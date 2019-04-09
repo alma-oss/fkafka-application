@@ -10,12 +10,25 @@
 
   <ItemGroup>
     <Compile Include="src/Application.fs" />
+    <Compile Include="src/ApplicationTest.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../fkafka/Kafka.fsproj">
+      <Name>Kafka.fsproj</Name>
+    </ProjectReference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="../fmetrics/Metrics.fsproj">
+      <Name>Metrics.fsproj</Name>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
-    <PackageReference Include="Lmc.Kafka" Version="4.0" />
-    <PackageReference Include="Lmc.Metrics" Version="1.0" />
+    <!--<PackageReference Include="Lmc.Kafka" Version="4.0" />-->
+    <!--<PackageReference Include="Lmc.Metrics" Version="1.0" />-->
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.0" />
   </ItemGroup>
 

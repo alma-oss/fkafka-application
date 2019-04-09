@@ -16,7 +16,7 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
 _todo_
 
 ## Release
-1. Increment version in `FkafkaApplication.fsproj`
+1. Increment version in `KafkaApplication.fsproj`
 2. Update `CHANGELOG.md`
 3. Commit new version and tag it
 4. Run `$ fake build target release`
