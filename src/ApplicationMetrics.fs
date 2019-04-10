@@ -1,0 +1,124 @@
+namespace KafkaApplication
+
+module ApplicationMetrics =
+    open Kafka
+    open ServiceIdentification
+
+    type private Count = Count of int
+
+    module private Count =
+        let value (Count count) = count
+
+    type InputStreamName = InputStreamName of StreamName
+    type OutputStreamName = OutputStreamName of StreamName
+
+    type private ApplicationMetric<'InputEvent, 'OutputEvent> =
+        | Status of Instance
+        | InputEventsTotal of Instance * InputStreamName * 'InputEvent
+        | OutputEventsTotal of Instance * OutputStreamName * 'OutputEvent
+
+    [<AutoOpen>]
+    module private InternalState =
+        open Metrics
+
+        let private failOnError = function
+            | Ok success -> success
+            | Error error -> failwithf "Error: %A" error
+
+        let createKey instance labels =
+            DataSetKey.createFromInstance instance labels
+            |> failOnError
+
+        let private createKeyForStatus instance =
+            createKey instance []
+
+        let private createKeyForInputEvent createKeys instance inputStream event =
+            createKeys inputStream event
+            |> createKey instance
+
+        let private createKeyForOutputEvent createKeys instance outputStream event =
+            createKeys outputStream event
+            |> createKey instance
+
+        let private metricStatus (Context context) = context |> sprintf "%s_status" |> MetricName.createOrFail
+        let private metricTotalInputEvent (Context context) = context |> sprintf "%s_input_events_total" |> MetricName.createOrFail
+        let private metricTotalOutputEvent (Context context) = context |> sprintf "%s_output_events_total" |> MetricName.createOrFail
+
+        let private metricValueToCount = function
+            | Int int -> Count int
+            | _ -> Count 0
+
+        let incrementState createInputKeys createOutputKeys = function
+            | Status instance ->
+                instance
+                |> createKeyForStatus
+                |> State.incrementMetricSetValue (Int 1) (metricStatus instance.Context)
+                |> metricValueToCount
+            | InputEventsTotal (instance, inputStream, event) ->
+                event
+                |> createKeyForInputEvent createInputKeys instance inputStream
+                |> State.incrementMetricSetValue (Int 1) (metricTotalInputEvent instance.Context)
+                |> metricValueToCount
+            | OutputEventsTotal (instance, outputStream, event) ->
+                event
+                |> createKeyForOutputEvent createOutputKeys instance outputStream
+                |> State.incrementMetricSetValue (Int 1) (metricTotalOutputEvent instance.Context)
+                |> metricValueToCount
+
+        let getFormattedMetricsForPrometheus (instance: Instance) _ =
+            let formatMetric metricType description metricName =
+                metricName
+                |> State.getMetric
+                |> function
+                    | Some metric ->
+                        { metric with
+                            Description = Some description
+                            Type = Some metricType
+                        }
+                        |> Metric.format
+                    | _ -> ""
+            let formatCounter = formatMetric MetricType.Counter
+
+            [
+                instance.Context |> metricStatus |> formatMetric MetricType.Gauge "Current instance status."
+                ServiceStatus.getFormattedValue()
+                ResourceAvailability.getFormattedValue()
+                instance.Context |> metricTotalInputEvent |> formatCounter "Total input event count."
+                instance.Context |> metricTotalOutputEvent |> formatCounter "Total output event count."
+            ]
+            |> String.concat ""
+
+    //
+    // Public state api
+    //
+
+    // Instance status
+
+    let private createNoKeys _ _ = []
+
+    let enableInstance instance =
+        instance
+        |> Status
+        |> incrementState createNoKeys createNoKeys
+        |> ignore
+
+    // Changing state
+
+    let incrementTotalInputEventCount createKeys instance inputStream event =
+        (instance, inputStream, event)
+        |> InputEventsTotal
+        |> incrementState createKeys createNoKeys
+        |> ignore
+
+    let incrementTotalOutputEventCount createKeys instance outputStream event =
+        (instance, outputStream, event)
+        |> OutputEventsTotal
+        |> incrementState createNoKeys createKeys
+        |> ignore
+
+    // Showing state
+
+    let showStateOnWebServerAsync instance path =
+        instance
+        |> getFormattedMetricsForPrometheus
+        |> Metrics.WebServer.showStateAsync path
