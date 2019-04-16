@@ -511,3 +511,102 @@ application {
 // whole running should be in try/catch to log errors and keeps application running (or maybe set some policies, what to do on error, ...)
 |> run
 ```
+
+### Simplified?
+```fs
+// all "Items" should be something like ApplicationPart (like WebPart)
+
+application {
+    logger Log                              // this registers Logger, which will be used for log debuging, errors, ...
+
+    envFile [ "../.env"; "../.dist.env" ]   // register envFiles -> select first available
+
+    //loggerVerbosityBy "VERBOSITY"
+    //let verbosity = envAs "VERBOSITY" Log.setVerbosityLevel                 // get env from envFile
+
+    instanceFromEnv "INSTANCE"  // calls Instance.parse and stores the value in ApplicationConfiguration
+    groupIdFromEnv "GROUP_ID"   // calls GroupId.fromString and stores the value in ApplicationConfiguration
+
+    useKafkaFromEnv {                   // it is not a ConnectionConfiguration, but ConnectionConfigurationFromEnvironemnt (same keys, but it only has strings with env names)
+        BrokerList = "KAFKA_BROKER"     // also Log.debug "Kafka", if logger is set
+        Topic = "INPUT_STREAM"
+    }
+
+    // this could be used to pre-register env variables into some map, which could be later passed to "consume" function
+    envs [
+        "DATA_CENTER"
+        "OUTPUT_STREAM" // how to do mapping?
+        "CONTRACT_API"
+        "CONTRACT_API_STATUS"
+    ]
+
+    showMetricsOn "/metrics"            // run web server which shows current metrics
+
+    consume (fun events application ->  // application can contain all needed parts, like envs, logger, ...
+        let { Logger = log; Environment = envs; IncrementOutputCount = incrementOutputCount; ConsumerConfiguration = consumerConfiguration } = application
+
+        let dataCenter = envs.["DATA_CENTER"] |> DataCenter
+        let outputStream = envs.["OUTPUT_STREAM"] |> StreamName |> OutputStream
+
+        // metrics                                                          // output metric should be in application itself (input is internal, since whole application is consumer which logs
+        let incrementOutputCount = incrementOutputCount outputStream        // it will already have instance injected
+
+        let contractApiStatus = envs.["CONTRACT_API_STATUS"]
+        let getContract =
+            envs.["CONTRACT_API"]
+            |> getContract (log.Debug "Contract") (log.Error "Contract")    // todo - how to use `getContract` and
+
+        //
+        // === Aggregator logic ===
+        //
+
+        // state
+        let stateStorage = create<UniqueKey, LastInteraction.StateValue>()
+
+        let getStatePerIntent createKey intent =
+            intent
+            |> createKey
+            |> getState stateStorage
+
+        let setStatePerIntent createKey (intent, state) =
+            let key =
+                intent
+                |> createKey
+            setState stateStorage key state
+
+        let countTotalStates () =
+            countAll stateStorage
+
+        // rule
+        let createResourceHref = Resource.createHref dataCenter
+        let rule = LastInteraction.rule getContract (createOutputEvent createResourceHref)
+
+        // fill state to the offset
+        let (fillStatePerEvent, cancelationToken) = startFillStateToOffset kafkaConfiguration rule getStatePerIntent setStatePerIntent countTotalStates // this will start showing the current progress
+
+        {
+            OnInputEvent = fillStatePerEvent
+        }
+        |> consentsInputEventReader
+        |> Kafka.consumeStreamToOffset consumerConfiguration offset
+
+        // cancel cancelationToken to cance async showing of filling progress
+
+        // prepare producer
+        let produce = producer {               // computed expression to help create producer and produce function
+            toStream outputStream
+            serialize Serializer.serialize
+            increment incrementOutputCount
+        }
+
+        // aggregate
+        let aggregateInputEvent = aggregateInputEvent rule getStatePerIntent setStatePerIntent produceEvent
+
+        events
+        |> Seq.map (tee incrementInputCount)
+        |> Seq.iter aggregateInputEvent
+    )
+}
+// whole running should be in try/catch to log errors and keeps application running (or maybe set some policies, what to do on error, ...)
+|> run
+```

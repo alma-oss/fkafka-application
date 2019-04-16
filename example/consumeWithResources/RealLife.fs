@@ -100,8 +100,20 @@ module Program =
             | :? KafkaException as e ->
                 printfn "Error: %A ..." e
                 markAsDisabled()
+                printfn "Waiting for reboot ..."
                 System.Threading.Thread.Sleep(10 * 1000)
                 runConsuming <- true
 
             if runConsuming then
                 printfn "Reboot ..."
+
+        //Kafka.Consumer.consumeResult kafkaConfiguration RawEvent.parse (fun e ->
+        //    printfn "Error: %A ..." e
+        //    markAsDisabled()
+        //    printfn "Waiting for reboot ..."
+        //    System.Threading.Thread.Sleep(10 * 1000)
+        //    printfn "Reboot ..."
+        //)
+        //|> Seq.take 20
+        //|> Seq.map (tee incrementInputCount)
+        //|> Seq.iter (route >> produce)

@@ -1,4 +1,4 @@
-namespace DummyExample
+namespace DummyWithComputedExpressionExample
 
 module Dice =
     let private random = System.Random()
@@ -22,7 +22,9 @@ module DummyKafka =
 
                 (fun () -> checker.CheckCluster handle),
                 (fun () -> checker.CheckTopic configuration.Connection.Topic handle)
-            | _ -> failwithf "No checker is set"
+            | _ ->
+                printfn "Without checkers ..."
+                (fun _ -> true), (fun _ -> true)
 
         seq {
             printfn "Start consuming ..."
@@ -63,11 +65,9 @@ module DummyCheck =
         }
 
 module Program =
-    open Confluent.Kafka
+    open Logging
     open Kafka
-    open Metrics
     open KafkaApplication
-    open ServiceIdentification
     open ApplicationMetrics
 
     let tee f a =
@@ -91,19 +91,6 @@ module Program =
         ]
 
     let run () =
-
-        let instance = {
-            Domain = Domain "arch"
-            Context = Context "example"
-            Purpose = Purpose "dummy"
-            Version = Version "dev"
-        }
-
-        let inputStream = StreamName "example-stream-common-all"
-        let brokerList = BrokerList "kfall-1"
-
-        let outputStream = "example-outputStream-common-all"
-
         //
         // pattern
         //
@@ -115,58 +102,59 @@ module Program =
         // run simple app
         //
 
-        // metrics
-        let incrementInputCount = incrementTotalInputEventCount createInputKeys instance (InputStreamName inputStream)
-        let incrementOutputCount = incrementTotalOutputEventCount createOutputKeys instance (OutputStreamName (Kafka.StreamName outputStream))
-
-        // service status
-        let markAsEnabled () =
-            ServiceStatus.enable instance Audience.Sys |> ignore
-
-        let markAsDisabled () =
-            ServiceStatus.disable instance Audience.Sys |> ignore
-
-        let kafkaConfiguration = {
-            Connection = {
-                BrokerList = brokerList
-                Topic = inputStream
-            }
-            GroupId = GroupId.Random
-            Logger = Some {
-                Log = printfn "%s"
-            }
-            Checker = Some (DummyCheck.checker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList)
-            ServiceStatus = Some {
-                MarkAsEnabled = markAsEnabled
-                MarkAsDisabled = markAsDisabled
-            }
-        }
-
-        // app
-        let produce event =
+        let produce (OutputStreamName outputStream) event =
             event
-            |> tee (incrementOutputCount)
-            |> printfn " -> response: %A"
+            //|> tee (incrementOutputCount)
+            |> printfn " -> response<%A>: %A" outputStream
 
-        showStateOnWebServerAsync instance "/metrics"
-        |> Async.Start
+        Log.setVerbosityLevel "vv"  // todo add handler to Environment
 
-        enableInstance instance
+        kafkaApplication {
+            //from environent {
+            //    file []
+//
+            //    instance "INSTANCE"
+            //    groupId "GROUP_ID"
+//
+            //    connect {
+            //        BrokerList = "BROKER_LIST"
+            //        Topic = "INPUT_STREAM"
+            //    }
+            //}
 
-        let mutable runConsuming = true
-        while runConsuming do
-            try
-                runConsuming <- false
+            envFile ["./.env"; "./.dist.env"]
 
-                DummyKafka.consume kafkaConfiguration
-                |> Seq.map (tee incrementInputCount)
-                |> Seq.iter (double >> produce)
-            with
-            | :? KafkaException as e ->
-                printfn "Error: %A ..." e
-                markAsDisabled()
+            instanceFromEnv "INSTANCE"
+            //groupIdFromEnv "GROUP_ID"
+
+            envRequire [
+                "OUTPUT_STREAM"
+            ]
+
+            connectFromEnv {
+                BrokerList = "BROKER_LIST"
+                Topic = "INPUT_STREAM"
+            }
+
+            consume (fun parts events ->
+                let outputStream =
+                    parts.Environment.["OUTPUT_STREAM"]
+                    |> StreamName
+                    |> OutputStreamName
+
+                events
+                //|> Seq.map (tee incrementInputCount)
+                //|> Seq.take 20
+                |> Seq.iter (double >> produce outputStream)
+            )
+
+            onError (fun logger _ ->
+                logger.Log "Application" "Waiting for reboot ..."
                 System.Threading.Thread.Sleep(10 * 1000)
-                runConsuming <- true
 
-            if runConsuming then
-                printfn "Reboot ..."
+                Reboot
+            )
+        }
+        //|> ignore
+        |> run DummyKafka.consume
+        ()

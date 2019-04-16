@@ -7,13 +7,22 @@ open MF.ConsoleStyle
 let main argv =
     Console.title "Admin - kafka"
 
+    //let argv = [|"reallife"; "not-computed"|]
+
     match argv with
     | [|"reallife"|] ->
         Console.section "Real-life example"
+        //RealLifeExample.Program.run()
+        printfn "Not implemented yet"
+    | [|"reallife"; "not-computed"|] ->
+        Console.section "Real-life without computed expression example"
         RealLifeExample.Program.run()
+    | [|"not-computed"|] ->
+        Console.section "Dummy without computed expression example"
+        DummyExample.Program.run()
     | _ ->
         Console.section "Dummy example"
-        DummyExample.Program.run()
+        DummyWithComputedExpressionExample.Program.run()
 
     Console.success "Done"
     0 // return an integer exit code

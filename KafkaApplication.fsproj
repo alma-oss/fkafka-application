@@ -9,8 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="src/Types.fs" />
     <Compile Include="src/Resource.fs" />
     <Compile Include="src/ApplicationMetrics.fs" />
+    <Compile Include="src/Environment.fs" />
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 
@@ -27,10 +29,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- todo - sort -->
     <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
     <!--<PackageReference Include="Lmc.Kafka" Version="4.0" />-->
     <!--<PackageReference Include="Lmc.Metrics" Version="1.0" />-->
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.0" />
+    <PackageReference Include="Lmc.Environment" Version="2.1" />
+    <PackageReference Include="Lmc.Logging" Version="1.0" />
   </ItemGroup>
 
 </Project>

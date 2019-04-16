@@ -7,19 +7,20 @@ dotnet build
 ```
 
 ## Run
+For example without computed expression add `not-computed` option
 
 ### Dummy example
 No real resources are used, just a randomized checking and generating an int value, instead of stream reading.
 
 ```
-dotnet run
+dotnet run -- [not-computed]
 ```
 
 ### Real-life example
 Consentor stream on dev1-services is used and checked as it would be in real-life application.
 
 ```
-dotnet run -- reallife
+dotnet run -- reallife [not-computed]
 ```
 
 ---
