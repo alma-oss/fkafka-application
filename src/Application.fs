@@ -1,34 +1,17 @@
 namespace KafkaApplication
 
-open System.IO
-open Environment
 open Kafka
-open ServiceIdentification
 
 [<AutoOpen>]
 module KafkaApplication =
+    open OptionOperators
+
     let private tee f a =
         f a
         a
 
     [<AutoOpen>]
     module private KafkaApplicationBuilder =
-        let (<??>) defaultValue opt = Option.defaultValue opt defaultValue
-        let (<?!>) (opt: 'a option) (errorMessage: string): Result<'a, KafkaApplicationError> =
-            match opt with
-            | Some value -> Ok value
-            | None -> sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError |> Result.Error
-
-        let defaultParts =
-            {
-                Logger = Logger.defaultLogger
-                Environment = Map.empty
-                Instance = None
-                GroupId = GroupId.Random
-                ConnectionConfiguration = None
-                Consume = None
-                OnError = None
-            }
 
         let buildApplication (Configuration configuration): KafkaApplication<'Event> =
             result {
@@ -36,18 +19,23 @@ module KafkaApplication =
 
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
+                let groupId = configurationParts.GroupId <?=> GroupId.Random
 
                 let! instance = configurationParts.Instance <?!> "Instance is required."
-                let! connectionConfiguration = configurationParts.ConnectionConfiguration <?!> "Connection configuration is required."
+                //let! connections = Connections <?!> "At least one connection configuration is required."
+                let! connections =
+                    if configurationParts.Connections |> Map.isEmpty then Error (KafkaApplicationError "At least one connection configuration is required.")
+                    else Ok configurationParts.Connections
                 let! consume = configurationParts.Consume <?!> "Consume function is required."
 
-                let onError = configurationParts.OnError <??> (fun _ _ -> Shutdown)
+                let onError = configurationParts.OnConsumeError <?=> (fun _ _ -> Shutdown)
 
-                let consumerConfiguration = Kafka.ConsumerConfiguration.createWithConnection connectionConfiguration GroupId.Random
+                let consumerConfiguration = Kafka.ConsumerConfiguration.createWithConnection connectionConfiguration groupId
 
                 let publicParts: ConsumeRuntimeParts = {
                     Logger = logger
                     Environment = environment
+                    Connections = connections
                     ConsumerConfiguration = consumerConfiguration
                 }
 
@@ -76,153 +64,72 @@ module KafkaApplication =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        let getEnv (parts: ConfigurationParts<_>) success error name =
-            name
-            |> Environment.tryGetEnv parts.Environment
-            |> Option.map success
-            |> Result.ofOption (sprintf "Environment variable for \"%s\" is not set." name)
-            |> Result.mapError error
-
-        member __.Yield (_) =
+        member __.Yield (_): Configuration<'Event> =
             defaultParts
             |> Ok
             |> Configuration
 
-        member __.Bind(state, f) =
+        member __.Bind(state, f): Configuration<'Event> =
             state >>= f
 
-        //member __.Combine(state: KafkaApplicationParts, x) =
-        //    state
-
-        //member __.Delay(f) =
-        //    // f is whole computed expression as a funcion
-        //    f()
-
-        member __.Run(state) =
+        member __.Run(state): KafkaApplication<'Evnet> =
             buildApplication state
 
-        [<CustomOperation("logger")>]
+        [<CustomOperation("useLogger")>]
         member __.Logger(state, logger: KafkaApplication.Logger): Configuration<'Event> =
             state <!> fun parts -> { parts with Logger = logger }
 
-        [<CustomOperation("envFile")>]
-        member __.EnvFile(state, envFileLocations): Configuration<'Event> =
-            state <!> fun parts ->
-                { parts with
-                    Environment =
-                        envFileLocations
-                        |> List.tryFind File.Exists
-                        |> Option.map (getEnvs (parts.Logger.Warning "Dotenv") >> Environment.merge parts.Environment)
-                        <??> parts.Environment
-                }
+        [<CustomOperation("useInstance")>]
+        member __.Instance(state, instance): Configuration<'Event> =
+            state <!> fun parts -> { parts with Instance = Some instance }
 
-        [<CustomOperation("checkEnv")>]
-        member __.CheckEnv(state, name, checker): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! value =
-                        name
-                        |> getEnv parts id EnvironmentError.InvalidFormatError
-
-                    let! _ =
-                        value
-                        |> checker
-                        |> Result.ofOption (sprintf "Value \"%s\" for %s is not in correct format." value name)
-                        |> Result.mapError EnvironmentError.InvalidFormatError
-
-                    return parts
-                }
-                |> Result.mapError EnvironmentError
-
-        [<CustomOperation("instanceFromEnv")>]
-        member __.InstanceFromEnv(state, instanceVariableName): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! instanceString =
-                        instanceVariableName
-                        |> getEnv parts id InstanceError.VariableNotFoundError
-
-                    let! instance =
-                        instanceString
-                        |> Instance.parse "-"
-                        |> Result.ofOption (sprintf "Value \"%s\" for Instance is not in correct format (expecting values separated by \"-\")." instanceString)
-                        |> Result.mapError InstanceError.InvalidFormatError
-
-                    return { parts with Instance = Some instance }
-                }
-                |> Result.mapError InstanceError
-
-        [<CustomOperation("groupIdFromEnv")>]
-        member __.GroupIdFromEnv(state, groupIdVariableName): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! groupId =
-                        groupIdVariableName
-                        |> getEnv parts GroupId.Id GroupIdError.VariableNotFoundError
-
-                    return { parts with GroupId = groupId }
-                }
-                |> Result.mapError GroupIdError
+        [<CustomOperation("useGroupId")>]
+        member __.GroupId(state, groupId): Configuration<'Event> =
+            state <!> fun parts -> { parts with GroupId = Some groupId }
 
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration): Configuration<'Event> =
-            state <!> fun parts -> { parts with ConnectionConfiguration = Some connectionConfiguration }
-
-        [<CustomOperation("connectFromEnv")>]
-        member __.ConnectFromEnv(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! brokerList =
-                        connectionConfiguration.BrokerList
-                        |> getEnv parts BrokerList ConnectionConfigurationError.VariableNotFoundError
-
-                    let! topic =
-                        connectionConfiguration.BrokerList
-                        |> getEnv parts StreamName ConnectionConfigurationError.VariableNotFoundError
-
-                    let connectionConfiguration: ConnectionConfiguration = {
-                        BrokerList = brokerList
-                        Topic = topic
-                    }
-
-                    return { parts with ConnectionConfiguration = Some connectionConfiguration}
-                }
-                |> Result.mapError ConnectionConfigurationError
+            state <!> fun parts -> { parts with Connections = Some connectionConfiguration }
 
         [<CustomOperation("consume")>]
         member __.Consume(state, consume): Configuration<'Event> =
             state <!> fun parts -> { parts with Consume = Some consume }
 
-        [<CustomOperation("onError")>]
-        member __.OnError(state, onError): Configuration<'Event> =
-            state <!> fun parts -> { parts with OnError = Some onError }
+        [<CustomOperation("onConsumeError")>]
+        member __.OnConsumeError(state, onConsumeError): Configuration<'Event> =
+            state <!> fun parts -> { parts with OnConsumeError = Some onConsumeError }
 
-        /// Define required environment variables, all values must be presented in currently loaded Environment
-        [<CustomOperation("envRequire")>]
-        member __.EnvRequire(state, names): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! _ =
-                        names
-                        |> List.map (getEnv parts id EnvironmentError.VariableNotFoundError)
-                        |> Result.sequence
-
-                    return parts
-                }
-                |> Result.mapError EnvironmentError
+        /// Add other configuration and merge it with current.
+        /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
+        /// (Except of logger)
+        [<CustomOperation("merge")>]
+        member __.Merge(state, configuration): Configuration<'Event> =
+            state >>= fun currentParts ->
+                configuration <!> fun newParts ->
+                    {
+                        Logger = currentParts.Logger
+                        Environment = Environment.update currentParts.Environment newParts.Environment
+                        Instance = newParts.Instance <??> currentParts.Instance
+                        GroupId = newParts.GroupId <??> currentParts.GroupId
+                        Connections = Connections <??> Connections
+                        Consume = newParts.Consume <??> currentParts.Consume
+                        OnConsumeError = newParts.OnConsumeError <??> currentParts.OnConsumeError
+                    }
+                |> Configuration.result
 
     let kafkaApplication = KafkaApplicationBuilder()
 
-    // todo - remove the `consume` parameter and use Kafka.consume directly
-    let run (kafka_consume: ConsumerConfiguration -> seq<'Event>) (KafkaApplication application) =
-        match application with
-        | Ok app ->
-            let log = app.Logger.Log "Application"
-            let logVerbose = app.Logger.Verbose "Application"
+    module private KafkaApplicationRunner =
+        // todo - remove the `consume` parameter and use Kafka.consume directly
+        let run (kafka_consume: ConsumerConfiguration -> 'Event seq) (application: KafkaApplicationParts<'Event>) =
+            let log = application.Logger.Log "Application"
+            let logVerbose = application.Logger.Verbose "Application"
             log "Starts ..."
 
-            logVerbose <| sprintf "Instance:\n%A" app.Instance
-            logVerbose <| sprintf "Kafka:\n%A" app.ConsumerConfiguration
+            logVerbose <| sprintf "Instance:\n%A" application.Instance
+            logVerbose <| sprintf "Kafka:\n%A" application.ConsumerConfiguration
+
+            // todo - produce `instance_started` event, id application_connection is available
 
             let markAsEnabled() =
                 log "... Mark as enabled ..."
@@ -235,22 +142,25 @@ module KafkaApplication =
                     markAsEnabled()
                     runConsuming <- false
 
-                    app.ConsumerConfiguration
+                    application.ConsumerConfiguration
                     |> kafka_consume  // todo replace with Kafka.consume
-                    |> app.Consume
+                    |> application.Consume
                 with
                 | :? Confluent.Kafka.KafkaException as e ->
                     markAsDisabled()
 
                     e
                     |> sprintf "%A"
-                    |> app.Logger.Error "Kafka"
+                    |> application.Logger.Error "Kafka"
 
-                    match app.OnError app.Logger e.Message with
+                    match application.OnError application.Logger e.Message with
                     | Reboot -> runConsuming <- true
                     | Shutdown -> runConsuming <- false
 
                 if runConsuming then
                     log "Reboot ..."
-        | Error error ->
-            failwithf "[Application] Error:\n%A" error
+
+    let run (kafka_consume: ConsumerConfiguration -> 'Event seq) (KafkaApplication application) =
+        match application with
+        | Ok app -> KafkaApplicationRunner.run kafka_consume app
+        | Error error -> failwithf "[Application] Error:\n%A" error

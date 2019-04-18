@@ -107,33 +107,68 @@ module Program =
             //|> tee (incrementOutputCount)
             |> printfn " -> response<%A>: %A" outputStream
 
-        Log.setVerbosityLevel "vv"  // todo add handler to Environment
+        Log.setVerbosityLevel "vvv"  // todo add function to Environment (and to ApplicationBuilder)
+
+        let logger = Logger.quietLogger
+
+        let environment = environmentWithLogger logger
 
         kafkaApplication {
-            //from environent {
-            //    file []
-//
-            //    instance "INSTANCE"
-            //    groupId "GROUP_ID"
-//
-            //    connect {
-            //        BrokerList = "BROKER_LIST"
-            //        Topic = "INPUT_STREAM"
-            //    }
+            useLogger logger
+
+            merge (environment {
+                file ["./.env"; "./.dist.env"]
+
+                instance "INSTANCE"
+                groupId "GROUP_ID"
+
+                require [ "OUTPUT_STREAM" ]
+
+                connect {
+                    BrokerList = "BROKER_LIST"
+                    Topic = "INPUT_STREAM"
+                }
+            })
+
+            // todo - how to handle multiple consumations?
+            //connectToFromEnv "application" {
+            //    BrokerList = "BROKER_LIST"
+            //    Topic = "APPLICATION_STREAM"
             //}
+            //
+            //connectToFromEnv "interaction" {
+            //    BrokerList = "BROKER_LIST"
+            //    Topic = "INPUT_STREAM"
+            //}
+            //
+            //consumeLastFrom "application" (fun parts event ->
+            //    event
+            //    |> Option.map (fun lastMessage ->
+            //        lastMessage.Value
+            //        |> RawEvent.parse
+            //        |> fun lastEvent -> lastEvent.CorrelationId
+            //    )
+            //    |> Option.map (fun lastAggregatedCorrelationId ->
+            //        let outputStream =
+            //            parts.Environment.["OUTPUT_STREAM"]
+            //            |> StreamName
+            //            |> OutputStreamName
+            //
+            //        let interactionConfiguration = parts.Connections.["interaction"]
+            //
+            //        Kafka.Consumer.consume interactionConfiguration
+            //        |> Seq.map (
+            //            tee incrementConsumedEvents
+            //            >> tee fillStatePerEvent
+            //        )
+            //        |> Seq.takeWhile (hasLastAggregatedCorrelationId >> not)
+            //        |> Seq.iter ignore
+            //    )
+            //)
 
-            envFile ["./.env"; "./.dist.env"]
-
-            instanceFromEnv "INSTANCE"
-            //groupIdFromEnv "GROUP_ID"
-
-            envRequire [
-                "OUTPUT_STREAM"
-            ]
-
-            connectFromEnv {
-                BrokerList = "BROKER_LIST"
-                Topic = "INPUT_STREAM"
+            connect {
+                BrokerList = BrokerList ""
+                Topic = StreamName ""
             }
 
             consume (fun parts events ->
@@ -148,7 +183,7 @@ module Program =
                 |> Seq.iter (double >> produce outputStream)
             )
 
-            onError (fun logger _ ->
+            onConsumeError (fun logger _ ->
                 logger.Log "Application" "Waiting for reboot ..."
                 System.Threading.Thread.Sleep(10 * 1000)
 
