@@ -185,7 +185,7 @@ module private Configuration =
 type KafkaApplicationParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
-    Instance: Instance
+    Box: Box
     ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
 }

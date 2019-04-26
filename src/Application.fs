@@ -1,6 +1,7 @@
 namespace KafkaApplication
 
 open Kafka
+open ServiceIdentification
 
 [<AutoOpen>]
 module KafkaApplication =
@@ -52,6 +53,12 @@ module KafkaApplication =
                     | Some errorHandler -> errorHandler
                     | _ -> (fun _ _ -> Shutdown)
 
+                let defaultSpot = {
+                    Zone = Zone "common"
+                    Bucket = Bucket "all"
+                }
+                let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version defaultSpot.Zone defaultSpot.Bucket
+
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
@@ -80,7 +87,7 @@ module KafkaApplication =
                 return {
                     Logger = configurationParts.Logger
                     Environment = configurationParts.Environment
-                    Instance = instance
+                    Box = box
                     ConsumerConfigurations = consumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
                 }
@@ -225,7 +232,7 @@ module KafkaApplication =
             let logVerbose = application.Logger.Verbose "Application"
             log "Starts ..."
 
-            logVerbose <| sprintf "Instance:\n%A" application.Instance
+            logVerbose <| sprintf "Box:\n%A" application.Box
             logVerbose <| sprintf "Kafka:\n%A" application.ConsumerConfigurations
 
             let markAsEnabled() =
