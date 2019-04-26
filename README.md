@@ -142,6 +142,15 @@ let main argv =
     0
 ```
 
+#### Tips, Notes, ...
+##### GroupId
+You can use different group id for every connection, but you have to explicitly define it, otherwise `GroupId.Random` will be used.
+If you just define `useGroupId "foo"`, it will be shared for all connections as default.
+You can define specific group id for a connection by
+```fs
+useGroupIdFor "connection" "groupId-for-connection"
+```
+
 ## Release
 1. Increment version in `KafkaApplication.fsproj`
 2. Update `CHANGELOG.md`

@@ -10,42 +10,79 @@ module KafkaApplication =
         f a
         a
 
+    let private assertNotEmpty error collection =
+        if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
+        else Ok collection
+
     [<AutoOpen>]
     module private KafkaApplicationBuilder =
+
+        let private composeRuntimeConsumeHandlersForConnections
+            consumerConfigurations
+            runtimeParts
+            (getErrorHandler: ConnectionName -> ErrorHandler)
+            ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'Event>) =
+
+            match consumerConfigurations |> Map.tryFind connection with
+            | Some configuration ->
+                Ok {
+                    Connection = connection
+                    Configuration = configuration
+                    Handler = handler |> ConsumeHandler.toRuntime runtimeParts
+                    OnError = connection |> getErrorHandler
+                }
+            | _ ->
+                MissingConfiguration connection
+                |> ConsumeHandlerError
+                |> Error
 
         let buildApplication (Configuration configuration): KafkaApplication<'Event> =
             result {
                 let! configurationParts = configuration
 
+                // required parts
+                let! instance = configurationParts.Instance <?!> "Instance is required."
+                let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
+                let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
+
+                // optional parts
+                let defaultErrorHandler = (fun _ _ -> Shutdown)
+                let getErrorHandler connection =
+                    match configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection with
+                    | Some errorHandler -> errorHandler
+                    | _ -> (fun _ _ -> Shutdown)
+
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
-                let groupId = configurationParts.GroupId <?=> GroupId.Random
+                let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
+                let groupIds = configurationParts.GroupIds
 
-                let! instance = configurationParts.Instance <?!> "Instance is required."
-                //let! connections = Connections <?!> "At least one connection configuration is required."
-                let! connections =
-                    if configurationParts.Connections |> Map.isEmpty then Error (KafkaApplicationError "At least one connection configuration is required.")
-                    else Ok configurationParts.Connections
-                let! consume = configurationParts.Consume <?!> "Consume function is required."
+                // composed parts
+                let consumerConfigurations =
+                    connections
+                    |> Map.map (fun name connection ->
+                        groupIds.TryFind name <?=> defaultGroupId
+                        |> Kafka.ConsumerConfiguration.createWithConnection connection
+                    )
 
-                let onError = configurationParts.OnConsumeError <?=> (fun _ _ -> Shutdown)
-
-                let consumerConfiguration = Kafka.ConsumerConfiguration.createWithConnection connectionConfiguration groupId
-
-                let publicParts: ConsumeRuntimeParts = {
+                let runtimeParts: ConsumeRuntimeParts = {
                     Logger = logger
                     Environment = environment
                     Connections = connections
-                    ConsumerConfiguration = consumerConfiguration
+                    ConsumerConfigurations = consumerConfigurations
                 }
+
+                let! runtimeConsumeHandlers =
+                    consumeHandlers
+                    |> List.map (composeRuntimeConsumeHandlersForConnections consumerConfigurations runtimeParts getErrorHandler)
+                    |> Result.sequence
 
                 return {
                     Logger = configurationParts.Logger
                     Environment = configurationParts.Environment
                     Instance = instance
-                    ConsumerConfiguration = consumerConfiguration
-                    Consume = consume publicParts
-                    OnError = onError
+                    ConsumerConfigurations = consumerConfigurations
+                    ConsumeHandlers = runtimeConsumeHandlers
                 }
             }
             |> KafkaApplication
@@ -89,15 +126,35 @@ module KafkaApplication =
 
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration): Configuration<'Event> =
-            state <!> fun parts -> { parts with Connections = Some connectionConfiguration }
+            state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
+
+        [<CustomOperation("connectTo")>]
+        member __.ConnectTo(state, name, connectionConfiguration): Configuration<'Event> =
+            state <!> fun parts -> { parts with Connections = parts.Connections.Add(ConnectionName name, connectionConfiguration) }
 
         [<CustomOperation("consume")>]
-        member __.Consume(state, consume): Configuration<'Event> =
-            state <!> fun parts -> { parts with Consume = Some consume }
+        member __.Consume(state, consumeHandler): Configuration<'Event> =
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+
+        [<CustomOperation("consumeFrom")>]
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'Event> =
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+
+        [<CustomOperation("consumeLast")>]
+        member __.ConsumeLast(state, consumeHandler): Configuration<'Event> =
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
+
+        [<CustomOperation("consumeLastFrom")>]
+        member __.ConsumeLastFrom(state, name, consumeHandler): Configuration<'Event> =
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
 
         [<CustomOperation("onConsumeError")>]
         member __.OnConsumeError(state, onConsumeError): Configuration<'Event> =
-            state <!> fun parts -> { parts with OnConsumeError = Some onConsumeError }
+            state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(Connections.Default, onConsumeError) }
+
+        [<CustomOperation("onConsumeErrorFor")>]
+        member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'Event> =
+            state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(ConnectionName name, onConsumeError) }
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
@@ -111,30 +168,33 @@ module KafkaApplication =
                         Environment = Environment.update currentParts.Environment newParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         GroupId = newParts.GroupId <??> currentParts.GroupId
-                        Connections = Connections <??> Connections
-                        Consume = newParts.Consume <??> currentParts.Consume
-                        OnConsumeError = newParts.OnConsumeError <??> currentParts.OnConsumeError
+                        GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
+                        Connections = newParts.Connections |> Map.merge currentParts.Connections
+                        ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
+                        OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
                     }
                 |> Configuration.result
 
     let kafkaApplication = KafkaApplicationBuilder()
 
     module private KafkaApplicationRunner =
-        // todo - remove the `consume` parameter and use Kafka.consume directly
-        let run (kafka_consume: ConsumerConfiguration -> 'Event seq) (application: KafkaApplicationParts<'Event>) =
-            let log = application.Logger.Log "Application"
-            let logVerbose = application.Logger.Verbose "Application"
-            log "Starts ..."
 
-            logVerbose <| sprintf "Instance:\n%A" application.Instance
-            logVerbose <| sprintf "Kafka:\n%A" application.ConsumerConfiguration
+        let private consume consumeEvents consumeLastEvent configuration = function
+            | Events eventsHandler ->
+                configuration
+                |> consumeEvents
+                |> eventsHandler
+            | LastEvent lastEventHandler ->
+                configuration
+                |> consumeLastEvent
+                |> Option.map lastEventHandler
+                |> ignore
 
-            // todo - produce `instance_started` event, id application_connection is available
-
-            let markAsEnabled() =
-                log "... Mark as enabled ..."
-            let markAsDisabled() =
-                log "... Mark as disabled ..."
+        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) markAsEnabled markAsDisabled consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
+            let context =
+                consumeHandler.Connection
+                |> ConnectionName.value
+                |> sprintf "Kafka<%s>"
 
             let mutable runConsuming = true
             while runConsuming do
@@ -142,25 +202,45 @@ module KafkaApplication =
                     markAsEnabled()
                     runConsuming <- false
 
-                    application.ConsumerConfiguration
-                    |> kafka_consume  // todo replace with Kafka.consume
-                    |> application.Consume
+                    consumeHandler.Handler
+                    |> consume consumeEvents consumeLastEvent consumeHandler.Configuration
                 with
                 | :? Confluent.Kafka.KafkaException as e ->
                     markAsDisabled()
+                    logger.Error context <| sprintf "%A" e
 
-                    e
-                    |> sprintf "%A"
-                    |> application.Logger.Error "Kafka"
+                    match consumeHandler.OnError logger e.Message with
+                    | Reboot ->
+                        runConsuming <- true
+                        logger.Log context "Reboot current consume ..."
+                    | Continue ->
+                        logger.Log context "Continue to next consume ..."
+                        runConsuming <- false
+                    | Shutdown ->
+                        logger.Log context "Shuting down the application ..."
+                        raise e
 
-                    match application.OnError application.Logger e.Message with
-                    | Reboot -> runConsuming <- true
-                    | Shutdown -> runConsuming <- false
+        let run (consumeEvents: ConsumerConfiguration -> 'Event seq) (consumeLastEvent: ConsumerConfiguration -> 'Event option) (application: KafkaApplicationParts<'Event>) =
+            let log = application.Logger.Log "Application"
+            let logVerbose = application.Logger.Verbose "Application"
+            log "Starts ..."
 
-                if runConsuming then
-                    log "Reboot ..."
+            logVerbose <| sprintf "Instance:\n%A" application.Instance
+            logVerbose <| sprintf "Kafka:\n%A" application.ConsumerConfigurations
+
+            let markAsEnabled() =
+                // todo - produce `instance_started` event, id application_connection is available
+                log "... Mark as enabled | instance_started ..."
+            let markAsDisabled() =
+                log "... Mark as disabled ..."
+
+            application.ConsumeHandlers
+            |> List.rev
+            |> List.iter (consumeWithErrorHandling application.Logger markAsEnabled markAsDisabled consumeEvents consumeLastEvent)
 
     let run (kafka_consume: ConsumerConfiguration -> 'Event seq) (KafkaApplication application) =
+        let kafka_consumeLast = (fun _ -> None) // never return any last message - todo - remove and use directly from kafka
+
         match application with
-        | Ok app -> KafkaApplicationRunner.run kafka_consume app
+        | Ok app -> KafkaApplicationRunner.run kafka_consume kafka_consumeLast app
         | Error error -> failwithf "[Application] Error:\n%A" error

@@ -26,6 +26,26 @@ module EnvironmentBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
+        let connectTo state connectionName (connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+            state >>= fun parts ->
+                result {
+                    let! brokerList =
+                        connectionConfiguration.BrokerList
+                        |> getEnvironmentValue parts BrokerList ConnectionConfigurationError.VariableNotFoundError
+
+                    let! topic =
+                        connectionConfiguration.BrokerList
+                        |> getEnvironmentValue parts StreamName ConnectionConfigurationError.VariableNotFoundError
+
+                    let connectionConfiguration: ConnectionConfiguration = {
+                        BrokerList = brokerList
+                        Topic = topic
+                    }
+
+                    return { parts with Connections = parts.Connections.Add(connectionName, connectionConfiguration) }
+                }
+                |> Result.mapError ConnectionConfigurationError
+
         member __.Yield (_): Configuration<'Event> =
             { defaultParts with Logger = logger }
             |> Ok
@@ -109,24 +129,11 @@ module EnvironmentBuilder =
 
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
-            state >>= fun parts ->
-                result {
-                    let! brokerList =
-                        connectionConfiguration.BrokerList
-                        |> getEnvironmentValue parts BrokerList ConnectionConfigurationError.VariableNotFoundError
+            connectTo state Connections.Default connectionConfiguration
 
-                    let! topic =
-                        connectionConfiguration.BrokerList
-                        |> getEnvironmentValue parts StreamName ConnectionConfigurationError.VariableNotFoundError
-
-                    let connectionConfiguration: ConnectionConfiguration = {
-                        BrokerList = brokerList
-                        Topic = topic
-                    }
-
-                    return { parts with Connections = Some connectionConfiguration}
-                }
-                |> Result.mapError ConnectionConfigurationError
+        [<CustomOperation("connectTo")>]
+        member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+            connectTo state (ConnectionName name) connectionConfiguration
 
     let environmentWithLogger logger = EnvironmentBuilder(logger)
     let environment = EnvironmentBuilder(defaultParts.Logger)

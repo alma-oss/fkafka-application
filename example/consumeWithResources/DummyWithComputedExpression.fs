@@ -107,9 +107,9 @@ module Program =
             //|> tee (incrementOutputCount)
             |> printfn " -> response<%A>: %A" outputStream
 
-        Log.setVerbosityLevel "vvv"  // todo add function to Environment (and to ApplicationBuilder)
+        Log.setVerbosityLevel "vv"  // todo add function to Environment (and to ApplicationBuilder)
 
-        let logger = Logger.quietLogger
+        let logger = Logger.defaultLogger
 
         let environment = environmentWithLogger logger
 
@@ -120,7 +120,7 @@ module Program =
                 file ["./.env"; "./.dist.env"]
 
                 instance "INSTANCE"
-                groupId "GROUP_ID"
+                //groupId "GROUP_ID"
 
                 require [ "OUTPUT_STREAM" ]
 
@@ -131,16 +131,6 @@ module Program =
             })
 
             // todo - how to handle multiple consumations?
-            //connectToFromEnv "application" {
-            //    BrokerList = "BROKER_LIST"
-            //    Topic = "APPLICATION_STREAM"
-            //}
-            //
-            //connectToFromEnv "interaction" {
-            //    BrokerList = "BROKER_LIST"
-            //    Topic = "INPUT_STREAM"
-            //}
-            //
             //consumeLastFrom "application" (fun parts event ->
             //    event
             //    |> Option.map (fun lastMessage ->
@@ -166,10 +156,10 @@ module Program =
             //    )
             //)
 
-            connect {
-                BrokerList = BrokerList ""
-                Topic = StreamName ""
-            }
+            //connect {
+            //    BrokerList = BrokerList "127.0.0.1:9092"
+            //    Topic = StreamName "my-input-stream"
+            //}
 
             consume (fun parts events ->
                 let outputStream =

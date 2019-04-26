@@ -49,12 +49,32 @@ type EnvironmentConnectionConfiguration = {
 }
 
 //
+// Kafka connections
+//
+
+type ConnectionName = ConnectionName of string
+
+module ConnectionName =
+    let value (ConnectionName name) = name
+
+type Connections = Map<ConnectionName, ConnectionConfiguration>
+
+module Connections =
+    let Default = ConnectionName "__default"
+
+    let empty: Connections =
+        Map.empty
+
+//
 // Errors
 //
 
 type OnErrorPolicy =
     | Reboot
+    | Continue
     | Shutdown
+
+type ErrorHandler = Logger -> string -> OnErrorPolicy
 
 [<RequireQualifiedAccess>]
 type EnvironmentError =
@@ -74,42 +94,66 @@ type GroupIdError =
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
 
+type ConsumeHandlerError =
+    | MissingConfiguration of ConnectionName
+
 type KafkaApplicationError =
     | KafkaApplicationError of string
     | InstanceError of InstanceError
     | GroupIdError of GroupIdError
     | ConnectionConfigurationError of ConnectionConfigurationError
     | EnvironmentError of EnvironmentError
+    | ConsumeHandlerError of ConsumeHandlerError
 
 //
-// Kafka connections
-//
-
-type Connections = Map<string, ConnectionConfiguration>
-
-module Connections =
-    let empty: Connections =
-        Map.empty
-
-//
-// Configuration / Application
+// Consume handlers
 //
 
 type ConsumeRuntimeParts = {
     Logger: Logger
     Environment: Map<string, string>
     Connections: Connections
-    ConsumerConfiguration: ConsumerConfiguration
+    ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
 }
+
+type ConsumeHandler<'Event> =
+    | Events of (ConsumeRuntimeParts -> 'Event seq -> unit)
+    | LastEvent of (ConsumeRuntimeParts -> 'Event -> unit)
+
+type RuntimeConsumeHandler<'Event> =
+    | Events of ('Event seq -> unit)
+    | LastEvent of ('Event -> unit)
+
+module ConsumeHandler =
+    let toRuntime runtimeParts = function
+        | ConsumeHandler.Events eventsHandler -> eventsHandler runtimeParts |> RuntimeConsumeHandler.Events
+        | ConsumeHandler.LastEvent lastEventHandler -> lastEventHandler runtimeParts |> RuntimeConsumeHandler.LastEvent
+
+type ConsumeHandlerForConnection<'Event> = {
+    Connection: ConnectionName
+    Handler: ConsumeHandler<'Event>
+}
+
+type RuntimeConsumeHandlerForConnection<'Event> = {
+    Connection: ConnectionName
+    Configuration: ConsumerConfiguration
+    OnError: ErrorHandler
+    Handler: RuntimeConsumeHandler<'Event>
+}
+
+//
+// Configuration / Application
+//
 
 type ConfigurationParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Instance: Instance option
     GroupId: GroupId option
+    GroupIds: Map<ConnectionName, GroupId>
     Connections: Connections
-    Consume: (ConsumeRuntimeParts -> 'Event seq -> unit) option
-    OnConsumeError: (Logger -> string -> OnErrorPolicy) option
+    ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
+    OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
 }
 
 [<AutoOpen>]
@@ -120,9 +164,10 @@ module internal ConfigurationParts =
             Environment = Map.empty
             Instance = None
             GroupId = None
+            GroupIds = Map.empty
             Connections = Connections.empty
-            Consume = None
-            OnConsumeError = None
+            ConsumeHandlers = []
+            OnConsumeErrorHandlers = Map.empty
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_>) success error name =
@@ -141,12 +186,15 @@ type KafkaApplicationParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Instance: Instance
-    ConsumerConfiguration: ConsumerConfiguration
-    Consume: 'Event seq -> unit
-    OnError: Logger -> string -> OnErrorPolicy
+    ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
+    ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
 }
 
 type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>
+
+//
+// Common helpers
+//
 
 module internal OptionOperators =
     /// Default value - if value is None, default value will be used
@@ -160,3 +208,18 @@ module internal OptionOperators =
         match opt with
         | Some value -> Ok value
         | None -> sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError |> Result.Error
+
+module internal Map =
+    /// Merge new values with the current values (replacing already defined values).
+    let merge currentValues newValues =
+        currentValues
+        |> Map.fold (fun merged name connection ->
+            if merged |> Map.containsKey name then merged
+            else merged.Add(name, connection)
+        ) newValues
+
+module internal List =
+    /// Merge new values with the current values (ignoring already defined values) if there is any new values.
+    let merge currentValues newValues =
+        if newValues |> List.isEmpty then currentValues
+        else newValues
