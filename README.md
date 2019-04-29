@@ -13,7 +13,7 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
 - see http://consul-1.infra.pprod/ui/devel1-services/services/development-nugetServer-common-stable for detailed information (and port)
 
 ## Custom Kafka Application functions
-_NOTE: All functions has the first argument for the `state: ConfigurationParts<'Event>`, but this is current state of the application and it is passed implicitly in the background by computed expression._
+_NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computed expression._
 
 | Function | Arguments | Description |
 | --- | --- | --- |
@@ -21,14 +21,14 @@ _NOTE: All functions has the first argument for the `state: ConfigurationParts<'
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
 | consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
-| merge | `configuration: ConfigurationParts<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
+| merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
 | onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | **NOT_IMPLEMENTED_YET** useVerbosity | `verbosity level: string` | It will set verbosity to the logger. |
-| **NOT_IMPLEMENTED_YET** showMetricsOn | `route: string` | It will asynchronously run a web server and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
+| showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 
 ### Mandatory
 - Instance of the application is required.
@@ -41,7 +41,7 @@ _NOTE: All functions has the first argument for the `state: ConfigurationParts<'
 ### Environment computed expression
 It allows you to parse .env files and get other environment variables to use in you application workflow.
 
-Environment computed expression returns `ConfigurationParts<'Event>` so you can `merge` it to the Kafka Application.
+Environment computed expression returns `Configuration<'Event>` so you can `merge` it to the Kafka Application.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

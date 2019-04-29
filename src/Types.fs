@@ -40,6 +40,28 @@ module Logger =
         }
 
 //
+// Metrics
+//
+
+type MetricsRoute = private MetricsRoute of string
+
+type InvalidMetricsRouteError = InvalidMetricsRouteError of string
+
+module MetricsRoute =
+    let create (route: string) =
+        if route.StartsWith "/" then MetricsRoute route |> Ok
+        else route |> InvalidMetricsRouteError |> Error
+
+    let createOrFail route =
+        route
+        |> create
+        |> function
+            | Ok route -> route
+            | Error e -> failwithf "%A" e
+
+    let value (MetricsRoute route) = route
+
+//
 // Environment
 //
 
@@ -97,6 +119,9 @@ type ConnectionConfigurationError =
 type ConsumeHandlerError =
     | MissingConfiguration of ConnectionName
 
+type MetricsError =
+    | InvalidRoute of InvalidMetricsRouteError
+
 type KafkaApplicationError =
     | KafkaApplicationError of string
     | InstanceError of InstanceError
@@ -104,6 +129,7 @@ type KafkaApplicationError =
     | ConnectionConfigurationError of ConnectionConfigurationError
     | EnvironmentError of EnvironmentError
     | ConsumeHandlerError of ConsumeHandlerError
+    | MetricsError of MetricsError
 
 //
 // Consume handlers
@@ -154,6 +180,7 @@ type ConfigurationParts<'Event> = {
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
+    MetricsRoute: MetricsRoute option
 }
 
 [<AutoOpen>]
@@ -168,6 +195,7 @@ module internal ConfigurationParts =
             Connections = Connections.empty
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
+            MetricsRoute = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_>) success error name =
@@ -188,6 +216,7 @@ type KafkaApplicationParts<'Event> = {
     Box: Box
     ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
+    MetricsRoute: MetricsRoute option
 }
 
 type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>

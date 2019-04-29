@@ -187,7 +187,7 @@ module Program =
                 Reboot
             )
 
-            // todo - add more functions - for checkers, ...
+            showMetricsOn "/metrics"
         }
         |> run DummyKafka.consume
         ()

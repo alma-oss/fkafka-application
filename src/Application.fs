@@ -63,6 +63,7 @@ module KafkaApplication =
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
+                let metricsRoute = configurationParts.MetricsRoute
 
                 // composed parts
                 let consumerConfigurations =
@@ -90,6 +91,7 @@ module KafkaApplication =
                     Box = box
                     ConsumerConfigurations = consumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
+                    MetricsRoute = metricsRoute
                 }
             }
             |> KafkaApplication
@@ -179,8 +181,23 @@ module KafkaApplication =
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
                         ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
+                        MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                     }
                 |> Configuration.result
+
+        /// It will start an asynchronous web server on http://127.0.0.1:8080 and shows metrics for prometheus.
+        [<CustomOperation("showMetricsOn")>]
+        member __.ShowMetricsOn(state, route): Configuration<'Event> =
+            state >>= fun parts ->
+                result {
+                    let! route =
+                        route
+                        |> MetricsRoute.create
+                        |> Result.mapError InvalidRoute
+
+                    return { parts with MetricsRoute = Some route }
+                }
+                |> Result.mapError MetricsError
 
     let kafkaApplication = KafkaApplicationBuilder()
 
@@ -234,6 +251,18 @@ module KafkaApplication =
 
             logVerbose <| sprintf "Box:\n%A" application.Box
             logVerbose <| sprintf "Kafka:\n%A" application.ConsumerConfigurations
+
+            let instance =
+                application.Box
+                |> Box.instance
+                |> tee (ApplicationMetrics.enableInstance)
+
+            application.MetricsRoute
+            |> Option.map (fun route ->
+                ApplicationMetrics.showStateOnWebServerAsync instance route
+                |> Async.Start
+            )
+            |> ignore
 
             let markAsEnabled() =
                 // todo - produce `instance_started` event, id application_connection is available

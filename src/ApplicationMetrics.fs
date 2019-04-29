@@ -118,7 +118,11 @@ module ApplicationMetrics =
 
     // Showing state
 
-    let showStateOnWebServerAsync instance path =
+    let showStateOnWebServerAsync instance route =
+        let route =
+            route
+            |> MetricsRoute.value
+
         instance
         |> getFormattedMetricsForPrometheus
-        |> Metrics.WebServer.showStateAsync path
+        |> Metrics.WebServer.showStateAsync route

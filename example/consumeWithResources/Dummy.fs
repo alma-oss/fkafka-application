@@ -148,7 +148,7 @@ module Program =
             |> tee (incrementOutputCount)
             |> printfn " -> response: %A"
 
-        showStateOnWebServerAsync instance "/metrics"
+        showStateOnWebServerAsync instance (MetricsRoute.createOrFail "/metrics")
         |> Async.Start
 
         enableInstance instance
