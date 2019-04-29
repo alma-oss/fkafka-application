@@ -111,7 +111,7 @@ module Program =
             |> tee (incrementOutputCount outputStream)
             |> printfn " -> response<%A>: %A" outputStream
 
-        Log.setVerbosityLevel "q"
+        Log.setVerbosityLevel "vv"
 
         let logger = Logger.defaultLogger
 

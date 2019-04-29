@@ -134,6 +134,7 @@ type ConsumeHandlerError =
 
 type MetricsError =
     | InvalidRoute of InvalidMetricsRouteError
+    | MetricError of Metrics.MetricError
 
 type KafkaApplicationError =
     | KafkaApplicationError of string

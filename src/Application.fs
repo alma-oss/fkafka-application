@@ -67,6 +67,18 @@ module KafkaApplication =
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
 
                 // composed parts
+                let! markAsEnabled =
+                    Metrics.ServiceStatus.markAsEnabled instance Metrics.Audience.Sys
+                    |> Result.mapError (MetricError >> MetricsError)
+                let! markAsDisabled =
+                    Metrics.ServiceStatus.markAsDisabled instance Metrics.Audience.Sys
+                    |> Result.mapError (MetricError >> MetricsError)
+
+                let serviceStatus = {
+                    MarkAsEnabled = markAsEnabled
+                    MarkAsDisabled = markAsDisabled
+                }
+
                 let consumerConfigurations =
                     connections
                     |> Map.map (fun name connection -> {
@@ -74,7 +86,7 @@ module KafkaApplication =
                         GroupId = groupIds.TryFind name <?=> defaultGroupId
                         Logger = { Log = logger.Verbose "Kafka" } |> Some
                         Checker = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance connection.BrokerList |> Some
-                        ServiceStatus = None
+                        ServiceStatus = serviceStatus |> Some
                     })
 
                 let incrementInputCount =
@@ -260,7 +272,7 @@ module KafkaApplication =
                 |> consumeLastEvent
                 |>! lastEventHandler
 
-        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) markAsEnabled markAsDisabled consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
+        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
             let context =
                 consumeHandler.Connection
                 |> ConnectionName.value
@@ -269,14 +281,12 @@ module KafkaApplication =
             let mutable runConsuming = true
             while runConsuming do
                 try
-                    markAsEnabled()
                     runConsuming <- false
 
                     consumeHandler.Handler
                     |> consume consumeEvents consumeLastEvent consumeHandler.Configuration consumeHandler.IncrementInputCount
                 with
                 | :? Confluent.Kafka.KafkaException as e ->
-                    markAsDisabled()
                     logger.Error context <| sprintf "%A" e
 
                     match consumeHandler.OnError logger e.Message with
@@ -302,6 +312,7 @@ module KafkaApplication =
                 application.Box
                 |> Box.instance
                 |> tee (ApplicationMetrics.enableInstance)
+                // todo - produce `instance_started` event, id application_connection is available
 
             application.MetricsRoute
             |>! (fun route ->
@@ -309,15 +320,9 @@ module KafkaApplication =
                 |> Async.Start
             )
 
-            let markAsEnabled() =
-                // todo - produce `instance_started` event, id application_connection is available
-                log "... Mark as enabled | instance_started ..."
-            let markAsDisabled() =
-                log "... Mark as disabled ..."
-
             application.ConsumeHandlers
             |> List.rev
-            |> List.iter (consumeWithErrorHandling application.Logger markAsEnabled markAsDisabled consumeEvents consumeLastEvent)
+            |> List.iter (consumeWithErrorHandling application.Logger consumeEvents consumeLastEvent)
 
     let run (kafka_consume: ConsumerConfiguration -> 'Event seq) (KafkaApplication application) =
         let kafka_consumeLast = (fun _ -> None) // never return any last message - todo - remove and use directly from kafka

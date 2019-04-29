@@ -102,6 +102,7 @@ module ApplicationMetrics =
     let private createNoOutputKeys = CreateOutputEventKeys createNoKeys
 
     let enableInstance instance =
+        // todo - set state instead of increment it
         instance
         |> Status
         |> incrementState createNoInputKeys createNoOutputKeys

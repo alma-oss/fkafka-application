@@ -121,10 +121,16 @@ module Program =
 
         // service status
         let markAsEnabled () =
-            ServiceStatus.enable instance Audience.Sys |> ignore
+            ServiceStatus.markAsEnabled instance Audience.Sys
+            |> function
+                | Ok enable -> enable ()
+                | Error e -> failwithf "Error: %A" e
 
         let markAsDisabled () =
-            ServiceStatus.disable instance Audience.Sys |> ignore
+            ServiceStatus.markAsDisabled instance Audience.Sys
+            |> function
+                | Ok enable -> enable ()
+                | Error e -> failwithf "Error: %A" e
 
         let kafkaConfiguration = {
             Connection = {
