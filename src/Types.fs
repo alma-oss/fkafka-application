@@ -200,6 +200,7 @@ type ConfigurationParts<'Event> = {
     MetricsRoute: MetricsRoute option
     CreateInputEventKeys: CreateInputEventKeys<'Event> option
     CreateOutputEventKeys: CreateOutputEventKeys<'Event> option
+    KafkaChecker: Checker option
 }
 
 [<AutoOpen>]
@@ -218,6 +219,7 @@ module internal ConfigurationParts =
             MetricsRoute = None
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
+            KafkaChecker = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_>) success error name =

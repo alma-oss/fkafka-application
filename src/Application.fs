@@ -64,6 +64,7 @@ module KafkaApplication =
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
+                let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
 
                 // composed parts
                 let consumerConfigurations =
@@ -71,8 +72,8 @@ module KafkaApplication =
                     |> Map.map (fun name connection -> {
                         Connection = connection
                         GroupId = groupIds.TryFind name <?=> defaultGroupId
-                        Logger = Some { Log = logger.Verbose "Kafka" }
-                        Checker = None
+                        Logger = { Log = logger.Verbose "Kafka" } |> Some
+                        Checker = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance connection.BrokerList |> Some
                         ServiceStatus = None
                     })
 
@@ -158,6 +159,10 @@ module KafkaApplication =
         member __.GroupId(state, groupId): Configuration<'Event> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
 
+        [<CustomOperation("checkKafkaWith")>]
+        member __.CheckKafkaWith(state, checker): Configuration<'Event> =
+            state <!> fun parts -> { parts with KafkaChecker = Some checker }
+
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration): Configuration<'Event> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
@@ -210,6 +215,7 @@ module KafkaApplication =
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
+                        KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                     }
                 |> Configuration.result
 

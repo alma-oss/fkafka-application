@@ -34,7 +34,7 @@ module EnvironmentBuilder =
                         |> getEnvironmentValue parts BrokerList ConnectionConfigurationError.VariableNotFoundError
 
                     let! topic =
-                        connectionConfiguration.BrokerList
+                        connectionConfiguration.Topic
                         |> getEnvironmentValue parts StreamName ConnectionConfigurationError.VariableNotFoundError
 
                     let connectionConfiguration: ConnectionConfiguration = {

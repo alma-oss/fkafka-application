@@ -17,6 +17,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 
 | Function | Arguments | Description |
 | --- | --- | --- |
+| checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
 | consume | `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the default Kafka connection. |
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
@@ -27,8 +28,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |
-| useSpot | `Spot` | It is optional with default `Zone = common; Bucket = all` |
 | useLogger | `logger: Logger` | It is optional. |
+| useSpot | `Spot` | It is optional with default `Zone = common; Bucket = all` |
 
 ### Mandatory
 - Instance of the application is required.
@@ -38,6 +39,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 - Default error handler is set to `ShutDown` on error.
 - Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
 - Default `Spot` is `Zone = common; Bucket = all`.
+- Default `Checker` for kafka is default checker defined in Kafka library.
 
 ### Environment computed expression
 It allows you to parse .env files and get other environment variables to use in you application workflow.

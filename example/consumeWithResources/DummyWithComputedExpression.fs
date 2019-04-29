@@ -111,7 +111,7 @@ module Program =
             |> tee (incrementOutputCount outputStream)
             |> printfn " -> response<%A>: %A" outputStream
 
-        Log.setVerbosityLevel "vv"
+        Log.setVerbosityLevel "q"
 
         let logger = Logger.defaultLogger
 
@@ -140,6 +140,8 @@ module Program =
                     Topic = "INPUT_STREAM"
                 }
             })
+
+            checkKafkaWith DummyCheck.checker
 
             consumeLastFrom "application" (fun parts lastMessage ->
                 //let outputStream =
