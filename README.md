@@ -24,11 +24,10 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
 | onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
+| showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
-| **NOT_IMPLEMENTED_YET** useVerbosity | `verbosity level: string` | It will set verbosity to the logger. |
-| showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 
 ### Mandatory
 - Instance of the application is required.
@@ -45,14 +44,14 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 
 | Function | Arguments | --- |
 | --- | --- | --- |
+| check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
+| ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
-| check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
-| **NOT_IMPLEMENTED_YET** verbosity | `variable name: string` | It will parse and set verbosity to the logger. |
 
 ## Runtime parts
 - TODO ...

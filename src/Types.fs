@@ -238,6 +238,12 @@ module internal OptionOperators =
         | Some value -> Ok value
         | None -> sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError |> Result.Error
 
+    /// Map action with side-effect and ignore the unit option result
+    let (|>!) (opt: 'a option) (action: 'a -> unit) =
+        opt
+        |> Option.map action
+        |> ignore
+
 module internal Map =
     /// Merge new values with the current values (replacing already defined values).
     let merge currentValues newValues =

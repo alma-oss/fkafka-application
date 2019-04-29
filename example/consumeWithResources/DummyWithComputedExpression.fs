@@ -107,7 +107,7 @@ module Program =
             //|> tee (incrementOutputCount)
             |> printfn " -> response<%A>: %A" outputStream
 
-        Log.setVerbosityLevel "vv"  // todo add function to Environment (and to ApplicationBuilder)
+        Log.setVerbosityLevel "vv"
 
         let logger = Logger.defaultLogger
 
@@ -118,6 +118,8 @@ module Program =
 
             merge (environment {
                 file ["./.env"; "./.dist.env"]
+
+                ifSetDo "VERBOSITY" Log.setVerbosityLevel
 
                 instance "INSTANCE"
                 //groupId "GROUP_ID"

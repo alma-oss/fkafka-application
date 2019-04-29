@@ -135,5 +135,14 @@ module EnvironmentBuilder =
         member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
             connectTo state (ConnectionName name) connectionConfiguration
 
+        [<CustomOperation("ifSetDo")>]
+        member __.IfSetDo(state, name, action): Configuration<'Event> =
+            state <!> fun parts ->
+                name
+                |> parts.Environment.TryFind
+                |>! action
+
+                parts
+
     let environmentWithLogger logger = EnvironmentBuilder(logger)
     let environment = EnvironmentBuilder(defaultParts.Logger)

@@ -211,8 +211,7 @@ module KafkaApplication =
             | LastEvent lastEventHandler ->
                 configuration
                 |> consumeLastEvent
-                |> Option.map lastEventHandler
-                |> ignore
+                |>! lastEventHandler
 
         let private consumeWithErrorHandling (logger: KafkaApplication.Logger) markAsEnabled markAsDisabled consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
             let context =
@@ -258,11 +257,10 @@ module KafkaApplication =
                 |> tee (ApplicationMetrics.enableInstance)
 
             application.MetricsRoute
-            |> Option.map (fun route ->
+            |>! (fun route ->
                 ApplicationMetrics.showStateOnWebServerAsync instance route
                 |> Async.Start
             )
-            |> ignore
 
             let markAsEnabled() =
                 // todo - produce `instance_started` event, id application_connection is available
