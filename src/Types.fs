@@ -109,6 +109,11 @@ type InstanceError =
     | InvalidFormatError of string
 
 [<RequireQualifiedAccess>]
+type SpotError =
+    | VariableNotFoundError of string
+    | InvalidFormatError of string
+
+[<RequireQualifiedAccess>]
 type GroupIdError =
     | VariableNotFoundError of string
 
@@ -125,6 +130,7 @@ type MetricsError =
 type KafkaApplicationError =
     | KafkaApplicationError of string
     | InstanceError of InstanceError
+    | SpotError of SpotError
     | GroupIdError of GroupIdError
     | ConnectionConfigurationError of ConnectionConfigurationError
     | EnvironmentError of EnvironmentError
@@ -175,6 +181,7 @@ type ConfigurationParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Instance: Instance option
+    Spot: Spot option
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
     Connections: Connections
@@ -190,6 +197,7 @@ module internal ConfigurationParts =
             Logger = Logger.defaultLogger
             Environment = Map.empty
             Instance = None
+            Spot = None
             GroupId = None
             GroupIds = Map.empty
             Connections = Connections.empty

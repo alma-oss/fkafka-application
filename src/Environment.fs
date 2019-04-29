@@ -115,6 +115,26 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError InstanceError
 
+        [<CustomOperation("spot")>]
+        member __.Spot(state, spotVariableName): Configuration<'Event> =
+            state >>= fun parts ->
+                result {
+                    let! spotString =
+                        spotVariableName
+                        |> getEnvironmentValue parts id SpotError.VariableNotFoundError
+
+                    return! Error (SpotError.InvalidFormatError (sprintf "Parsing for Spot \"%s\" is not implemented yet." spotString))
+
+                    //let! spot =
+                    //    spotString
+                    //    |> Spot.parse "-"
+                    //    |> Result.ofOption (sprintf "Value \"%s\" for Spot is not in correct format (expecting values separated by \"-\")." spotString)
+                    //    |> Result.mapError SpotError.InvalidFormatError
+
+                    //return { parts with Spot = Some spot }
+                }
+                |> Result.mapError SpotError
+
         [<CustomOperation("groupId")>]
         member __.GroupId(state, groupIdVariableName): Configuration<'Event> =
             state >>= fun parts ->

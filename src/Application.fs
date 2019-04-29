@@ -53,11 +53,8 @@ module KafkaApplication =
                     | Some errorHandler -> errorHandler
                     | _ -> (fun _ _ -> Shutdown)
 
-                let defaultSpot = {
-                    Zone = Zone "common"
-                    Bucket = Bucket "all"
-                }
-                let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version defaultSpot.Zone defaultSpot.Bucket
+                let spot = configurationParts.Spot <?=> { Zone = Zone "common"; Bucket = Bucket "all" }
+                let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version spot.Zone spot.Bucket
 
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
@@ -129,6 +126,10 @@ module KafkaApplication =
         member __.Instance(state, instance): Configuration<'Event> =
             state <!> fun parts -> { parts with Instance = Some instance }
 
+        [<CustomOperation("useSpot")>]
+        member __.Spot(state, spot): Configuration<'Event> =
+            state <!> fun parts -> { parts with Spot = Some spot }
+
         [<CustomOperation("useGroupId")>]
         member __.GroupId(state, groupId): Configuration<'Event> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
@@ -176,6 +177,7 @@ module KafkaApplication =
                         Logger = currentParts.Logger
                         Environment = Environment.update currentParts.Environment newParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
+                        Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
