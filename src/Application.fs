@@ -68,10 +68,13 @@ module KafkaApplication =
                 // composed parts
                 let consumerConfigurations =
                     connections
-                    |> Map.map (fun name connection ->
-                        groupIds.TryFind name <?=> defaultGroupId
-                        |> Kafka.ConsumerConfiguration.createWithConnection connection
-                    )
+                    |> Map.map (fun name connection -> {
+                        Connection = connection
+                        GroupId = groupIds.TryFind name <?=> defaultGroupId
+                        Logger = Some { Log = logger.Verbose "Kafka" }
+                        Checker = None
+                        ServiceStatus = None
+                    })
 
                 let incrementInputCount =
                     configurationParts.CreateInputEventKeys

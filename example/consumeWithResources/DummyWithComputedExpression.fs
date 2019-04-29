@@ -15,6 +15,11 @@ module DummyKafka =
             | Some { MarkAsEnabled = enable; MarkAsDisabled = disable } -> (enable, disable)
             | _ -> (ignore, ignore)
 
+        let log msg =
+            match configuration.Logger with
+            | Some { Log = log } -> log msg
+            | _ -> ()
+
         let (checkKafka, checkTopic) =
             match configuration.Checker with
             | Some checker ->
@@ -23,11 +28,11 @@ module DummyKafka =
                 (fun () -> checker.CheckCluster handle),
                 (fun () -> checker.CheckTopic configuration.Connection.Topic handle)
             | _ ->
-                printfn "Without checkers ..."
+                log "Without checkers ..."
                 (fun _ -> true), (fun _ -> true)
 
         seq {
-            printfn "Start consuming ..."
+            log "Start consuming ..."
             let mutable i = 0
             let mutable waitTimeModifier = 1
 
@@ -39,7 +44,7 @@ module DummyKafka =
                     if waitTimeModifier <> 1 then
                         waitTimeModifier <- 1
 
-                    printfn "\n - reading from %A<%A> ..." configuration.Connection.Topic configuration.Connection.BrokerList
+                    log <| sprintf "\n - reading from %A<%A> ..." configuration.Connection.Topic configuration.Connection.BrokerList
                     System.Threading.Thread.Sleep(1000)
 
                     if Dice.roll() = 1 && Dice.roll() = 1 && Dice.roll() = 1 then
@@ -50,8 +55,8 @@ module DummyKafka =
                 | _ ->
                     markAsDisabled()
 
-                    if waitTimeModifier = 1 then printfn "\n - reading is not available - resource is down"
-                    printfn " -> waiting %s" (String.replicate waitTimeModifier "...")
+                    if waitTimeModifier = 1 then log <| sprintf "\n - reading is not available - resource is down"
+                    log <| sprintf " -> waiting %s" (String.replicate waitTimeModifier "...")
                     System.Threading.Thread.Sleep(3000 * waitTimeModifier)
                     waitTimeModifier <- waitTimeModifier * 2
         }
@@ -68,7 +73,6 @@ module Program =
     open Logging
     open Kafka
     open KafkaApplication
-    open ApplicationMetrics
 
     let tee f a =
         f a
