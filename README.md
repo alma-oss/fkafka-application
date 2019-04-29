@@ -12,7 +12,52 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
 - it should be http://development-nugetserver-common-stable.service.devel1-services.consul:{PORT} (_make sure you have a correct port, since it changes with deployment_)
 - see http://consul-1.infra.pprod/ui/devel1-services/services/development-nugetServer-common-stable for detailed information (and port)
 
-## Use
+## Custom Kafka Application functions
+_NOTE: All functions has the first argument for the `state: ConfigurationParts<'Event>`, but this is current state of the application and it is passed implicitly in the background by computed expression._
+
+| Function | Arguments | Description |
+| --- | --- | --- |
+| consume | `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the default Kafka connection. |
+| consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
+| consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
+| consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
+| merge | `configuration: ConfigurationParts<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
+| onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
+| onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
+| useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
+| useInstance | `Instance` | |
+| useLogger | `logger: Logger` | It is optional. |
+| **NOT_IMPLEMENTED_YET** useVerbosity | `verbosity level: string` | It will set verbosity to the logger. |
+| **NOT_IMPLEMENTED_YET** showMetricsOn | `route: string` | It will asynchronously run a web server and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
+
+### Mandatory
+- Instance of the application is required.
+- You have to define at least one consume handler and its connection.
+
+### Defaults
+- Default error handler is set to `ShutDown` on error.
+- Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
+
+### Environment computed expression
+It allows you to parse .env files and get other environment variables to use in you application workflow.
+
+Environment computed expression returns `ConfigurationParts<'Event>` so you can `merge` it to the Kafka Application.
+
+| Function | Arguments | --- |
+| --- | --- | --- |
+| connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
+| connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
+| file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
+| groupId | `variable name: string` | It will parse GroupId from the environment variable. |
+| instance | `variable name: string` | It will parse Instance from the environment variable. |
+| require | `variables: string list` | It will check whether all required variables are already defined. |
+| check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
+| **NOT_IMPLEMENTED_YET** verbosity | `variable name: string` | It will parse and set verbosity to the logger. |
+
+## Runtime parts
+- TODO ...
+
+## Examples
 
 ### Connect to kafka stream
 This is the most elemental reason for this application framework, so there are simple ways for simple cases.
@@ -143,7 +188,8 @@ let main argv =
 ```
 
 #### Tips, Notes, ...
-##### GroupId
+
+##### GroupId
 You can use different group id for every connection, but you have to explicitly define it, otherwise `GroupId.Random` will be used.
 If you just define `useGroupId "foo"`, it will be shared for all connections as default.
 You can define specific group id for a connection by

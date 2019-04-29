@@ -128,33 +128,40 @@ module Program =
                     BrokerList = "BROKER_LIST"
                     Topic = "INPUT_STREAM"
                 }
+
+                connectTo "application" {
+                    BrokerList = "BROKER_LIST"
+                    Topic = "INPUT_STREAM"
+                }
             })
 
-            // todo - how to handle multiple consumations?
-            //consumeLastFrom "application" (fun parts event ->
-            //    event
-            //    |> Option.map (fun lastMessage ->
-            //        lastMessage.Value
-            //        |> RawEvent.parse
-            //        |> fun lastEvent -> lastEvent.CorrelationId
-            //    )
-            //    |> Option.map (fun lastAggregatedCorrelationId ->
-            //        let outputStream =
-            //            parts.Environment.["OUTPUT_STREAM"]
-            //            |> StreamName
-            //            |> OutputStreamName
-            //
-            //        let interactionConfiguration = parts.Connections.["interaction"]
-            //
-            //        Kafka.Consumer.consume interactionConfiguration
-            //        |> Seq.map (
-            //            tee incrementConsumedEvents
-            //            >> tee fillStatePerEvent
-            //        )
-            //        |> Seq.takeWhile (hasLastAggregatedCorrelationId >> not)
-            //        |> Seq.iter ignore
-            //    )
-            //)
+            consumeLastFrom "application" (fun parts lastMessage ->
+                //let outputStream =
+                //    parts.Environment.["OUTPUT_STREAM"]
+                //    |> StreamName
+                //    |> OutputStreamName
+
+                //let interactionConfiguration = parts.Connections.["interaction"]    // todo add some method for this
+
+                //Kafka.Consumer.consume interactionConfiguration id
+                //|> Seq.map (
+                //    tee incrementConsumedEvents
+                //    >> tee fillStatePerEvent
+                //)
+                //|> Seq.takeWhile (hasLastAggregatedCorrelationId >> not)
+                //|> Seq.iter ignore
+
+                parts.Logger.Log "Application Last Message" <| sprintf "%i" lastMessage
+            )
+
+            onConsumeErrorFor "application" (fun _ _ -> Continue)
+
+            consumeFrom "application" (fun parts events ->
+                parts.Logger.Log "PreConsume" "First two events: "
+                events
+                |> Seq.take 2
+                |> Seq.iter ((sprintf "- %A") >> parts.Logger.Log "PreConsume")
+            )
 
             //connect {
             //    BrokerList = BrokerList "127.0.0.1:9092"
@@ -179,7 +186,8 @@ module Program =
 
                 Reboot
             )
+
+            // todo - add more functions - for checkers, ...
         }
-        //|> ignore
         |> run DummyKafka.consume
         ()
