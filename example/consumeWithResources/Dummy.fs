@@ -79,13 +79,13 @@ module Program =
             if event % 2 = 0 then "even" else "odd"
             |> sprintf "event_%s"
 
-        [
+        SimpleDataSetKeys [
             ("event", eventType)
             ("input_stream", inputStream)
         ]
 
     let createOutputKeys (OutputStreamName (StreamName outputStream)) _ =
-        [
+        SimpleDataSetKeys [
             ("event", "doubled")
             ("output_stream", outputStream)
         ]
@@ -116,8 +116,8 @@ module Program =
         //
 
         // metrics
-        let incrementInputCount = incrementTotalInputEventCount createInputKeys instance (InputStreamName inputStream)
-        let incrementOutputCount = incrementTotalOutputEventCount createOutputKeys instance (OutputStreamName (Kafka.StreamName outputStream))
+        let incrementInputCount = incrementTotalInputEventCount (CreateInputEventKeys createInputKeys) instance (InputStreamName inputStream)
+        let incrementOutputCount = incrementTotalOutputEventCount (CreateOutputEventKeys createOutputKeys) instance (OutputStreamName (Kafka.StreamName outputStream))
 
         // service status
         let markAsEnabled () =

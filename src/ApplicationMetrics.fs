@@ -9,8 +9,9 @@ module ApplicationMetrics =
     module private Count =
         let value (Count count) = count
 
-    type InputStreamName = InputStreamName of StreamName
-    type OutputStreamName = OutputStreamName of StreamName
+
+    module private SimpleDataSetKeys =
+        let value (SimpleDataSetKeys dataSetKeys) = dataSetKeys
 
     type private ApplicationMetric<'InputEvent, 'OutputEvent> =
         | Status of Instance
@@ -32,12 +33,14 @@ module ApplicationMetrics =
         let private createKeyForStatus instance =
             createKey instance []
 
-        let private createKeyForInputEvent createKeys instance inputStream event =
+        let private createKeyForInputEvent (CreateInputEventKeys createKeys) instance inputStream event =
             createKeys inputStream event
+            |> SimpleDataSetKeys.value
             |> createKey instance
 
-        let private createKeyForOutputEvent createKeys instance outputStream event =
+        let private createKeyForOutputEvent (CreateOutputEventKeys createKeys) instance outputStream event =
             createKeys outputStream event
+            |> SimpleDataSetKeys.value
             |> createKey instance
 
         let private metricStatus (Context context) = context |> sprintf "%s_status" |> MetricName.createOrFail
@@ -94,12 +97,14 @@ module ApplicationMetrics =
 
     // Instance status
 
-    let private createNoKeys _ _ = []
+    let private createNoKeys _ _ = SimpleDataSetKeys []
+    let private createNoInputKeys = CreateInputEventKeys createNoKeys
+    let private createNoOutputKeys = CreateOutputEventKeys createNoKeys
 
     let enableInstance instance =
         instance
         |> Status
-        |> incrementState createNoKeys createNoKeys
+        |> incrementState createNoInputKeys createNoOutputKeys
         |> ignore
 
     // Changing state
@@ -107,13 +112,13 @@ module ApplicationMetrics =
     let incrementTotalInputEventCount createKeys instance inputStream event =
         (instance, inputStream, event)
         |> InputEventsTotal
-        |> incrementState createKeys createNoKeys
+        |> incrementState createKeys createNoOutputKeys
         |> ignore
 
     let incrementTotalOutputEventCount createKeys instance outputStream event =
         (instance, outputStream, event)
         |> OutputEventsTotal
-        |> incrementState createNoKeys createKeys
+        |> incrementState createNoInputKeys createKeys
         |> ignore
 
     // Showing state

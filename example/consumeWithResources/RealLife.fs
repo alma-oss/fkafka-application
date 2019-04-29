@@ -14,13 +14,13 @@ module Program =
         a
 
     let createInputKeys (InputStreamName (StreamName inputStream)) (event: RawEvent) =
-        [
+        SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
             ("input_stream", inputStream)
         ]
 
     let createOutputKeys (OutputStreamName (StreamName outputStream)) (event: RawEvent) =
-        [
+        SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
             ("output_stream", outputStream)
         ]
@@ -51,8 +51,8 @@ module Program =
         //
 
         // metrics
-        let incrementInputCount = incrementTotalInputEventCount createInputKeys instance (InputStreamName inputStream)
-        let incrementOutputCount = incrementTotalOutputEventCount createOutputKeys instance (OutputStreamName (Kafka.StreamName outputStream))
+        let incrementInputCount = incrementTotalInputEventCount (CreateInputEventKeys createInputKeys) instance (InputStreamName inputStream)
+        let incrementOutputCount = incrementTotalOutputEventCount (CreateOutputEventKeys createOutputKeys) instance (OutputStreamName (Kafka.StreamName outputStream))
 
         // service status
         let markAsEnabled () =

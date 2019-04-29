@@ -79,13 +79,13 @@ module Program =
             if event % 2 = 0 then "even" else "odd"
             |> sprintf "event_%s"
 
-        [
+        SimpleDataSetKeys [
             ("event", eventType)
             ("input_stream", inputStream)
         ]
 
     let createOutputKeys (OutputStreamName (StreamName outputStream)) _ =
-        [
+        SimpleDataSetKeys [
             ("event", "doubled")
             ("output_stream", outputStream)
         ]
@@ -102,9 +102,9 @@ module Program =
         // run simple app
         //
 
-        let produce (OutputStreamName outputStream) event =
+        let produce incrementOutputCount outputStream event =
             event
-            //|> tee (incrementOutputCount)
+            |> tee (incrementOutputCount outputStream)
             |> printfn " -> response<%A>: %A" outputStream
 
         Log.setVerbosityLevel "vv"
@@ -165,10 +165,8 @@ module Program =
                 |> Seq.iter ((sprintf "- %A") >> parts.Logger.Log "PreConsume")
             )
 
-            //connect {
-            //    BrokerList = BrokerList "127.0.0.1:9092"
-            //    Topic = StreamName "my-input-stream"
-            //}
+            showInputEventsWith createInputKeys
+            showOutputEventsWith createOutputKeys
 
             consume (fun parts events ->
                 let outputStream =
@@ -179,7 +177,7 @@ module Program =
                 events
                 //|> Seq.map (tee incrementInputCount)
                 //|> Seq.take 20
-                |> Seq.iter (double >> produce outputStream)
+                |> Seq.iter (double >> produce parts.IncrementOutputEventCount outputStream)
             )
 
             onConsumeError (fun logger _ ->

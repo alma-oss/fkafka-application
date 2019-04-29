@@ -17,11 +17,11 @@ module KafkaApplication =
 
     [<AutoOpen>]
     module private KafkaApplicationBuilder =
-
         let private composeRuntimeConsumeHandlersForConnections
             consumerConfigurations
             runtimeParts
             (getErrorHandler: ConnectionName -> ErrorHandler)
+            incrementInputCount
             ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'Event>) =
 
             match consumerConfigurations |> Map.tryFind connection with
@@ -31,6 +31,10 @@ module KafkaApplication =
                     Configuration = configuration
                     Handler = handler |> ConsumeHandler.toRuntime runtimeParts
                     OnError = connection |> getErrorHandler
+                    IncrementInputCount =
+                        match incrementInputCount with
+                        | Some incrementInputCount -> incrementInputCount (InputStreamName configuration.Connection.Topic)
+                        | None -> ignore
                 }
             | _ ->
                 MissingConfiguration connection
@@ -60,7 +64,6 @@ module KafkaApplication =
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
-                let metricsRoute = configurationParts.MetricsRoute
 
                 // composed parts
                 let consumerConfigurations =
@@ -70,25 +73,43 @@ module KafkaApplication =
                         |> Kafka.ConsumerConfiguration.createWithConnection connection
                     )
 
-                let runtimeParts: ConsumeRuntimeParts = {
+                let incrementInputCount =
+                    configurationParts.CreateInputEventKeys
+                    |> Option.map (fun createInputKeys ->
+                        ApplicationMetrics.incrementTotalInputEventCount createInputKeys instance
+                    )
+                let incrementOutputCount =
+                    match configurationParts.CreateOutputEventKeys with
+                    | Some createOutputKeys -> ApplicationMetrics.incrementTotalOutputEventCount createOutputKeys instance
+                    | _ -> fun _ -> ignore
+
+                let runtimeParts: ConsumeRuntimeParts<'Event> = {
                     Logger = logger
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = consumerConfigurations
+                    IncrementOutputEventCount = incrementOutputCount
                 }
+
+                let composeRuntimeHandler =
+                    composeRuntimeConsumeHandlersForConnections
+                        consumerConfigurations
+                        runtimeParts
+                        getErrorHandler
+                        incrementInputCount
 
                 let! runtimeConsumeHandlers =
                     consumeHandlers
-                    |> List.map (composeRuntimeConsumeHandlersForConnections consumerConfigurations runtimeParts getErrorHandler)
+                    |> List.map composeRuntimeHandler
                     |> Result.sequence
 
                 return {
-                    Logger = configurationParts.Logger
+                    Logger = logger
                     Environment = configurationParts.Environment
                     Box = box
                     ConsumerConfigurations = consumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
-                    MetricsRoute = metricsRoute
+                    MetricsRoute = configurationParts.MetricsRoute
                 }
             }
             |> KafkaApplication
@@ -184,6 +205,8 @@ module KafkaApplication =
                         ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
+                        CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
+                        CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                     }
                 |> Configuration.result
 
@@ -201,14 +224,27 @@ module KafkaApplication =
                 }
                 |> Result.mapError MetricsError
 
+        [<CustomOperation("showInputEventsWith")>]
+        member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'Event> =
+            state <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
+
+        [<CustomOperation("showOutputEventsWith")>]
+        member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'Event> =
+            state <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
+
     let kafkaApplication = KafkaApplicationBuilder()
 
     module private KafkaApplicationRunner =
 
-        let private consume consumeEvents consumeLastEvent configuration = function
+        let private consume
+            (consumeEvents: ConsumerConfiguration -> 'Event seq)
+            (consumeLastEvent: ConsumerConfiguration -> 'Event option)
+            configuration
+            incrementInputEventCount = function
             | Events eventsHandler ->
                 configuration
                 |> consumeEvents
+                |> Seq.map (tee incrementInputEventCount)
                 |> eventsHandler
             | LastEvent lastEventHandler ->
                 configuration
@@ -228,7 +264,7 @@ module KafkaApplication =
                     runConsuming <- false
 
                     consumeHandler.Handler
-                    |> consume consumeEvents consumeLastEvent consumeHandler.Configuration
+                    |> consume consumeEvents consumeLastEvent consumeHandler.Configuration consumeHandler.IncrementInputCount
                 with
                 | :? Confluent.Kafka.KafkaException as e ->
                     markAsDisabled()

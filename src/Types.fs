@@ -61,6 +61,14 @@ module MetricsRoute =
 
     let value (MetricsRoute route) = route
 
+type InputStreamName = InputStreamName of StreamName
+type OutputStreamName = OutputStreamName of StreamName
+
+type SimpleDataSetKeys = SimpleDataSetKeys of (string * string) list
+
+type CreateInputEventKeys<'InputEvent> = CreateInputEventKeys of (InputStreamName -> 'InputEvent -> SimpleDataSetKeys)
+type CreateOutputEventKeys<'OutputEvent> = CreateOutputEventKeys of (OutputStreamName -> 'OutputEvent -> SimpleDataSetKeys)
+
 //
 // Environment
 //
@@ -141,16 +149,17 @@ type KafkaApplicationError =
 // Consume handlers
 //
 
-type ConsumeRuntimeParts = {
+type ConsumeRuntimeParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
+    IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
 }
 
 type ConsumeHandler<'Event> =
-    | Events of (ConsumeRuntimeParts -> 'Event seq -> unit)
-    | LastEvent of (ConsumeRuntimeParts -> 'Event -> unit)
+    | Events of (ConsumeRuntimeParts<'Event> -> 'Event seq -> unit)
+    | LastEvent of (ConsumeRuntimeParts<'Event> -> 'Event -> unit)
 
 type RuntimeConsumeHandler<'Event> =
     | Events of ('Event seq -> unit)
@@ -171,6 +180,7 @@ type RuntimeConsumeHandlerForConnection<'Event> = {
     Configuration: ConsumerConfiguration
     OnError: ErrorHandler
     Handler: RuntimeConsumeHandler<'Event>
+    IncrementInputCount: 'Event -> unit
 }
 
 //
@@ -188,6 +198,8 @@ type ConfigurationParts<'Event> = {
     ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
     MetricsRoute: MetricsRoute option
+    CreateInputEventKeys: CreateInputEventKeys<'Event> option
+    CreateOutputEventKeys: CreateOutputEventKeys<'Event> option
 }
 
 [<AutoOpen>]
@@ -204,6 +216,8 @@ module internal ConfigurationParts =
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
             MetricsRoute = None
+            CreateInputEventKeys = None
+            CreateOutputEventKeys = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_>) success error name =
