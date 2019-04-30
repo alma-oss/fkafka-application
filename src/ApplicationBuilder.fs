@@ -5,8 +5,7 @@ module ApplicationBuilder =
     open ServiceIdentification
     open OptionOperators
 
-    [<AutoOpen>]
-    module private KafkaApplicationBuilder =
+    module internal KafkaApplicationBuilder =
         let private assertNotEmpty error collection =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
             else Ok collection
@@ -183,7 +182,7 @@ module ApplicationBuilder =
             }
             |> KafkaApplication
 
-    type KafkaApplicationBuilder internal (createProducer, produceMessage) =
+    type KafkaApplicationBuilder<'Event, 'a> internal (buildApplication: Configuration<'Event> -> 'a) =
         let debugConfiguration (parts: ConfigurationParts<_>) =
             parts
             |> sprintf "%A"
@@ -205,8 +204,8 @@ module ApplicationBuilder =
         member __.Bind(state, f): Configuration<'Event> =
             state >>= f
 
-        member __.Run(state): KafkaApplication<'Evnet> =
-            buildApplication createProducer produceMessage state
+        member __.Run(state: Configuration<'Event>) =
+            buildApplication state
 
         [<CustomOperation("useLogger")>]
         member __.Logger(state, logger: KafkaApplication.Logger): Configuration<'Event> =

@@ -6,7 +6,13 @@ module KafkaApplication =
     open ApplicationBuilder
     open ApplicationRunner
 
-    let kafkaApplication = KafkaApplicationBuilder(Producer.createProducer, Producer.produceMessage)
+    let kafkaApplication<'Event> =
+        let buildApplication: Configuration<'Event> -> KafkaApplication<'Event> = KafkaApplicationBuilder.buildApplication Producer.createProducer Producer.produceMessage
+        KafkaApplicationBuilder(buildApplication)
+
+    let partialKafkaApplication<'Event> =
+        let id: Configuration<'Event> -> Configuration<'Event> = id
+        KafkaApplicationBuilder(id)
 
     let run (KafkaApplication application) =
         let consume configuration =

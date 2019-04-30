@@ -64,13 +64,15 @@ module Program =
                 }
             })
 
-            produceTo "outputStream" // toDto
+            merge (partialKafkaApplication {
+                produceTo "outputStream" // toDto
 
-            consume (fun _ events ->
-                events
-                |> Seq.take 1000
-                |> Seq.iter ignore
-            )
+                consume (fun _ events ->
+                    events
+                    |> Seq.take 1000
+                    |> Seq.iter ignore
+                )
+            })
 
             consumeFrom "contracts" (fun app contractEvents ->
                 use producer = app.Producers.["outputStream"]
