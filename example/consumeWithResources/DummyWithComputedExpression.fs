@@ -163,7 +163,7 @@ module Program =
                 //    |> StreamName
                 //    |> OutputStreamName
 
-                //let interactionConfiguration = parts.Connections.["interaction"]    // todo add some method for this
+                //let interactionConfiguration = parts.Connections.["interaction"]
 
                 //Kafka.Consumer.consume interactionConfiguration id
                 //|> Seq.map (
@@ -188,9 +188,7 @@ module Program =
             consume (fun parts events ->
                 // todo - produce instance_started event
                 // todo - event parsers?
-
-                // todo - somehow add `produce` function to parts
-                // - it should have resource checking for target kafka+topic
+                // todo - `produce` should have resource checking for target kafka+topic
 
                 let outputStream =
                     parts.Environment.["OUTPUT_STREAM"]
@@ -213,5 +211,5 @@ module Program =
             showInputEventsWith createInputKeys
             showOutputEventsWith createOutputKeys
         }
-        |> run DummyKafka.consume
+        |> _runDummy DummyKafka.consume (fun _ -> None)
         ()

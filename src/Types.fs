@@ -83,9 +83,11 @@ type EnvironmentConnectionConfiguration = {
 //
 
 type ConnectionName = ConnectionName of string
+type RuntimeConnectionName = string
 
 module ConnectionName =
     let value (ConnectionName name) = name
+    let runtimeName (ConnectionName name): RuntimeConnectionName = name
 
 type Connections = Map<ConnectionName, ConnectionConfiguration>
 
@@ -129,7 +131,12 @@ type GroupIdError =
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
 
+[<RequireQualifiedAccess>]
 type ConsumeHandlerError =
+    | MissingConfiguration of ConnectionName
+
+[<RequireQualifiedAccess>]
+type ProduceError =
     | MissingConfiguration of ConnectionName
 
 type MetricsError =
@@ -144,6 +151,7 @@ type KafkaApplicationError =
     | ConnectionConfigurationError of ConnectionConfigurationError
     | EnvironmentError of EnvironmentError
     | ConsumeHandlerError of ConsumeHandlerError
+    | ProduceError of ProduceError
     | MetricsError of MetricsError
 
 //
@@ -169,10 +177,10 @@ type ConsumeRuntimeParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Connections: Connections
-    ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
-    Producers: Map<ConnectionName, KafkaProducer>
-    Produces: Map<ConnectionName, ProduceEvent<'Event>>
+    Producers: Map<RuntimeConnectionName, KafkaProducer>
+    Produces: Map<RuntimeConnectionName, ProduceEvent<'Event>>
 }
 
 type ConsumeHandler<'Event> =
@@ -194,7 +202,7 @@ type ConsumeHandlerForConnection<'Event> = {
 }
 
 type RuntimeConsumeHandlerForConnection<'Event> = {
-    Connection: ConnectionName
+    Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
     OnError: ErrorHandler
     Handler: RuntimeConsumeHandler<'Event>
@@ -215,7 +223,7 @@ type ConfigurationParts<'Event> = {
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
-    ProducerSerializers: Map<ConnectionName, ProducerSerializer<'Event>>
+    ProduceTo: ConnectionName list
     MetricsRoute: MetricsRoute option
     CreateInputEventKeys: CreateInputEventKeys<'Event> option
     CreateOutputEventKeys: CreateOutputEventKeys<'Event> option
@@ -235,7 +243,7 @@ module internal ConfigurationParts =
             Connections = Connections.empty
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
-            ProducerSerializers = Map.empty
+            ProduceTo = []
             MetricsRoute = None
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
@@ -258,7 +266,7 @@ type KafkaApplicationParts<'Event> = {
     Logger: Logger
     Environment: Map<string, string>
     Box: Box
-    ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
     MetricsRoute: MetricsRoute option
 }

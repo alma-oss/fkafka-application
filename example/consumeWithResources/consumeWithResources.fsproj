@@ -15,6 +15,7 @@
     <Compile Include="Dummy.fs" />
     <Compile Include="DummyWithComputedExpression.fs" />
     <Compile Include="RealLife.fs" />
+    <Compile Include="RealLifeWithComputedExpression.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

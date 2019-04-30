@@ -13,6 +13,7 @@
     <Compile Include="src/Resource.fs" />
     <Compile Include="src/ApplicationMetrics.fs" />
     <Compile Include="src/Environment.fs" />
+    <Compile Include="src/Serializer.fs" />
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 
@@ -26,6 +27,10 @@
     <ProjectReference Include="../fmetrics/Metrics.fsproj">
       <Name>Metrics.fsproj</Name>
     </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 
   <ItemGroup>
