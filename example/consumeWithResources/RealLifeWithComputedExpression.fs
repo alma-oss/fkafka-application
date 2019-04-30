@@ -57,6 +57,11 @@ module Program =
                     BrokerList = "BROKER_LIST"
                     Topic = "OUTPUT_STREAM"
                 }
+
+                supervision {
+                    BrokerList = "BROKER_LIST"
+                    Topic = "SUPERVISION_STREAM"
+                }
             })
 
             produceTo "outputStream" // toDto

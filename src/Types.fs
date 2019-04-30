@@ -93,6 +93,7 @@ type Connections = Map<ConnectionName, ConnectionConfiguration>
 
 module Connections =
     let Default = ConnectionName "__default"
+    let Supervision = ConnectionName "__supervision"
 
     let empty: Connections =
         Map.empty
@@ -269,6 +270,7 @@ type KafkaApplicationParts<'Event> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
     MetricsRoute: MetricsRoute option
+    SupervisionConnection: ConnectionConfiguration option
 }
 
 type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>

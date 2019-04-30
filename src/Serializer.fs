@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module Serializer =
+module internal Serializer =
     module private Json =
         open Newtonsoft.Json
 

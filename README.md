@@ -31,6 +31,9 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = common; Bucket = all` |
+| connect | `...` | _TODO_ |
+| connectTo | `...` | _TODO_ |
+| useSupervision | `...` | _TODO_ |
 
 ### Mandatory
 - Instance of the application is required.
@@ -49,6 +52,7 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 
 | Function | Arguments | --- |
 | --- | --- | --- |
+| **PARSING_IS_NOT_IMPLEMENTED_YET** spot | `variable name: string` | It will parse Spot from the environment variable. |
 | check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
@@ -57,7 +61,7 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
-| **PARSING_IS_NOT_IMPLEMENTED_YET** spot | `variable name: string` | It will parse Spot from the environment variable. |
+| supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be use to produce a supervision events (like `instance_started`) |
 
 ## Runtime parts
 - TODO ...

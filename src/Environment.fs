@@ -147,6 +147,10 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError GroupIdError
 
+        [<CustomOperation("supervision")>]
+        member __.Supervision(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+            connectTo state Connections.Supervision connectionConfiguration
+
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
             connectTo state Connections.Default connectionConfiguration

@@ -10,10 +10,11 @@
 
   <ItemGroup>
     <Compile Include="src/Types.fs" />
+    <Compile Include="src/Serializer.fs" />
     <Compile Include="src/Resource.fs" />
     <Compile Include="src/ApplicationMetrics.fs" />
+    <Compile Include="src/ApplicationEvents.fs" />
     <Compile Include="src/Environment.fs" />
-    <Compile Include="src/Serializer.fs" />
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 

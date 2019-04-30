@@ -94,6 +94,7 @@ module KafkaApplication =
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
+                let supervisionConnection = connections |> Map.tryFind Connections.Supervision
 
                 //
                 // composed parts
@@ -183,6 +184,7 @@ module KafkaApplication =
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
                     MetricsRoute = configurationParts.MetricsRoute
+                    SupervisionConnection = supervisionConnection
                 }
             }
             |> KafkaApplication
@@ -235,6 +237,10 @@ module KafkaApplication =
         [<CustomOperation("connect")>]
         member __.Connect(state, connectionConfiguration): Configuration<'Event> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
+
+        [<CustomOperation("useSupervision")>]
+        member __.Supervision(state, connectionConfiguration): Configuration<'Event> =
+            state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }
 
         [<CustomOperation("connectTo")>]
         member __.ConnectTo(state, name, connectionConfiguration): Configuration<'Event> =
@@ -319,6 +325,16 @@ module KafkaApplication =
 
     module private KafkaApplicationRunner =
 
+        let private produceInstanceStarted logger box supervisionConnection =
+            use producer = Producer.createProducer supervisionConnection.BrokerList
+
+            box
+            |> ApplicationEvents.createInstanceStarted
+            |> ApplicationEvents.serialize
+            |> Producer.produceSingleMessage producer supervisionConnection.Topic
+
+            logger.Verbose "Supervision" "Instance started produced."
+
         let private consume
             (consumeEvents: ConsumerConfiguration -> 'Event seq)
             (consumeLastEvent: ConsumerConfiguration -> 'Event option)
@@ -369,7 +385,9 @@ module KafkaApplication =
                 application.Box
                 |> Box.instance
                 |> tee (ApplicationMetrics.enableContext)
-                // todo - produce `instance_started` event, id application_connection is available
+
+            application.SupervisionConnection
+            |>! produceInstanceStarted application.Logger application.Box
 
             application.MetricsRoute
             |>! (fun route ->
