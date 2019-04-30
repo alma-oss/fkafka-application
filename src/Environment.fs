@@ -8,10 +8,6 @@ module EnvironmentBuilder =
     open ServiceIdentification
     open Kafka
 
-    let private tee f a =
-        f a
-        a
-
     type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_>) =
             parts
