@@ -232,13 +232,13 @@ module ApplicationBuilder =
         member __.Connect(state, connectionConfiguration): Configuration<'Event> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
 
-        [<CustomOperation("useSupervision")>]
-        member __.Supervision(state, connectionConfiguration): Configuration<'Event> =
-            state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }
-
         [<CustomOperation("connectTo")>]
         member __.ConnectTo(state, name, connectionConfiguration): Configuration<'Event> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(ConnectionName name, connectionConfiguration) }
+
+        [<CustomOperation("useSupervision")>]
+        member __.Supervision(state, connectionConfiguration): Configuration<'Event> =
+            state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }
 
         [<CustomOperation("consume")>]
         member __.Consume(state, consumeHandler): Configuration<'Event> =

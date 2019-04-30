@@ -18,6 +18,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | Function | Arguments | Description |
 | --- | --- | --- |
 | checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
+| connect | `Kafka.ConnectionConfiguration` | It will _register_ a default connection for Kafka. |
+| connectTo | `connectionName: string`, `Kafka.ConnectionConfiguration` | It will _register_ a named connection for Kafka. |
 | consume | `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the default Kafka connection. |
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
@@ -26,14 +28,14 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
 | produceTo | `connectionName: string`, `serialize: 'Event –> string` | This will register both a Kafka Producer and a produce event function. |
+| showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
+| showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = common; Bucket = all` |
-| connect | `...` | _TODO_ |
-| connectTo | `...` | _TODO_ |
-| useSupervision | `...` | _TODO_ |
+| useSupervision | `Kafka.ConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ### Mandatory
 - Instance of the application is required.
@@ -61,7 +63,7 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
-| supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be use to produce a supervision events (like `instance_started`) |
+| supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ## Runtime parts
 - TODO ...
@@ -117,7 +119,7 @@ let main argv =
     kafkaApplication {
         instance { Domain="my"; Context="simple"; Purpose="example"; Version="local" }
 
-        // this will create only default connection, which can be consumed by the default `consume` funcion only
+        // this will create only default connection, which can be consumed by the default `consume` function only
         connect {
             BrokerList = brokerList
             Topic = StreamName "my-input-stream"
