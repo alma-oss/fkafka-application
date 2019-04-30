@@ -11,15 +11,15 @@ module ApplicationBuilder =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
             else Ok collection
 
-        let private prepareProducer (connections: Connections) incrementOutputCount name =
+        let private prepareProducer createProducer produceMessage (connections: Connections) incrementOutputCount name =
             result {
                 let! connection =
                     connections
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingConfiguration name)
 
-                let producer = Producer.createProducer connection.BrokerList
-                let produce producer = Producer.produceMessage producer connection.Topic
+                let producer = createProducer connection.BrokerList
+                let produce producer = produceMessage producer connection.Topic
                 let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
 
                 let produceEvent producer event =
@@ -60,7 +60,7 @@ module ApplicationBuilder =
                 }
             }
 
-        let buildApplication (Configuration configuration): KafkaApplication<'Event> =
+        let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'Event> =
             result {
                 let! configurationParts = configuration
 
@@ -85,7 +85,7 @@ module ApplicationBuilder =
 
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
-                let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
+                let defaultGroupId = configurationParts.GroupId <?=> Kafka.GroupId.Random
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
                 let supervisionConnection = connections |> Map.tryFind Connections.Supervision
@@ -133,7 +133,7 @@ module ApplicationBuilder =
                 // producers
                 let! preparedProducers =
                     configurationParts.ProduceTo
-                    |> List.map (prepareProducer connections incrementOutputCount)
+                    |> List.map (prepareProducer createProducer produceMessage connections incrementOutputCount)
                     |> Result.sequence
                     |> Result.mapError ProduceError
 
@@ -183,7 +183,7 @@ module ApplicationBuilder =
             }
             |> KafkaApplication
 
-    type KafkaApplicationBuilder internal () =
+    type KafkaApplicationBuilder internal (createProducer, produceMessage) =
         let debugConfiguration (parts: ConfigurationParts<_>) =
             parts
             |> sprintf "%A"
@@ -206,7 +206,7 @@ module ApplicationBuilder =
             state >>= f
 
         member __.Run(state): KafkaApplication<'Evnet> =
-            buildApplication state
+            buildApplication createProducer produceMessage state
 
         [<CustomOperation("useLogger")>]
         member __.Logger(state, logger: KafkaApplication.Logger): Configuration<'Event> =

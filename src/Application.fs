@@ -6,7 +6,7 @@ module KafkaApplication =
     open ApplicationBuilder
     open ApplicationRunner
 
-    let kafkaApplication = KafkaApplicationBuilder()
+    let kafkaApplication = KafkaApplicationBuilder(Producer.createProducer, Producer.produceMessage)
 
     let run (KafkaApplication application) =
         let consume configuration =
@@ -16,11 +16,11 @@ module KafkaApplication =
             Consumer.consumeLast configuration RawEvent.parse   // todo - what with parse?
 
         match application with
-        | Ok app -> runApplication consume consumeLast app
+        | Ok app -> runApplication consume consumeLast Producer.createProducer Producer.produceSingleMessage app
         | Error error -> failwithf "[Application] Error:\n%A" error
 
     // todo - remove
     let _runDummy (kafka_consume: ConsumerConfiguration -> 'Event seq) (kafka_consumeLast: ConsumerConfiguration -> 'Event option) (KafkaApplication application) =
         match application with
-        | Ok app -> runApplication kafka_consume kafka_consumeLast app
+        | Ok app -> runApplication kafka_consume kafka_consumeLast Producer.createProducer Producer.produceSingleMessage app
         | Error error -> failwithf "[Application] Error:\n%A" error

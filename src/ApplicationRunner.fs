@@ -6,13 +6,13 @@ module ApplicationRunner =
     open OptionOperators
 
     module private KafkaApplicationRunner =
-        let private produceInstanceStarted logger box supervisionConnection =
-            use producer = Producer.createProducer supervisionConnection.BrokerList
+        let private produceInstanceStarted createProducer produceSingleMessage logger box supervisionConnection =
+            use producer = createProducer supervisionConnection.BrokerList
 
             box
             |> ApplicationEvents.createInstanceStarted
             |> ApplicationEvents.serialize
-            |> Producer.produceSingleMessage producer supervisionConnection.Topic
+            |> produceSingleMessage producer supervisionConnection.Topic
 
             logger.Verbose "Supervision" "Instance started produced."
 
@@ -58,7 +58,12 @@ module ApplicationRunner =
                         logger.Log context "Shuting down the application ..."
                         raise e
 
-        let run (consumeEvents: ConsumerConfiguration -> 'Event seq) (consumeLastEvent: ConsumerConfiguration -> 'Event option) (application: KafkaApplicationParts<'Event>) =
+        let run
+            (consumeEvents: ConsumerConfiguration -> 'Event seq)
+            (consumeLastEvent: ConsumerConfiguration -> 'Event option)
+            createProducer
+            produceSingleMessage
+            (application: KafkaApplicationParts<'Event>) =
             application.Logger.Debug "Application" <| sprintf "Configuration:\n%A" application
             application.Logger.Log "Application" "Starts ..."
 
@@ -68,7 +73,7 @@ module ApplicationRunner =
                 |> tee (ApplicationMetrics.enableContext)
 
             application.SupervisionConnection
-            |>! produceInstanceStarted application.Logger application.Box
+            |>! produceInstanceStarted createProducer produceSingleMessage application.Logger application.Box
 
             application.MetricsRoute
             |>! (fun route ->
