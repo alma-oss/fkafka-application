@@ -25,6 +25,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
 | onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
+| produceTo | `connectionName: string`, `serialize: 'Event –> string` | This will register both a Kafka Producer and a produce event function. |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |

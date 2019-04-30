@@ -106,10 +106,24 @@ module Program =
         // run simple app
         //
 
+        // ------ producer ------
         let produce incrementOutputCount outputStream event =
             event
             |> tee (incrementOutputCount outputStream)
             |> printfn " -> response<%A>: %A" outputStream
+
+        // in consume
+        // try
+        //      use producer = parts.Producer.["connection"]
+        //      let produce = parts.Produce.["connection"] producer
+
+        //      events
+        //      |> Seq.iter produce
+
+        // finally
+        //      producer.Flush()
+
+        // ------ /producer ------
 
         Log.setVerbosityLevel "vv"
 
@@ -171,17 +185,19 @@ module Program =
                 |> Seq.iter ((sprintf "- %A") >> parts.Logger.Log "PreConsume")
             )
 
-            showInputEventsWith createInputKeys
-            showOutputEventsWith createOutputKeys
-
             consume (fun parts events ->
+                // todo - produce instance_started event
+                // todo - event parsers?
+
+                // todo - somehow add `produce` function to parts
+                // - it should have resource checking for target kafka+topic
+
                 let outputStream =
                     parts.Environment.["OUTPUT_STREAM"]
                     |> StreamName
                     |> OutputStreamName
 
                 events
-                //|> Seq.map (tee incrementInputCount)
                 //|> Seq.take 20
                 |> Seq.iter (double >> produce parts.IncrementOutputEventCount outputStream)
             )
@@ -194,6 +210,8 @@ module Program =
             )
 
             showMetricsOn "/metrics"
+            showInputEventsWith createInputKeys
+            showOutputEventsWith createOutputKeys
         }
         |> run DummyKafka.consume
         ()

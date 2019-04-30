@@ -17,6 +17,30 @@ module KafkaApplication =
 
     [<AutoOpen>]
     module private KafkaApplicationBuilder =
+        let private prepareProducer (connections: Connections) incrementOutputCount =
+            fun name (ProducerSerializer serialize) ->
+                result {
+                    let! connection =
+                        connections.TryFind name
+                        |> Result.ofOption "No connection was found for producer."
+                        |> Result.mapError KafkaApplicationError    // todo - use more specific error
+
+                    let producer = Producer.createProducer connection.BrokerList
+                    let produce producer = Producer.produceMessage producer connection.Topic
+                    let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
+
+                    let produceEvent producer event =
+                        event
+                        |> tee (serialize >> (produce producer))
+                        |> incrementOutputCount
+
+                    return {
+                        Connection = name
+                        Producer = producer
+                        Produce = produceEvent
+                    }
+                }
+
         let private composeRuntimeConsumeHandlersForConnections
             consumerConfigurations
             runtimeParts
@@ -45,12 +69,16 @@ module KafkaApplication =
             result {
                 let! configurationParts = configuration
 
+                //
                 // required parts
+                //
                 let! instance = configurationParts.Instance <?!> "Instance is required."
                 let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
                 let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
 
+                //
                 // optional parts
+                //
                 let defaultErrorHandler = (fun _ _ -> Shutdown)
                 let getErrorHandler connection =
                     match configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection with
@@ -66,18 +94,17 @@ module KafkaApplication =
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
 
+                //
                 // composed parts
+                //
+
+                // consumers
                 let! markAsEnabled =
                     Metrics.ServiceStatus.markAsEnabled instance Metrics.Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
                 let! markAsDisabled =
                     Metrics.ServiceStatus.markAsDisabled instance Metrics.Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
-
-                let serviceStatus = {
-                    MarkAsEnabled = markAsEnabled
-                    MarkAsDisabled = markAsDisabled
-                }
 
                 let consumerConfigurations =
                     connections
@@ -86,9 +113,10 @@ module KafkaApplication =
                         GroupId = groupIds.TryFind name <?=> defaultGroupId
                         Logger = { Log = logger.Verbose "Kafka" } |> Some
                         Checker = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance connection.BrokerList |> Some
-                        ServiceStatus = serviceStatus |> Some
+                        ServiceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled } |> Some
                     })
 
+                // input/output metrics
                 let incrementInputCount =
                     configurationParts.CreateInputEventKeys
                     |> Option.map (fun createInputKeys ->
@@ -99,12 +127,34 @@ module KafkaApplication =
                     | Some createOutputKeys -> ApplicationMetrics.incrementTotalOutputEventCount createOutputKeys instance
                     | _ -> fun _ -> ignore
 
+                // producers
+                let! preparedProducers =
+                    configurationParts.ProducerSerializers
+                    |> Map.map (prepareProducer connections incrementOutputCount)
+                    |> Map.toList
+                    |> List.map snd
+                    |> Result.sequence
+
+                let (producers, produces) =
+                    preparedProducers
+                    |> List.fold (fun (producers: Map<ConnectionName, KafkaProducer>, produces: Map<ConnectionName, ProduceEvent<'Event>>) preparedProducer ->
+                        (
+                            producers.Add(preparedProducer.Connection, preparedProducer.Producer),
+                            produces.Add(preparedProducer.Connection, preparedProducer.Produce)
+                        )
+                    ) (Map.empty, Map.empty)
+
+                //
+                // runtime parts
+                //
                 let runtimeParts: ConsumeRuntimeParts<'Event> = {
                     Logger = logger
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = consumerConfigurations
                     IncrementOutputEventCount = incrementOutputCount
+                    Producers = producers
+                    Produces = produces
                 }
 
                 let composeRuntimeHandler =
@@ -121,7 +171,7 @@ module KafkaApplication =
 
                 return {
                     Logger = logger
-                    Environment = configurationParts.Environment
+                    Environment = environment
                     Box = box
                     ConsumerConfigurations = consumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
@@ -207,6 +257,10 @@ module KafkaApplication =
         member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'Event> =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(ConnectionName name, onConsumeError) }
 
+        [<CustomOperation("produceTo")>]
+        member __.ProduceTo(state, name, serialize): Configuration<'Event> =
+            state <!> fun parts -> { parts with ProducerSerializers = parts.ProducerSerializers.Add(ConnectionName name, ProducerSerializer serialize) }
+
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
@@ -224,6 +278,7 @@ module KafkaApplication =
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
                         ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
+                        ProducerSerializers = newParts.ProducerSerializers |> Map.merge currentParts.ProducerSerializers
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys

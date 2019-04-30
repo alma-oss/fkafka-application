@@ -147,6 +147,21 @@ type KafkaApplicationError =
     | MetricsError of MetricsError
 
 //
+// Produce
+//
+
+type ProducerSerializer<'Event> = ProducerSerializer of ('Event -> string)
+
+type KafkaProducer = Kafka.Producer.Producer
+type ProduceEvent<'Event> = KafkaProducer -> 'Event -> unit
+
+type private PreparedProducer<'Event> = {
+    Connection: ConnectionName
+    Producer: KafkaProducer
+    Produce: ProduceEvent<'Event>
+}
+
+//
 // Consume handlers
 //
 
@@ -156,6 +171,8 @@ type ConsumeRuntimeParts<'Event> = {
     Connections: Connections
     ConsumerConfigurations: Map<ConnectionName, ConsumerConfiguration>
     IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
+    Producers: Map<ConnectionName, KafkaProducer>
+    Produces: Map<ConnectionName, ProduceEvent<'Event>>
 }
 
 type ConsumeHandler<'Event> =
@@ -198,6 +215,7 @@ type ConfigurationParts<'Event> = {
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
+    ProducerSerializers: Map<ConnectionName, ProducerSerializer<'Event>>
     MetricsRoute: MetricsRoute option
     CreateInputEventKeys: CreateInputEventKeys<'Event> option
     CreateOutputEventKeys: CreateOutputEventKeys<'Event> option
@@ -217,6 +235,7 @@ module internal ConfigurationParts =
             Connections = Connections.empty
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
+            ProducerSerializers = Map.empty
             MetricsRoute = None
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
