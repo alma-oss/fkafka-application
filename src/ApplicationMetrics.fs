@@ -14,7 +14,6 @@ module ApplicationMetrics =
         let value (SimpleDataSetKeys dataSetKeys) = dataSetKeys
 
     type private ApplicationMetric<'InputEvent, 'OutputEvent> =
-        | Status of Instance
         | InputEventsTotal of Instance * InputStreamName * 'InputEvent
         | OutputEventsTotal of Instance * OutputStreamName * 'OutputEvent
 
@@ -52,11 +51,6 @@ module ApplicationMetrics =
             | _ -> Count 0
 
         let incrementState createInputKeys createOutputKeys = function
-            | Status instance ->
-                instance
-                |> createKeyForStatus
-                |> State.incrementMetricSetValue (Int 1) (metricStatus instance.Context)
-                |> metricValueToCount
             | InputEventsTotal (instance, inputStream, event) ->
                 event
                 |> createKeyForInputEvent createInputKeys instance inputStream
@@ -67,6 +61,14 @@ module ApplicationMetrics =
                 |> createKeyForOutputEvent createOutputKeys instance outputStream
                 |> State.incrementMetricSetValue (Int 1) (metricTotalOutputEvent instance.Context)
                 |> metricValueToCount
+
+        let enableContextStatus (instance: Instance) =
+            let metricName = metricStatus instance.Context
+            let dataSetKey =
+                instance
+                |> createKeyForStatus
+
+            State.enableStatusMetric metricName dataSetKey
 
         let getFormattedMetricsForPrometheus (instance: Instance) _ =
             let formatMetric metricType description metricName =
@@ -101,12 +103,9 @@ module ApplicationMetrics =
     let private createNoInputKeys = CreateInputEventKeys createNoKeys
     let private createNoOutputKeys = CreateOutputEventKeys createNoKeys
 
-    let enableInstance instance =
-        // todo - set state instead of increment it
+    let enableContext instance =
         instance
-        |> Status
-        |> incrementState createNoInputKeys createNoOutputKeys
-        |> ignore
+        |> enableContextStatus
 
     // Changing state
 

@@ -157,7 +157,7 @@ module Program =
         showStateOnWebServerAsync instance (MetricsRoute.createOrFail "/metrics")
         |> Async.Start
 
-        enableInstance instance
+        enableContext instance
 
         let mutable runConsuming = true
         while runConsuming do

@@ -368,7 +368,7 @@ module KafkaApplication =
             let instance =
                 application.Box
                 |> Box.instance
-                |> tee (ApplicationMetrics.enableInstance)
+                |> tee (ApplicationMetrics.enableContext)
                 // todo - produce `instance_started` event, id application_connection is available
 
             application.MetricsRoute
