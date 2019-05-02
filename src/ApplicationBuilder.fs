@@ -15,7 +15,7 @@ module ApplicationBuilder =
             logger
             checker
             markAsDisabled
-            createProducer
+            prepareProducer
             produceMessage
             (connections: Connections)
             incrementOutputCount
@@ -26,18 +26,17 @@ module ApplicationBuilder =
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingConfiguration name)
 
-                let producer = createProducer {
+                let producer = prepareProducer {
                     Connection = connection
                     Logger = name |> ConnectionName.runtimeName |> logger |> Some
                     Checker = checker connection.BrokerList |> Some
                     MarkAsDisabled = markAsDisabled |> Some
                 }
-                let produce = produceMessage producer
                 let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
 
-                let produceEvent event =
+                let produceEvent producer event =
                     event
-                    |> tee (Serializer.serialize >> produce)
+                    |> tee (Serializer.serialize >> produceMessage producer)
                     |> incrementOutputCount
 
                 return {
@@ -49,7 +48,6 @@ module ApplicationBuilder =
 
         let private composeRuntimeConsumeHandlersForConnections
             runtimeConsumerConfigurations
-            runtimeParts
             (getErrorHandler: ConnectionName -> ErrorHandler)
             incrementInputCount
             ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'Event>) =
@@ -64,7 +62,7 @@ module ApplicationBuilder =
                 return {
                     Connection = runtimeConnectionName
                     Configuration = configuration
-                    Handler = handler |> ConsumeHandler.toRuntime runtimeParts
+                    Handler = handler
                     OnError = connection |> getErrorHandler
                     IncrementInputCount =
                         match incrementInputCount with
@@ -164,7 +162,7 @@ module ApplicationBuilder =
 
                 let (producers, produces) =
                     preparedProducers
-                    |> List.fold (fun (producers: Map<RuntimeConnectionName, KafkaTopicProducer>, produces: Map<RuntimeConnectionName, ProduceEvent<'Event>>) preparedProducer ->
+                    |> List.fold (fun (producers: Map<RuntimeConnectionName, NotConnectedProducer>, produces: Map<RuntimeConnectionName, PreparedProduceEvent<'Event>>) preparedProducer ->
                         let { Connection = (ConnectionName connection); Producer = producer; Produce = produce} = preparedProducer
 
                         ( producers.Add(connection, producer), produces.Add(connection, produce) )
@@ -173,7 +171,7 @@ module ApplicationBuilder =
                 //
                 // runtime parts
                 //
-                let runtimeParts: ConsumeRuntimeParts<'Event> = {
+                let preparedRuntimeParts: PreparedConsumeRuntimeParts<'Event> = {
                     Logger = logger
                     Environment = environment
                     Connections = connections
@@ -182,7 +180,7 @@ module ApplicationBuilder =
                     ProduceTo = produces
                 }
 
-                let composeRuntimeHandler = composeRuntimeConsumeHandlersForConnections runtimeConsumerConfigurations runtimeParts getErrorHandler incrementInputCount
+                let composeRuntimeHandler = composeRuntimeConsumeHandlersForConnections runtimeConsumerConfigurations getErrorHandler incrementInputCount
 
                 let! runtimeConsumeHandlers =
                     consumeHandlers
@@ -198,6 +196,7 @@ module ApplicationBuilder =
                     ConsumeHandlers = runtimeConsumeHandlers
                     Producers = producers
                     MetricsRoute = configurationParts.MetricsRoute
+                    PreparedRuntimeParts = preparedRuntimeParts
                 }
             }
             |> KafkaApplication

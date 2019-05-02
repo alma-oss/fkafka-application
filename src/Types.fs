@@ -161,18 +161,30 @@ type KafkaApplicationError =
 
 type ProducerSerializer<'Event> = ProducerSerializer of ('Event -> string)
 
-type KafkaTopicProducer = Kafka.Producer.TopicProducer
+type NotConnectedProducer = Kafka.Producer.NotConnectedProducer
+type ConnectedProducer = Kafka.Producer.TopicProducer
+
+type PreparedProduceEvent<'Event> = ConnectedProducer -> 'Event -> unit
 type ProduceEvent<'Event> = 'Event -> unit
 
 type private PreparedProducer<'Event> = {
     Connection: ConnectionName
-    Producer: KafkaTopicProducer
-    Produce: ProduceEvent<'Event>
+    Producer: NotConnectedProducer
+    Produce: PreparedProduceEvent<'Event>
 }
 
 //
 // Consume handlers
 //
+
+type PreparedConsumeRuntimeParts<'Event> = {
+    Logger: Logger
+    Environment: Map<string, string>
+    Connections: Connections
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
+    IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
+    ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'Event>>
+}
 
 type ConsumeRuntimeParts<'Event> = {
     Logger: Logger
@@ -182,6 +194,19 @@ type ConsumeRuntimeParts<'Event> = {
     IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'Event>>
 }
+
+module internal PreparedConsumeRuntimeParts =
+    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'Event>): ConsumeRuntimeParts<'Event> =
+        {
+            Logger = preparedRuntimeParts.Logger
+            Environment = preparedRuntimeParts.Environment
+            Connections = preparedRuntimeParts.Connections
+            ConsumerConfigurations = preparedRuntimeParts.ConsumerConfigurations
+            IncrementOutputEventCount = preparedRuntimeParts.IncrementOutputEventCount
+            ProduceTo =
+                preparedRuntimeParts.ProduceTo
+                |> Map.map (fun connection produce -> produce producers.[connection])
+        }
 
 type ConsumeHandler<'Event> =
     | Events of (ConsumeRuntimeParts<'Event> -> 'Event seq -> unit)
@@ -205,7 +230,7 @@ type RuntimeConsumeHandlerForConnection<'Event> = {
     Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
     OnError: ErrorHandler
-    Handler: RuntimeConsumeHandler<'Event>
+    Handler: ConsumeHandler<'Event>
     IncrementInputCount: 'Event -> unit
 }
 
@@ -268,8 +293,9 @@ type KafkaApplicationParts<'Event> = {
     Box: Box
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
-    Producers: Map<RuntimeConnectionName, KafkaTopicProducer>
+    Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     MetricsRoute: MetricsRoute option
+    PreparedRuntimeParts: PreparedConsumeRuntimeParts<'Event>
 }
 
 type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>

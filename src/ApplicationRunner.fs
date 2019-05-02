@@ -6,7 +6,7 @@ module ApplicationRunner =
     open OptionOperators
 
     module private KafkaApplicationRunner =
-        let private produceInstanceStarted produceSingleMessage logger box (supervisionProducer: KafkaTopicProducer) =
+        let private produceInstanceStarted produceSingleMessage logger box (supervisionProducer: ConnectedProducer) =
             box
             |> ApplicationEvents.createInstanceStarted
             |> ApplicationEvents.serialize
@@ -29,7 +29,7 @@ module ApplicationRunner =
                 |> consumeLastEvent
                 |>! lastEventHandler
 
-        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) flushProducers consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
+        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) runtimeParts flushProducers consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
             let context = sprintf "Kafka<%s>" consumeHandler.Connection
 
             let mutable runConsuming = true
@@ -39,6 +39,7 @@ module ApplicationRunner =
                         runConsuming <- false
 
                         consumeHandler.Handler
+                        |> ConsumeHandler.toRuntime runtimeParts
                         |> consume consumeEvents consumeLastEvent consumeHandler.Configuration consumeHandler.IncrementInputCount
                     with
                     | :? Confluent.Kafka.KafkaException as e ->
@@ -67,34 +68,40 @@ module ApplicationRunner =
         let run
             (consumeEvents: ConsumerConfiguration -> 'Event seq)
             (consumeLastEvent: ConsumerConfiguration -> 'Event option)
+            connectProducer
             produceSingleMessage
             flushProducer
             closeProducer
             (application: KafkaApplicationParts<'Event>) =
-            let doWithAllProducers = doWithAllProducers application.Producers
+            application.Logger.Debug "Application" <| sprintf "Configuration:\n%A" application
+            application.Logger.Log "Application" "Starts ..."
+
+            let instance =
+                application.Box
+                |> Box.instance
+                |> tee (ApplicationMetrics.enableContext)
+
+            application.MetricsRoute
+            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance)
+            |>! Async.Start
+
+            let connectedProducers = application.Producers |> Map.map (fun _ -> connectProducer)
+            let doWithAllProducers = doWithAllProducers connectedProducers
+
+            let runtimeParts =
+                application.PreparedRuntimeParts
+                |> PreparedConsumeRuntimeParts.toRuntimeParts connectedProducers
+
+            connectedProducers
+            |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
+            |>! produceInstanceStarted produceSingleMessage application.Logger application.Box
+
+            let flushAllProducers () = flushProducer |> doWithAllProducers
 
             try
-                application.Logger.Debug "Application" <| sprintf "Configuration:\n%A" application
-                application.Logger.Log "Application" "Starts ..."
-
-                let instance =
-                    application.Box
-                    |> Box.instance
-                    |> tee (ApplicationMetrics.enableContext)
-
-                application.Producers
-                |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
-                |>! produceInstanceStarted produceSingleMessage application.Logger application.Box
-
-                application.MetricsRoute
-                |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance)
-                |>! Async.Start
-
-                let flushAllProducers () = flushProducer |> doWithAllProducers
-
                 application.ConsumeHandlers
                 |> List.rev
-                |> List.iter (consumeWithErrorHandling application.Logger flushAllProducers consumeEvents consumeLastEvent)
+                |> List.iter (consumeWithErrorHandling application.Logger runtimeParts flushAllProducers consumeEvents consumeLastEvent)
             finally
                 application.Logger.Verbose "Application" "Close producers ..."
                 closeProducer |> doWithAllProducers

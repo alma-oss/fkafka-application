@@ -78,10 +78,10 @@ module Program =
 
             consumeFrom "contracts" (fun app contractEvents ->
                 let produce = app.ProduceTo.["outputStream"]
-            
+
                 contractEvents
                 |> Seq.filter isActivatedContracts
-                |> Seq.take 1
+                //|> Seq.take 1
                 |> Seq.iter (filterDomainData >> toDto >> produce)
             )
 
