@@ -6,7 +6,7 @@ module ApplicationRunner =
     open OptionOperators
 
     module private KafkaApplicationRunner =
-        let private produceInstanceStarted produceSingleMessage logger box supervisionProducer =
+        let private produceInstanceStarted produceSingleMessage logger box (supervisionProducer: KafkaTopicProducer) =
             box
             |> ApplicationEvents.createInstanceStarted
             |> ApplicationEvents.serialize

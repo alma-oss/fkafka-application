@@ -8,11 +8,12 @@ module Dice =
 module DummyKafka =
     open Confluent.Kafka
     open Kafka
+    open Metrics.ServiceStatus
 
     let consume (configuration: ConsumerConfiguration) =
         let (markAsEnabled, markAsDisabled) =
             match configuration.ServiceStatus with
-            | Some { MarkAsEnabled = MarkAsEnabled enable; MarkAsDisabled = MarkAsDisabled disable } -> ( enable, disable)
+            | Some { MarkAsEnabled = (MarkAsEnabled enable); MarkAsDisabled = (MarkAsDisabled disable) } -> ( enable, disable)
             | _ -> (ignore, ignore)
 
         let (checkKafka, checkTopic) =
@@ -66,6 +67,7 @@ module Program =
     open Confluent.Kafka
     open Kafka
     open Metrics
+    open Metrics.ServiceStatus
     open KafkaApplication
     open ServiceIdentification
     open ApplicationMetrics
@@ -123,13 +125,13 @@ module Program =
         let markAsEnabled () =
             ServiceStatus.markAsEnabled instance Audience.Sys
             |> function
-                | Ok enable -> enable ()
+                | Ok enable -> enable |> MarkAsEnabled.execute
                 | Error e -> failwithf "Error: %A" e
 
         let markAsDisabled () =
             ServiceStatus.markAsDisabled instance Audience.Sys
             |> function
-                | Ok enable -> enable ()
+                | Ok disable -> disable |> MarkAsDisabled.execute
                 | Error e -> failwithf "Error: %A" e
 
         let kafkaConfiguration = {

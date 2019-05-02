@@ -2,6 +2,7 @@ namespace KafkaApplication
 
 module ApplicationBuilder =
     open Kafka
+    open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
 
@@ -10,7 +11,15 @@ module ApplicationBuilder =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
             else Ok collection
 
-        let private prepareProducer createProducer produceMessage (connections: Connections) incrementOutputCount name =
+        let private prepareProducer
+            logger
+            checker
+            markAsDisabled
+            createProducer
+            produceMessage
+            (connections: Connections)
+            incrementOutputCount
+            name =
             result {
                 let! connection =
                     connections
@@ -19,9 +28,9 @@ module ApplicationBuilder =
 
                 let producer = createProducer {
                     Connection = connection
-                    Logger = None // todo
-                    Checker = None // todo
-                    MarkAsDisabled = None // todo
+                    Logger = name |> ConnectionName.runtimeName |> logger |> Some
+                    Checker = checker connection.BrokerList |> Some
+                    MarkAsDisabled = markAsDisabled |> Some
                 }
                 let produce = produceMessage producer
                 let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
@@ -102,13 +111,19 @@ module ApplicationBuilder =
                 // composed parts
                 //
 
-                // consumers
+                // kafka parts
+                let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
+                let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
+
+                // service status
                 let! markAsEnabled =
                     Metrics.ServiceStatus.markAsEnabled instance Metrics.Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
                 let! markAsDisabled =
                     Metrics.ServiceStatus.markAsDisabled instance Metrics.Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
+
+                let serviceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled }
 
                 let runtimeConsumerConfigurations =
                     connections
@@ -120,9 +135,9 @@ module ApplicationBuilder =
                             {
                                 Connection = connection
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
-                                Logger = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) } |> Some
-                                Checker = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance connection.BrokerList |> Some
-                                ServiceStatus = { MarkAsEnabled = MarkAsEnabled markAsEnabled; MarkAsDisabled = MarkAsDisabled markAsDisabled } |> Some
+                                Logger = kafkaLogger runtimeConnection |> Some
+                                Checker = kafkaChecker connection.BrokerList |> Some
+                                ServiceStatus = serviceStatus |> Some
                             }
                         )
                     ) Map.empty
@@ -139,9 +154,11 @@ module ApplicationBuilder =
                     | _ -> fun _ -> ignore
 
                 // producers
+                let prepareProducer = prepareProducer kafkaLogger kafkaChecker serviceStatus.MarkAsDisabled createProducer produceMessage connections incrementOutputCount
+
                 let! preparedProducers =
                     connectionsToProduce
-                    |> List.map (prepareProducer createProducer produceMessage connections incrementOutputCount)
+                    |> List.map prepareProducer
                     |> Result.sequence
                     |> Result.mapError ProduceError
 
@@ -165,12 +182,7 @@ module ApplicationBuilder =
                     ProduceTo = produces
                 }
 
-                let composeRuntimeHandler =
-                    composeRuntimeConsumeHandlersForConnections
-                        runtimeConsumerConfigurations
-                        runtimeParts
-                        getErrorHandler
-                        incrementInputCount
+                let composeRuntimeHandler = composeRuntimeConsumeHandlersForConnections runtimeConsumerConfigurations runtimeParts getErrorHandler incrementInputCount
 
                 let! runtimeConsumeHandlers =
                     consumeHandlers

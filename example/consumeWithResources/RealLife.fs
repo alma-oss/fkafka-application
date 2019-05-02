@@ -5,6 +5,7 @@ open KafkaApplication
 module Program =
     open Kafka
     open Metrics
+    open Metrics.ServiceStatus
     open KafkaApplication
     open ServiceIdentification
     open ApplicationMetrics
@@ -58,13 +59,13 @@ module Program =
         let markAsEnabled () =
             ServiceStatus.markAsEnabled instance Audience.Sys
             |> function
-                | Ok enable -> enable ()
+                | Ok enable -> enable |> MarkAsEnabled.execute
                 | Error e -> failwithf "Error: %A" e
 
         let markAsDisabled () =
             ServiceStatus.markAsDisabled instance Audience.Sys
             |> function
-                | Ok enable -> enable ()
+                | Ok disable -> disable |> MarkAsDisabled.execute
                 | Error e -> failwithf "Error: %A" e
 
         let kafkaConfiguration = {

@@ -8,6 +8,7 @@ module Dice =
 module DummyKafka =
     open Confluent.Kafka
     open Kafka
+    open Metrics.ServiceStatus
 
     let consume (configuration: ConsumerConfiguration) =
         let (markAsEnabled, markAsDisabled) =
