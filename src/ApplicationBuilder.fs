@@ -17,13 +17,18 @@ module ApplicationBuilder =
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingConfiguration name)
 
-                let producer = createProducer connection.BrokerList
-                let produce producer = produceMessage producer connection.Topic
+                let producer = createProducer {
+                    Connection = connection
+                    Logger = None // todo
+                    Checker = None // todo
+                    MarkAsDisabled = None // todo
+                }
+                let produce = produceMessage producer
                 let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
 
-                let produceEvent producer event =
+                let produceEvent event =
                     event
-                    |> tee (Serializer.serialize >> (produce producer))
+                    |> tee (Serializer.serialize >> produce)
                     |> incrementOutputCount
 
                 return {
@@ -87,7 +92,11 @@ module ApplicationBuilder =
                 let defaultGroupId = configurationParts.GroupId <?=> Kafka.GroupId.Random
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
-                let supervisionConnection = connections |> Map.tryFind Connections.Supervision
+
+                let connectionsToProduce =
+                    if connections |> Map.containsKey Connections.Supervision
+                    then Connections.Supervision :: configurationParts.ProduceTo
+                    else configurationParts.ProduceTo
 
                 //
                 // composed parts
@@ -113,7 +122,7 @@ module ApplicationBuilder =
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
                                 Logger = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) } |> Some
                                 Checker = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance connection.BrokerList |> Some
-                                ServiceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled } |> Some
+                                ServiceStatus = { MarkAsEnabled = MarkAsEnabled markAsEnabled; MarkAsDisabled = MarkAsDisabled markAsDisabled } |> Some
                             }
                         )
                     ) Map.empty
@@ -131,14 +140,14 @@ module ApplicationBuilder =
 
                 // producers
                 let! preparedProducers =
-                    configurationParts.ProduceTo
+                    connectionsToProduce
                     |> List.map (prepareProducer createProducer produceMessage connections incrementOutputCount)
                     |> Result.sequence
                     |> Result.mapError ProduceError
 
                 let (producers, produces) =
                     preparedProducers
-                    |> List.fold (fun (producers: Map<RuntimeConnectionName, KafkaProducer>, produces: Map<RuntimeConnectionName, ProduceEvent<'Event>>) preparedProducer ->
+                    |> List.fold (fun (producers: Map<RuntimeConnectionName, KafkaTopicProducer>, produces: Map<RuntimeConnectionName, ProduceEvent<'Event>>) preparedProducer ->
                         let { Connection = (ConnectionName connection); Producer = producer; Produce = produce} = preparedProducer
 
                         ( producers.Add(connection, producer), produces.Add(connection, produce) )
@@ -153,8 +162,7 @@ module ApplicationBuilder =
                     Connections = connections
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     IncrementOutputEventCount = incrementOutputCount
-                    Producers = producers
-                    Produces = produces
+                    ProduceTo = produces
                 }
 
                 let composeRuntimeHandler =
@@ -176,8 +184,8 @@ module ApplicationBuilder =
                     Box = box
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
+                    Producers = producers
                     MetricsRoute = configurationParts.MetricsRoute
-                    SupervisionConnection = supervisionConnection
                 }
             }
             |> KafkaApplication

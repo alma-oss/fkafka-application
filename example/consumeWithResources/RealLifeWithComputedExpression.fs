@@ -67,24 +67,22 @@ module Program =
             merge (partialKafkaApplication {
                 produceTo "outputStream" // toDto
 
-                consume (fun _ events ->
+                consume (fun app events ->
+                    let produce = app.ProduceTo.["outputStream"]
+
                     events
                     |> Seq.take 1000
-                    |> Seq.iter ignore
+                    |> Seq.iter (filterDomainData >> toDto >> produce)
                 )
             })
 
             consumeFrom "contracts" (fun app contractEvents ->
-                use producer = app.Producers.["outputStream"]
-                let produce = app.Produces.["outputStream"] producer
-
-                try
-                    contractEvents
-                    |> Seq.filter isActivatedContracts
-                    |> Seq.take 1
-                    |> Seq.iter (filterDomainData >> toDto >> produce)
-                finally
-                    producer.Flush()
+                let produce = app.ProduceTo.["outputStream"]
+            
+                contractEvents
+                |> Seq.filter isActivatedContracts
+                |> Seq.take 1
+                |> Seq.iter (filterDomainData >> toDto >> produce)
             )
 
             showMetricsOn "/metrics"
@@ -92,3 +90,5 @@ module Program =
             showOutputEventsWith createOutputKeys
         }
         |> run
+
+        //System.Threading.Thread.Sleep(10 * 1000)

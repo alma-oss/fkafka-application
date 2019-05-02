@@ -78,8 +78,8 @@ module Program =
             }
             Checker = Some (Kafka.Checker.defaultChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList)
             ServiceStatus = Some {
-                MarkAsEnabled = markAsEnabled
-                MarkAsDisabled = markAsDisabled
+                MarkAsEnabled = MarkAsEnabled markAsEnabled
+                MarkAsDisabled = MarkAsDisabled markAsDisabled
             }
         }
 

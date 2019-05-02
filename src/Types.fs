@@ -161,12 +161,12 @@ type KafkaApplicationError =
 
 type ProducerSerializer<'Event> = ProducerSerializer of ('Event -> string)
 
-type KafkaProducer = Kafka.Producer.Producer
-type ProduceEvent<'Event> = KafkaProducer -> 'Event -> unit
+type KafkaTopicProducer = Kafka.Producer.TopicProducer
+type ProduceEvent<'Event> = 'Event -> unit
 
 type private PreparedProducer<'Event> = {
     Connection: ConnectionName
-    Producer: KafkaProducer
+    Producer: KafkaTopicProducer
     Produce: ProduceEvent<'Event>
 }
 
@@ -180,8 +180,7 @@ type ConsumeRuntimeParts<'Event> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
-    Producers: Map<RuntimeConnectionName, KafkaProducer>
-    Produces: Map<RuntimeConnectionName, ProduceEvent<'Event>>
+    ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'Event>>
 }
 
 type ConsumeHandler<'Event> =
@@ -269,8 +268,8 @@ type KafkaApplicationParts<'Event> = {
     Box: Box
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
+    Producers: Map<RuntimeConnectionName, KafkaTopicProducer>
     MetricsRoute: MetricsRoute option
-    SupervisionConnection: ConnectionConfiguration option
 }
 
 type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>

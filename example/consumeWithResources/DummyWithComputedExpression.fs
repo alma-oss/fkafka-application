@@ -12,7 +12,7 @@ module DummyKafka =
     let consume (configuration: ConsumerConfiguration) =
         let (markAsEnabled, markAsDisabled) =
             match configuration.ServiceStatus with
-            | Some { MarkAsEnabled = enable; MarkAsDisabled = disable } -> (enable, disable)
+            | Some { MarkAsEnabled = MarkAsEnabled enable; MarkAsDisabled = MarkAsDisabled disable } -> ( enable, disable)
             | _ -> (ignore, ignore)
 
         let log msg =
