@@ -227,7 +227,7 @@ module ApplicationBuilder =
             buildApplication state
 
         [<CustomOperation("useLogger")>]
-        member __.Logger(state, logger: KafkaApplication.Logger): Configuration<'Event> =
+        member __.Logger(state, logger: ApplicationLogger): Configuration<'Event> =
             state <!> fun parts -> { parts with Logger = logger }
 
         [<CustomOperation("useInstance")>]

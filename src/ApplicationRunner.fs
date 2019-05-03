@@ -29,7 +29,7 @@ module ApplicationRunner =
                 |> consumeLastEvent
                 |>! lastEventHandler
 
-        let private consumeWithErrorHandling (logger: KafkaApplication.Logger) runtimeParts flushProducers consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
+        let private consumeWithErrorHandling (logger: ApplicationLogger) runtimeParts flushProducers consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
             let context = sprintf "Kafka<%s>" consumeHandler.Connection
 
             let mutable runConsuming = true

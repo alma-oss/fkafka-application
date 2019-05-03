@@ -128,7 +128,7 @@ module Program =
 
         Log.setVerbosityLevel "vv"
 
-        let logger = Logger.defaultLogger
+        let logger = ApplicationLogger.defaultLogger
 
         let environment = environmentWithLogger logger
 

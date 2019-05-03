@@ -9,15 +9,16 @@ open ServiceIdentification
 
 type Log = string -> string -> unit
 
-type Logger = {
+type ApplicationLogger = {
     Debug: Log
     Log: Log
     Verbose: Log
+    VeryVerbose: Log
     Warning: Log
     Error: Log
 }
 
-module Logger =
+module ApplicationLogger =
     open Logging
 
     let quietLogger =
@@ -26,6 +27,7 @@ module Logger =
             Debug = ignore
             Log = ignore
             Verbose = ignore
+            VeryVerbose = ignore
             Warning = ignore
             Error = ignore
         }
@@ -35,6 +37,7 @@ module Logger =
             Debug = Log.debug
             Log = Log.normal
             Verbose = Log.verbose
+            VeryVerbose = Log.veryVerbose
             Warning = Log.warning
             Error = Log.error
         }
@@ -107,7 +110,7 @@ type OnErrorPolicy =
     | Continue
     | Shutdown
 
-type ErrorHandler = Logger -> string -> OnErrorPolicy
+type ErrorHandler = ApplicationLogger -> string -> OnErrorPolicy
 
 [<RequireQualifiedAccess>]
 type EnvironmentError =
@@ -178,7 +181,7 @@ type private PreparedProducer<'Event> = {
 //
 
 type PreparedConsumeRuntimeParts<'Event> = {
-    Logger: Logger
+    Logger: ApplicationLogger
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -187,7 +190,7 @@ type PreparedConsumeRuntimeParts<'Event> = {
 }
 
 type ConsumeRuntimeParts<'Event> = {
-    Logger: Logger
+    Logger: ApplicationLogger
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -239,7 +242,7 @@ type RuntimeConsumeHandlerForConnection<'Event> = {
 //
 
 type ConfigurationParts<'Event> = {
-    Logger: Logger
+    Logger: ApplicationLogger
     Environment: Map<string, string>
     Instance: Instance option
     Spot: Spot option
@@ -259,7 +262,7 @@ type ConfigurationParts<'Event> = {
 module internal ConfigurationParts =
     let defaultParts =
         {
-            Logger = Logger.defaultLogger
+            Logger = ApplicationLogger.defaultLogger
             Environment = Map.empty
             Instance = None
             Spot = None
@@ -288,7 +291,7 @@ module private Configuration =
     let result (Configuration result) = result
 
 type KafkaApplicationParts<'Event> = {
-    Logger: Logger
+    Logger: ApplicationLogger
     Environment: Map<string, string>
     Box: Box
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
