@@ -162,44 +162,44 @@ type KafkaApplicationError =
 // Produce
 //
 
-type ProducerSerializer<'Event> = ProducerSerializer of ('Event -> string)
+type ProducerSerializer<'OutputEvent> = ProducerSerializer of ('OutputEvent -> string)
 
 type NotConnectedProducer = Kafka.Producer.NotConnectedProducer
 type ConnectedProducer = Kafka.Producer.TopicProducer
 
-type PreparedProduceEvent<'Event> = ConnectedProducer -> 'Event -> unit
-type ProduceEvent<'Event> = 'Event -> unit
+type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> 'OutputEvent -> unit
+type ProduceEvent<'OutputEvent> = 'OutputEvent -> unit
 
-type private PreparedProducer<'Event> = {
+type private PreparedProducer<'OutputEvent> = {
     Connection: ConnectionName
     Producer: NotConnectedProducer
-    Produce: PreparedProduceEvent<'Event>
+    Produce: PreparedProduceEvent<'OutputEvent>
 }
 
 //
 // Consume handlers
 //
 
-type PreparedConsumeRuntimeParts<'Event> = {
+type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
-    ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'Event>>
+    IncrementOutputEventCount: (OutputStreamName -> 'OutputEvent -> unit)
+    ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
 }
 
-type ConsumeRuntimeParts<'Event> = {
+type ConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    IncrementOutputEventCount: (OutputStreamName -> 'Event -> unit)
-    ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'Event>>
+    IncrementOutputEventCount: (OutputStreamName -> 'OutputEvent -> unit)
+    ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
 }
 
 module internal PreparedConsumeRuntimeParts =
-    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'Event>): ConsumeRuntimeParts<'Event> =
+    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
         {
             Logger = preparedRuntimeParts.Logger
             Environment = preparedRuntimeParts.Environment
@@ -211,37 +211,37 @@ module internal PreparedConsumeRuntimeParts =
                 |> Map.map (fun connection produce -> produce producers.[connection])
         }
 
-type ConsumeHandler<'Event> =
-    | Events of (ConsumeRuntimeParts<'Event> -> 'Event seq -> unit)
-    | LastEvent of (ConsumeRuntimeParts<'Event> -> 'Event -> unit)
+type ConsumeHandler<'InputEvent, 'OutputEvent> =
+    | Events of (ConsumeRuntimeParts<'OutputEvent> -> 'InputEvent seq -> unit)
+    | LastEvent of (ConsumeRuntimeParts<'OutputEvent> -> 'InputEvent -> unit)
 
-type RuntimeConsumeHandler<'Event> =
-    | Events of ('Event seq -> unit)
-    | LastEvent of ('Event -> unit)
+type RuntimeConsumeHandler<'InputEvent> =
+    | Events of ('InputEvent seq -> unit)
+    | LastEvent of ('InputEvent -> unit)
 
 module ConsumeHandler =
     let toRuntime runtimeParts = function
         | ConsumeHandler.Events eventsHandler -> eventsHandler runtimeParts |> RuntimeConsumeHandler.Events
         | ConsumeHandler.LastEvent lastEventHandler -> lastEventHandler runtimeParts |> RuntimeConsumeHandler.LastEvent
 
-type ConsumeHandlerForConnection<'Event> = {
+type ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: ConnectionName
-    Handler: ConsumeHandler<'Event>
+    Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
 }
 
-type RuntimeConsumeHandlerForConnection<'Event> = {
+type RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
     OnError: ErrorHandler
-    Handler: ConsumeHandler<'Event>
-    IncrementInputCount: 'Event -> unit
+    Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
+    IncrementInputCount: 'InputEvent -> unit
 }
 
 //
 // Configuration / Application
 //
 
-type ConfigurationParts<'Event> = {
+type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Instance: Instance option
@@ -249,12 +249,12 @@ type ConfigurationParts<'Event> = {
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
     Connections: Connections
-    ConsumeHandlers: ConsumeHandlerForConnection<'Event> list
+    ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
     ProduceTo: ConnectionName list
     MetricsRoute: MetricsRoute option
-    CreateInputEventKeys: CreateInputEventKeys<'Event> option
-    CreateOutputEventKeys: CreateOutputEventKeys<'Event> option
+    CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
+    CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
 }
 
@@ -278,27 +278,27 @@ module internal ConfigurationParts =
             KafkaChecker = None
         }
 
-    let getEnvironmentValue (parts: ConfigurationParts<_>) success error name =
+    let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
         name
         |> Environment.tryGetEnv parts.Environment
         |> Option.map success
         |> Result.ofOption (sprintf "Environment variable for \"%s\" is not set." name)
         |> Result.mapError error
 
-type Configuration<'Event> = private Configuration of Result<ConfigurationParts<'Event>, KafkaApplicationError>
+type Configuration<'InputEvent, 'OutputEvent> = private Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
 
 module private Configuration =
     let result (Configuration result) = result
 
-type KafkaApplicationParts<'Event> = {
+type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Box: Box
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    ConsumeHandlers: RuntimeConsumeHandlerForConnection<'Event> list
+    ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     MetricsRoute: MetricsRoute option
-    PreparedRuntimeParts: PreparedConsumeRuntimeParts<'Event>
+    PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
 
-type KafkaApplication<'Event> = private KafkaApplication of Result<KafkaApplicationParts<'Event>, KafkaApplicationError>
+type KafkaApplication<'InputEvent, 'OutputEvent> = private KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>

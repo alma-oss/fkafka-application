@@ -46,11 +46,11 @@ module ApplicationBuilder =
                 }
             }
 
-        let private composeRuntimeConsumeHandlersForConnections
+        let private composeRuntimeConsumeHandlersForConnections<'InputEvent, 'OutputEvent>
             runtimeConsumerConfigurations
             (getErrorHandler: ConnectionName -> ErrorHandler)
             incrementInputCount
-            ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'Event>) =
+            ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) =
             result {
                 let runtimeConnectionName = connection |> ConnectionName.runtimeName
 
@@ -71,7 +71,7 @@ module ApplicationBuilder =
                 }
             }
 
-        let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'Event> =
+        let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent> =
             result {
                 let! configurationParts = configuration
 
@@ -162,7 +162,7 @@ module ApplicationBuilder =
 
                 let (producers, produces) =
                     preparedProducers
-                    |> List.fold (fun (producers: Map<RuntimeConnectionName, NotConnectedProducer>, produces: Map<RuntimeConnectionName, PreparedProduceEvent<'Event>>) preparedProducer ->
+                    |> List.fold (fun (producers: Map<RuntimeConnectionName, NotConnectedProducer>, produces: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>) preparedProducer ->
                         let { Connection = (ConnectionName connection); Producer = producer; Produce = produce} = preparedProducer
 
                         ( producers.Add(connection, producer), produces.Add(connection, produce) )
@@ -171,7 +171,7 @@ module ApplicationBuilder =
                 //
                 // runtime parts
                 //
-                let preparedRuntimeParts: PreparedConsumeRuntimeParts<'Event> = {
+                let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
                     Environment = environment
                     Connections = connections
@@ -201,8 +201,8 @@ module ApplicationBuilder =
             }
             |> KafkaApplication
 
-    type KafkaApplicationBuilder<'Event, 'a> internal (buildApplication: Configuration<'Event> -> 'a) =
-        let debugConfiguration (parts: ConfigurationParts<_>) =
+    type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> 'a) =
+        let debugConfiguration (parts: ConfigurationParts<_, _>) =
             parts
             |> sprintf "%A"
             |> parts.Logger.Debug "Configuration"
@@ -215,82 +215,82 @@ module ApplicationBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        member __.Yield (_): Configuration<'Event> =
+        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
             defaultParts
             |> Ok
             |> Configuration
 
-        member __.Bind(state, f): Configuration<'Event> =
+        member __.Bind(state, f): Configuration<'InputEvent, 'OutputEvent> =
             state >>= f
 
-        member __.Run(state: Configuration<'Event>) =
+        member __.Run(state: Configuration<'InputEvent, 'OutputEvent>) =
             buildApplication state
 
         [<CustomOperation("useLogger")>]
-        member __.Logger(state, logger: ApplicationLogger): Configuration<'Event> =
+        member __.Logger(state, logger: ApplicationLogger): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Logger = logger }
 
         [<CustomOperation("useInstance")>]
-        member __.Instance(state, instance): Configuration<'Event> =
+        member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Instance = Some instance }
 
         [<CustomOperation("useSpot")>]
-        member __.Spot(state, spot): Configuration<'Event> =
+        member __.Spot(state, spot): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Spot = Some spot }
 
         [<CustomOperation("useGroupId")>]
-        member __.GroupId(state, groupId): Configuration<'Event> =
+        member __.GroupId(state, groupId): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
 
         [<CustomOperation("checkKafkaWith")>]
-        member __.CheckKafkaWith(state, checker): Configuration<'Event> =
+        member __.CheckKafkaWith(state, checker): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with KafkaChecker = Some checker }
 
         [<CustomOperation("connect")>]
-        member __.Connect(state, connectionConfiguration): Configuration<'Event> =
+        member __.Connect(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
 
         [<CustomOperation("connectTo")>]
-        member __.ConnectTo(state, name, connectionConfiguration): Configuration<'Event> =
+        member __.ConnectTo(state, name, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(ConnectionName name, connectionConfiguration) }
 
         [<CustomOperation("useSupervision")>]
-        member __.Supervision(state, connectionConfiguration): Configuration<'Event> =
+        member __.Supervision(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }
 
         [<CustomOperation("consume")>]
-        member __.Consume(state, consumeHandler): Configuration<'Event> =
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
 
         [<CustomOperation("consumeFrom")>]
-        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'Event> =
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
 
         [<CustomOperation("consumeLast")>]
-        member __.ConsumeLast(state, consumeHandler): Configuration<'Event> =
+        member __.ConsumeLast(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
 
         [<CustomOperation("consumeLastFrom")>]
-        member __.ConsumeLastFrom(state, name, consumeHandler): Configuration<'Event> =
+        member __.ConsumeLastFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
 
         [<CustomOperation("onConsumeError")>]
-        member __.OnConsumeError(state, onConsumeError): Configuration<'Event> =
+        member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(Connections.Default, onConsumeError) }
 
         [<CustomOperation("onConsumeErrorFor")>]
-        member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'Event> =
+        member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(ConnectionName name, onConsumeError) }
 
         [<CustomOperation("produceTo")>]
-        member __.ProduceTo(state, name): Configuration<'Event> =
+        member __.ProduceTo(state, name): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with ProduceTo = ConnectionName name :: parts.ProduceTo }
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
         [<CustomOperation("merge")>]
-        member __.Merge(state, configuration): Configuration<'Event> =
+        member __.Merge(state, configuration): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun currentParts ->
                 configuration <!> fun newParts ->
                     {
@@ -313,7 +313,7 @@ module ApplicationBuilder =
 
         /// Start an asynchronous web server on http://127.0.0.1:8080 and shows metrics for prometheus.
         [<CustomOperation("showMetricsOn")>]
-        member __.ShowMetricsOn(state, route): Configuration<'Event> =
+        member __.ShowMetricsOn(state, route): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! route =
@@ -326,9 +326,9 @@ module ApplicationBuilder =
                 |> Result.mapError MetricsError
 
         [<CustomOperation("showInputEventsWith")>]
-        member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'Event> =
+        member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
 
         [<CustomOperation("showOutputEventsWith")>]
-        member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'Event> =
+        member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }

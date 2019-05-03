@@ -89,6 +89,6 @@ module Program =
             showInputEventsWith createInputKeys
             showOutputEventsWith createOutputKeys
         }
-        |> run
+        |> run RawEvent.parse
 
         //System.Threading.Thread.Sleep(10 * 1000)

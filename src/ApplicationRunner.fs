@@ -14,9 +14,9 @@ module ApplicationRunner =
 
             logger.Verbose "Supervision" "Instance started produced."
 
-        let private consume
-            (consumeEvents: ConsumerConfiguration -> 'Event seq)
-            (consumeLastEvent: ConsumerConfiguration -> 'Event option)
+        let private consume<'InputEvent>
+            (consumeEvents: ConsumerConfiguration -> 'InputEvent seq)
+            (consumeLastEvent: ConsumerConfiguration -> 'InputEvent option)
             configuration
             incrementInputEventCount = function
             | Events eventsHandler ->
@@ -29,7 +29,13 @@ module ApplicationRunner =
                 |> consumeLastEvent
                 |>! lastEventHandler
 
-        let private consumeWithErrorHandling (logger: ApplicationLogger) runtimeParts flushProducers consumeEvents consumeLastEvent (consumeHandler: RuntimeConsumeHandlerForConnection<_>) =
+        let private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
+            (logger: ApplicationLogger)
+            (runtimeParts: ConsumeRuntimeParts<'OutputEvent>)
+            flushProducers
+            consumeEvents
+            consumeLastEvent
+            (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) =
             let context = sprintf "Kafka<%s>" consumeHandler.Connection
 
             let mutable runConsuming = true
@@ -65,14 +71,14 @@ module ApplicationRunner =
             |> List.map snd
             |> List.iter action
 
-        let run
-            (consumeEvents: ConsumerConfiguration -> 'Event seq)
-            (consumeLastEvent: ConsumerConfiguration -> 'Event option)
+        let run<'InputEvent, 'OutputEvent>
+            (consumeEvents: ConsumerConfiguration -> 'InputEvent seq)
+            (consumeLastEvent: ConsumerConfiguration -> 'InputEvent option)
             connectProducer
             produceSingleMessage
             flushProducer
             closeProducer
-            (application: KafkaApplicationParts<'Event>) =
+            (application: KafkaApplicationParts<'InputEvent, 'OutputEvent>) =
             application.Logger.Debug "Application" <| sprintf "Configuration:\n%A" application
             application.Logger.Log "Application" "Starts ..."
 

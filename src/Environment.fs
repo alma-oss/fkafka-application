@@ -9,7 +9,7 @@ module EnvironmentBuilder =
     open Kafka
 
     type EnvironmentBuilder internal (logger) =
-        let debugConfiguration (parts: ConfigurationParts<_>) =
+        let debugConfiguration (parts: ConfigurationParts<_, _>) =
             parts
             |> sprintf "%A"
             |> parts.Logger.Debug "Environment"
@@ -22,7 +22,7 @@ module EnvironmentBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        let connectTo state connectionName (connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+        let connectTo state connectionName (connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! brokerList =
@@ -42,16 +42,16 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError ConnectionConfigurationError
 
-        member __.Yield (_): Configuration<'Event> =
+        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
             { defaultParts with Logger = logger }
             |> Ok
             |> Configuration
 
-        member __.Run(state): Configuration<'Event> =
+        member __.Run(state): Configuration<'InputEvent, 'OutputEvent> =
             state
 
         [<CustomOperation("file")>]
-        member __.File(state, envFileLocations): Configuration<'Event> =
+        member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts ->
                 { parts with
                     Environment =
@@ -62,7 +62,7 @@ module EnvironmentBuilder =
                 }
 
         [<CustomOperation("check")>]
-        member __.Check(state, name, checker): Configuration<'Event> =
+        member __.Check(state, name, checker): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! value =
@@ -81,7 +81,7 @@ module EnvironmentBuilder =
 
         /// Define required environment variables, all values must be presented in currently loaded Environment
         [<CustomOperation("require")>]
-        member __.Require(state, names): Configuration<'Event> =
+        member __.Require(state, names): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! _ =
@@ -94,7 +94,7 @@ module EnvironmentBuilder =
                 |> Result.mapError EnvironmentError
 
         [<CustomOperation("instance")>]
-        member __.Instance(state, instanceVariableName): Configuration<'Event> =
+        member __.Instance(state, instanceVariableName): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! instanceString =
@@ -112,7 +112,7 @@ module EnvironmentBuilder =
                 |> Result.mapError InstanceError
 
         [<CustomOperation("spot")>]
-        member __.Spot(state, spotVariableName): Configuration<'Event> =
+        member __.Spot(state, spotVariableName): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! spotString =
@@ -132,7 +132,7 @@ module EnvironmentBuilder =
                 |> Result.mapError SpotError
 
         [<CustomOperation("groupId")>]
-        member __.GroupId(state, groupIdVariableName): Configuration<'Event> =
+        member __.GroupId(state, groupIdVariableName): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! groupId =
@@ -144,19 +144,19 @@ module EnvironmentBuilder =
                 |> Result.mapError GroupIdError
 
         [<CustomOperation("supervision")>]
-        member __.Supervision(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+        member __.Supervision(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             connectTo state Connections.Supervision connectionConfiguration
 
         [<CustomOperation("connect")>]
-        member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+        member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             connectTo state Connections.Default connectionConfiguration
 
         [<CustomOperation("connectTo")>]
-        member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'Event> =
+        member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             connectTo state (ConnectionName name) connectionConfiguration
 
         [<CustomOperation("ifSetDo")>]
-        member __.IfSetDo(state, name, action): Configuration<'Event> =
+        member __.IfSetDo(state, name, action): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts ->
                 name
                 |> parts.Environment.TryFind
