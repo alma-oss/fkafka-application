@@ -9,7 +9,7 @@ module ApplicationRunner =
         let private produceInstanceStarted produceSingleMessage logger box (supervisionProducer: ConnectedProducer) =
             box
             |> ApplicationEvents.createInstanceStarted
-            |> ApplicationEvents.serialize
+            |> ApplicationEvents.fromDomain Serializer.serialize
             |> produceSingleMessage supervisionProducer
 
             logger.Verbose "Supervision" "Instance started produced."

@@ -77,24 +77,25 @@ module ApplicationEvents =
         domain_data: EmptyDataDto
     }
 
-    let serialize (InstanceStartedEvent event) =
-        {
-            schema = 1
-            id = event.Id |> EventId.value
-            correlation_id = event.CorrelationId |> CorrelationId.value
-            causation_id = event.CausationId |> CausationId.value
-            timestamp = event.Timestamp
-            event = event.Event |> EventName.value
-            domain = event.Domain |> Domain.value
-            context = event.Context |> Context.value
-            purpose = event.Purpose |> Purpose.value
-            version = event.Version |> Version.value
-            zone = event.Zone |> Zone.value
-            bucket = event.Bucket |> Bucket.value
-            meta_data = {
-                created_at = event.MetaData.CreatedAt
+    let fromDomain: FromDomain<InstanceStartedEvent> =
+        fun (Serialize serialize) (InstanceStartedEvent event) ->
+            {
+                schema = 1
+                id = event.Id |> EventId.value
+                correlation_id = event.CorrelationId |> CorrelationId.value
+                causation_id = event.CausationId |> CausationId.value
+                timestamp = event.Timestamp
+                event = event.Event |> EventName.value
+                domain = event.Domain |> Domain.value
+                context = event.Context |> Context.value
+                purpose = event.Purpose |> Purpose.value
+                version = event.Version |> Version.value
+                zone = event.Zone |> Zone.value
+                bucket = event.Bucket |> Bucket.value
+                meta_data = {
+                    created_at = event.MetaData.CreatedAt
+                }
+                key_data = Map.empty
+                domain_data = Map.empty
             }
-            key_data = Map.empty
-            domain_data = Map.empty
-        }
-        |> Serializer.serialize
+            |> serialize

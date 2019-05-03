@@ -176,6 +176,10 @@ type private PreparedProducer<'OutputEvent> = {
     Produce: PreparedProduceEvent<'OutputEvent>
 }
 
+// Output events
+type Serialize = Serialize of (obj -> string)
+type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> string
+
 //
 // Consume handlers
 //
@@ -252,6 +256,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
     ProduceTo: ConnectionName list
+    FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
     MetricsRoute: MetricsRoute option
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
@@ -272,6 +277,7 @@ module internal ConfigurationParts =
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
             ProduceTo = []
+            FromDomain = Map.empty
             MetricsRoute = None
             CreateInputEventKeys = None
             CreateOutputEventKeys = None

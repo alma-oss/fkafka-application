@@ -1,12 +1,10 @@
 namespace KafkaApplication
 
-module internal Serializer =
+module Serializer = // todo - internal?
     module private Json =
         open Newtonsoft.Json
 
         let serialize obj =
             JsonConvert.SerializeObject obj
 
-    let serialize (event: 'Event) =
-        event
-        |> Json.serialize
+    let serialize = Serialize Json.serialize

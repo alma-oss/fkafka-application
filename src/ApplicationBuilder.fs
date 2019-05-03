@@ -18,6 +18,7 @@ module ApplicationBuilder =
             prepareProducer
             produceMessage
             (connections: Connections)
+            fromDomain
             incrementOutputCount
             name =
             result {
@@ -25,6 +26,11 @@ module ApplicationBuilder =
                     connections
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingConfiguration name)
+
+                let! fromDomain =
+                    fromDomain
+                    |> Map.tryFind name
+                    |> Result.ofOption (ProduceError.MissingConfiguration name) // todo this should be always there ?
 
                 let producer = prepareProducer {
                     Connection = connection
@@ -36,7 +42,7 @@ module ApplicationBuilder =
 
                 let produceEvent producer event =
                     event
-                    |> tee (Serializer.serialize >> produceMessage producer)
+                    |> tee (fromDomain Serializer.serialize >> produceMessage producer)
                     |> incrementOutputCount
 
                 return {
@@ -152,7 +158,7 @@ module ApplicationBuilder =
                     | _ -> fun _ -> ignore
 
                 // producers
-                let prepareProducer = prepareProducer kafkaLogger kafkaChecker serviceStatus.MarkAsDisabled createProducer produceMessage connections incrementOutputCount
+                let prepareProducer = prepareProducer kafkaLogger kafkaChecker serviceStatus.MarkAsDisabled createProducer produceMessage connections configurationParts.FromDomain incrementOutputCount
 
                 let! preparedProducers =
                     connectionsToProduce
@@ -283,8 +289,14 @@ module ApplicationBuilder =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(ConnectionName name, onConsumeError) }
 
         [<CustomOperation("produceTo")>]
-        member __.ProduceTo(state, name): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ProduceTo = ConnectionName name :: parts.ProduceTo }
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts ->
+                let connectionName = ConnectionName name
+                {
+                    parts with
+                        ProduceTo = connectionName :: parts.ProduceTo
+                        FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
+                }
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
@@ -304,6 +316,7 @@ module ApplicationBuilder =
                         ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
                         ProduceTo = newParts.ProduceTo |> List.merge currentParts.ProduceTo
+                        FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys

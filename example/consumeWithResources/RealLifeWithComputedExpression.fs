@@ -28,9 +28,9 @@ module Program =
         let filterDomainData (event: RawEvent) =
             { event with DomainData = None }
 
-        let toDto (event: RawEvent) =
-            // todo
-            event
+        let fromDomain: FromDomain<RawEvent> =
+            fun (Serialize serialize) event ->
+                serialize event
 
         //
         // run simple app
@@ -65,14 +65,14 @@ module Program =
             })
 
             merge (partialKafkaApplication {
-                produceTo "outputStream" // toDto
+                produceTo "outputStream" fromDomain
 
                 consume (fun app events ->
                     let produce = app.ProduceTo.["outputStream"]
 
                     events
                     |> Seq.take 1000
-                    |> Seq.iter (filterDomainData >> toDto >> produce)
+                    |> Seq.iter (filterDomainData >> produce)
                 )
             })
 
@@ -82,7 +82,7 @@ module Program =
                 contractEvents
                 |> Seq.filter isActivatedContracts
                 //|> Seq.take 1
-                |> Seq.iter (filterDomainData >> toDto >> produce)
+                |> Seq.iter (filterDomainData >> produce)
             )
 
             showMetricsOn "/metrics"
@@ -90,5 +90,3 @@ module Program =
             showOutputEventsWith createOutputKeys
         }
         |> run RawEvent.parse
-
-        //System.Threading.Thread.Sleep(10 * 1000)
