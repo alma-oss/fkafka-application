@@ -312,6 +312,24 @@ module ApplicationBuilder =
                         FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
                 }
 
+        [<CustomOperation("produceToMany")>]
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts ->
+                let connectionNames =
+                    topics
+                    |> List.map ConnectionName
+
+                let fromDomain =
+                    connectionNames
+                    |> List.map (fun name -> (name, fromDomain))
+                    |> Map.ofList
+
+                {
+                    parts with
+                        ProduceTo = parts.ProduceTo @ connectionNames
+                        FromDomain = parts.FromDomain |> Map.merge fromDomain
+                }
+
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
@@ -327,9 +345,9 @@ module ApplicationBuilder =
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
-                        ConsumeHandlers = newParts.ConsumeHandlers |> List.merge currentParts.ConsumeHandlers
+                        ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
-                        ProduceTo = newParts.ProduceTo |> List.merge currentParts.ProduceTo
+                        ProduceTo = currentParts.ProduceTo @ newParts.ProduceTo
                         FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys

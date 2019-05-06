@@ -33,9 +33,3 @@ module internal Map =
             if merged |> Map.containsKey name then merged
             else merged.Add(name, connection)
         ) newValues
-
-module internal List =
-    /// Merge new values with the current values (ignoring already defined values) if there is any new values.
-    let merge currentValues newValues =
-        if newValues |> List.isEmpty then currentValues
-        else newValues
