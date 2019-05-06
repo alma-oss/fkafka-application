@@ -42,6 +42,27 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError ConnectionConfigurationError
 
+        let connectManyTo state (connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! brokerList =
+                        connectionConfiguration.BrokerList
+                        |> getEnvironmentValue parts BrokerList ConnectionConfigurationError.VariableNotFoundError
+
+                    let connectionConfigurations: Connections =
+                        connectionConfiguration.Topics
+                        |> List.map (fun topic ->
+                            (
+                                topic |> ConnectionName,
+                                { BrokerList = brokerList; Topic = StreamName topic }
+                            )
+                        )
+                        |> Map.ofList
+
+                    return { parts with Connections = parts.Connections |> Map.merge connectionConfigurations }
+                }
+                |> Result.mapError ConnectionConfigurationError
+
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
             { defaultParts with Logger = logger }
             |> Ok
@@ -154,6 +175,10 @@ module EnvironmentBuilder =
         [<CustomOperation("connectTo")>]
         member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             connectTo state (ConnectionName name) connectionConfiguration
+
+        [<CustomOperation("connectManyToBroker")>]
+        member __.ConnectManyToBroker(state, connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+            connectManyTo state connectionConfiguration
 
         [<CustomOperation("ifSetDo")>]
         member __.IfSetDo(state, name, action): Configuration<'InputEvent, 'OutputEvent> =

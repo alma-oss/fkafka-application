@@ -81,9 +81,19 @@ type EnvironmentConnectionConfiguration = {
     Topic: string
 }
 
+type EnvironmentManyTopicsConnectionConfiguration = {
+    BrokerList: string
+    Topics: string list
+}
+
 //
 // Kafka connections
 //
+
+type ManyTopicsConnectionConfiguration = {
+    BrokerList: BrokerList
+    Topics: StreamName list
+}
 
 type ConnectionName = ConnectionName of string
 type RuntimeConnectionName = string

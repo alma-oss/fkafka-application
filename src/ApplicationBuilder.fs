@@ -260,6 +260,20 @@ module ApplicationBuilder =
         member __.ConnectTo(state, name, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(ConnectionName name, connectionConfiguration) }
 
+        [<CustomOperation("connectManyToBroker")>]
+        member __.ConnectManyToBroker(state, connectionConfigurations: ManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts ->
+                let configurationConnections: Connections =
+                    connectionConfigurations.Topics
+                    |> List.map (fun topic ->
+                        (
+                            topic |> StreamName.value |> ConnectionName,
+                            { BrokerList = connectionConfigurations.BrokerList; Topic = topic }
+                        )
+                    )
+                    |> Map.ofList
+                { parts with Connections = parts.Connections |> Map.merge configurationConnections }
+
         [<CustomOperation("useSupervision")>]
         member __.Supervision(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }

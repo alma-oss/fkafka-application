@@ -19,6 +19,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | --- | --- | --- |
 | checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
 | connect | `Kafka.ConnectionConfiguration` | It will _register_ a default connection for Kafka. |
+| connectManyToBroker | `ManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
 | connectTo | `connectionName: string`, `Kafka.ConnectionConfiguration` | It will _register_ a named connection for Kafka. |
 | consume | `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the default Kafka connection. |
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
@@ -57,6 +58,7 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 | **PARSING_IS_NOT_IMPLEMENTED_YET** spot | `variable name: string` | It will parse Spot from the environment variable. |
 | check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
+| connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
