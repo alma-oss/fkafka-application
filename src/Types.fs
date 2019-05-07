@@ -151,7 +151,8 @@ type ConsumeHandlerError =
 
 [<RequireQualifiedAccess>]
 type ProduceError =
-    | MissingConfiguration of ConnectionName
+    | MissingConnectionConfiguration of ConnectionName
+    | MissingFromDomainConfiguration of ConnectionName
 
 type MetricsError =
     | InvalidRoute of InvalidMetricsRouteError
@@ -317,4 +318,4 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
 
-type KafkaApplication<'InputEvent, 'OutputEvent> = private KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>

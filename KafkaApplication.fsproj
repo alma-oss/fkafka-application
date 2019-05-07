@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Common kafka application -->
     <Compile Include="src/Types.fs" />
     <Compile Include="src/Utilities.fs" />
     <Compile Include="src/Serializer.fs" />
@@ -18,33 +19,33 @@
     <Compile Include="src/Environment.fs" />
     <Compile Include="src/ApplicationBuilder.fs" />
     <Compile Include="src/ApplicationRunner.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Filter pattern application -->
+    <Compile Include="src/Filter/Types.fs" />
+    <Compile Include="src/Filter/Filter.fs" />
+    <Compile Include="src/Filter/Metrics.fs" />
+    <Compile Include="src/Filter/FilterBuilder.fs" />
+    <Compile Include="src/Filter/FilterRunner.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../fkafka/Kafka.fsproj">
-      <Name>Kafka.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="../fmetrics/Metrics.fsproj">
-      <Name>Metrics.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- todo - sort -->
-    <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
-    <!--<PackageReference Include="Lmc.Kafka" Version="4.0" />-->
-    <!--<PackageReference Include="Lmc.Metrics" Version="1.0" />-->
-    <PackageReference Include="Lmc.ServiceIdentification" Version="2.0" />
     <PackageReference Include="Lmc.Environment" Version="2.1" />
+    <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
+    <PackageReference Include="Lmc.Kafka" Version="6.0" />
     <PackageReference Include="Lmc.Logging" Version="1.0" />
+    <PackageReference Include="Lmc.Metrics" Version="2.0" />
+    <PackageReference Include="Lmc.ServiceIdentification" Version="2.0" />
   </ItemGroup>
 
 </Project>
