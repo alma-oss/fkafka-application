@@ -12,6 +12,11 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
 - it should be http://development-nugetserver-common-stable.service.devel1-services.consul:{PORT} (_make sure you have a correct port, since it changes with deployment_)
 - see http://consul-1.infra.pprod/ui/devel1-services/services/development-nugetServer-common-stable for detailed information (and port)
 
+## Patterns
+You can simply use predefined patterns for application you want.
+
+- [FilterContentFilter](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Filter/README.md)
+
 ## Custom Kafka Application functions
 _NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computed expression._
 

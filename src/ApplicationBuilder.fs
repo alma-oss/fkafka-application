@@ -6,7 +6,70 @@ module ApplicationBuilder =
     open ServiceIdentification
     open OptionOperators
 
+    [<AutoOpen>]
     module internal KafkaApplicationBuilder =
+        let private debugConfiguration (parts: ConfigurationParts<_, _>) =
+            parts
+            |> sprintf "%A"
+            |> parts.Logger.Debug "Configuration"
+
+        let (>>=) (Configuration configuration) f =
+            configuration
+            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Configuration
+
+        let (<!>) state f =
+            state >>= (f >> Ok)
+
+        /// Add other configuration and merge it with current.
+        /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
+        /// (Except of logger)
+        let mergeConfiguration<'InputEvent, 'OutputEvent> currentConfiguration newConfiguration: Configuration<'InputEvent, 'OutputEvent> =
+            currentConfiguration >>= fun currentParts ->
+                newConfiguration <!> fun newParts ->
+                    {
+                        Logger = currentParts.Logger
+                        Environment = newParts.Environment |> Environment.update currentParts.Environment
+                        Instance = newParts.Instance <??> currentParts.Instance
+                        Spot = newParts.Spot <??> currentParts.Spot
+                        GroupId = newParts.GroupId <??> currentParts.GroupId
+                        GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
+                        Connections = newParts.Connections |> Map.merge currentParts.Connections
+                        ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
+                        OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
+                        ProduceTo = currentParts.ProduceTo @ newParts.ProduceTo
+                        FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
+                        MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
+                        CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
+                        CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
+                        KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
+                    }
+                |> Configuration.result
+
+        let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+
+        let addDefaultConsumeHandler<'InputEvent, 'OutputEvent> consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
+            Connections.Default |> addConsumeHandler configuration consumeHandler
+
+        let addConsumeHandlerForConnection<'InputEvent, 'OutputEvent> name consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
+            ConnectionName name |> addConsumeHandler configuration consumeHandler
+
+        let addProduceTo<'InputEvent, 'OutputEvent> name fromDomain configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts ->
+                let connectionName = ConnectionName name
+                {
+                    parts with
+                        ProduceTo = connectionName :: parts.ProduceTo
+                        FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
+                }
+
+        let addCreateInputEventKeys<'InputEvent, 'OutputEvent> createInputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
+
+        let addCreateOutputEventKeys<'InputEvent, 'OutputEvent> createOutputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
+
         let private assertNotEmpty error collection =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
             else Ok collection
@@ -25,12 +88,12 @@ module ApplicationBuilder =
                 let! connection =
                     connections
                     |> Map.tryFind name
-                    |> Result.ofOption (ProduceError.MissingConfiguration name)
+                    |> Result.ofOption (ProduceError.MissingConnectionConfiguration name)
 
                 let! fromDomain =
                     fromDomain
                     |> Map.tryFind name
-                    |> Result.ofOption (ProduceError.MissingConfiguration name) // todo this should be always there ?
+                    |> Result.ofOption (ProduceError.MissingFromDomainConfiguration name)
 
                 let producer = prepareProducer {
                     Connection = connection
@@ -50,6 +113,14 @@ module ApplicationBuilder =
                     Producer = producer
                     Produce = produceEvent
                 }
+            }
+
+        let private prepareSupervisionProduce logger checker markAsDisabled prepareProducer supervisionConnection =
+            prepareProducer {
+                Connection = supervisionConnection
+                Logger = "Supervision" |> logger |> Some
+                Checker = checker supervisionConnection.BrokerList |> Some
+                MarkAsDisabled = markAsDisabled |> Some
             }
 
         let private composeRuntimeConsumeHandlersForConnections<'InputEvent, 'OutputEvent>
@@ -106,11 +177,6 @@ module ApplicationBuilder =
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
 
-                let connectionsToProduce =
-                    if connections |> Map.containsKey Connections.Supervision
-                    then Connections.Supervision :: configurationParts.ProduceTo
-                    else configurationParts.ProduceTo
-
                 //
                 // composed parts
                 //
@@ -161,7 +227,7 @@ module ApplicationBuilder =
                 let prepareProducer = prepareProducer kafkaLogger kafkaChecker serviceStatus.MarkAsDisabled createProducer produceMessage connections configurationParts.FromDomain incrementOutputCount
 
                 let! preparedProducers =
-                    connectionsToProduce
+                    configurationParts.ProduceTo
                     |> List.map prepareProducer
                     |> Result.sequence
                     |> Result.mapError ProduceError
@@ -173,6 +239,16 @@ module ApplicationBuilder =
 
                         ( producers.Add(connection, producer), produces.Add(connection, produce) )
                     ) (Map.empty, Map.empty)
+
+                let supervisionProducer =
+                    connections
+                    |> Map.tryFind Connections.Supervision
+                    |> Option.map (prepareSupervisionProduce kafkaLogger kafkaChecker markAsDisabled createProducer)
+
+                let producers =
+                    match supervisionProducer with
+                    | Some supervisionProducer -> producers.Add(Connections.Supervision |> ConnectionName.runtimeName, supervisionProducer)
+                    | _ -> producers
 
                 //
                 // runtime parts
@@ -207,20 +283,11 @@ module ApplicationBuilder =
             }
             |> KafkaApplication
 
+    //
+    // Kafka Application Builder computed expression
+    //
+
     type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> 'a) =
-        let debugConfiguration (parts: ConfigurationParts<_, _>) =
-            parts
-            |> sprintf "%A"
-            |> parts.Logger.Debug "Configuration"
-
-        let (>>=) (Configuration configuration) f =
-            configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
-            |> Configuration
-
-        let (<!>) state f =
-            state >>= (f >> Ok)
-
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
             defaultParts
             |> Ok
@@ -280,11 +347,11 @@ module ApplicationBuilder =
 
         [<CustomOperation("consume")>]
         member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+            state |> addDefaultConsumeHandler consumeHandler
 
         [<CustomOperation("consumeFrom")>]
         member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+            state |> addConsumeHandlerForConnection name consumeHandler
 
         [<CustomOperation("consumeLast")>]
         member __.ConsumeLast(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
@@ -304,13 +371,7 @@ module ApplicationBuilder =
 
         [<CustomOperation("produceTo")>]
         member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts ->
-                let connectionName = ConnectionName name
-                {
-                    parts with
-                        ProduceTo = connectionName :: parts.ProduceTo
-                        FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
-                }
+            state |> addProduceTo name fromDomain
 
         [<CustomOperation("produceToMany")>]
         member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
@@ -335,26 +396,7 @@ module ApplicationBuilder =
         /// (Except of logger)
         [<CustomOperation("merge")>]
         member __.Merge(state, configuration): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun currentParts ->
-                configuration <!> fun newParts ->
-                    {
-                        Logger = currentParts.Logger
-                        Environment = Environment.update currentParts.Environment newParts.Environment
-                        Instance = newParts.Instance <??> currentParts.Instance
-                        Spot = newParts.Spot <??> currentParts.Spot
-                        GroupId = newParts.GroupId <??> currentParts.GroupId
-                        GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
-                        Connections = newParts.Connections |> Map.merge currentParts.Connections
-                        ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
-                        OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
-                        ProduceTo = currentParts.ProduceTo @ newParts.ProduceTo
-                        FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
-                        MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
-                        CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
-                        CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
-                        KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
-                    }
-                |> Configuration.result
+            configuration |> mergeConfiguration state
 
         /// Start an asynchronous web server on http://127.0.0.1:8080 and shows metrics for prometheus.
         [<CustomOperation("showMetricsOn")>]
@@ -372,8 +414,8 @@ module ApplicationBuilder =
 
         [<CustomOperation("showInputEventsWith")>]
         member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
+            state |> addCreateInputEventKeys createInputEventKeys
 
         [<CustomOperation("showOutputEventsWith")>]
         member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
+            state |> addCreateOutputEventKeys createOutputEventKeys
