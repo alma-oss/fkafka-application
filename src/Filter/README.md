@@ -10,7 +10,7 @@ It filters input stream by specific configuration and then filters out content y
 ## Filter computed expression
 It allows you to create a filter application easier. It has build-in a filter consumer, metrics, etc.
 
-Filter computed expression returns `FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.runFilter` function.
+Filter computed expression returns `FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

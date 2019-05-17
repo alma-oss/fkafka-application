@@ -31,6 +31,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Content-Based Router pattern application -->
+    <Compile Include="src/Router/Types.fs" />
+    <Compile Include="src/Router/Router.fs" />
+    <Compile Include="src/Router/Metrics.fs" />
+    <Compile Include="src/Router/RouterBuilder.fs" />
+    <Compile Include="src/Router/RouterRunner.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 
