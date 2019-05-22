@@ -2,18 +2,13 @@ namespace KafkaApplication.Router
 
 module ContentBasedRouterRunner =
     open KafkaApplication
+    open KafkaApplication.Pattern
 
     let runRouter<'InputEvent, 'OutputEvent> run (ContentBasedRouterApplication application: ContentBasedRouterApplication<'InputEvent, 'OutputEvent>): unit =
-        match application with
-        | Ok filterApplication ->   // todo - this could be common too
-            let (KafkaApplication kafkaApplication) = filterApplication.Application
+        let beforeRun routerApplication app =
+            routerApplication.RouterConfiguration
+            |> sprintf "%A"
+            |> app.Logger.VeryVerbose "Router"
 
-            match kafkaApplication with
-            | Ok app ->
-                // log filter configuration
-                app.Logger.VeryVerbose "Router" (sprintf "%A" filterApplication.RouterConfiguration)
-
-                // run router application
-                filterApplication.Application |> run
-            | Error error -> failwithf "[Router Application] Error:\n%A" error
-        | Error error -> failwithf "[Router Application] Error:\n%A" error
+        application
+        |> PatternRunner.runPattern "Router" ContentBasedRouterApplication.application beforeRun run

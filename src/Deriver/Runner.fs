@@ -1,7 +1,11 @@
 namespace KafkaApplication.Deriver
 
 module DeriverRunner =
+    open KafkaApplication
+    open KafkaApplication.Pattern
+
     let runDeriver<'InputEvent, 'OutputEvent> run (DeriverApplication application: DeriverApplication<'InputEvent, 'OutputEvent>): unit =
-        match application with
-        | Ok deriverApplication -> deriverApplication.Application |> run
-        | Error error -> failwithf "[Deriver Application] Error:\n%A" error
+        let beforeRun _ = ignore
+
+        application
+        |> PatternRunner.runPattern "Deriver" DeriverApplication.application beforeRun run

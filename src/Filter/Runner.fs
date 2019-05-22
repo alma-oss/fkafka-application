@@ -2,18 +2,13 @@ namespace KafkaApplication.Filter
 
 module FilterRunner =
     open KafkaApplication
+    open KafkaApplication.Pattern
 
     let runFilter<'InputEvent, 'OutputEvent> run (FilterApplication application: FilterApplication<'InputEvent, 'OutputEvent>): unit =
-        match application with
-        | Ok filterApplication ->
-            let (KafkaApplication kafkaApplication) = filterApplication.Application
+        let beforeRun filterApplication app =
+            filterApplication.FilterConfiguration
+            |> sprintf "%A"
+            |> app.Logger.VeryVerbose "Filter"
 
-            match kafkaApplication with
-            | Ok app ->
-                // log filter configuration
-                app.Logger.VeryVerbose "Filter" (sprintf "%A" filterApplication.FilterConfiguration)
-
-                // run filter application
-                filterApplication.Application |> run
-            | Error error -> failwithf "[Filter Application] Error:\n%A" error
-        | Error error -> failwithf "[Filter Application] Error:\n%A" error
+        application
+        |> PatternRunner.runPattern "Filter" FilterApplication.application beforeRun run

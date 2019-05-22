@@ -56,11 +56,11 @@ module KafkaApplication =
     let run<'InputEvent, 'OutputEvent>
         (parseEvent: ParseEvent<'InputEvent>)
         (application: Application<'InputEvent, 'OutputEvent>) =
-        let runApplication kafkaApplication =
-            runKafkaApplication kafkaApplication parseEvent
+        let runApplication beforeRun kafkaApplication =
+            runKafkaApplication beforeRun kafkaApplication parseEvent
 
         match application with
-        | CustomApplication kafkaApplication -> runApplication kafkaApplication
+        | CustomApplication kafkaApplication -> runApplication ignore kafkaApplication
         | FilterContentFilter filterApplication -> FilterRunner.runFilter runApplication filterApplication
         | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runApplication routerApplication
         | Deriver deriverApplication -> DeriverRunner.runDeriver runApplication deriverApplication

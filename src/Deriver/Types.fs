@@ -55,3 +55,6 @@ type DeriverApplicationParts<'InputEvent, 'OutputEvent> = {
 }
 
 type DeriverApplication<'InputEvent, 'OutputEvent> = internal DeriverApplication of Result<DeriverApplicationParts<'InputEvent, 'OutputEvent>, DeriverApplicationError>
+
+module DeriverApplication =
+    let application { Application = application } = application

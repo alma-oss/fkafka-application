@@ -64,3 +64,6 @@ type FilterApplicationParts<'InputEvent, 'OutputEvent> = {
 }
 
 type FilterApplication<'InputEvent, 'OutputEvent> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent>, FilterApplicationError>
+
+module FilterApplication =
+    let application { Application = application } = application

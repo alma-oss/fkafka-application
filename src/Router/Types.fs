@@ -97,3 +97,6 @@ type ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent> = {
 }
 
 type ContentBasedRouterApplication<'InputEvent, 'OutputEvent> = internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
+
+module ContentBasedRouterApplication =
+    let application { Application = application } = application

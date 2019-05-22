@@ -112,7 +112,8 @@ module ApplicationRunner =
                 application.Logger.Verbose "Application" "Close producers ..."
                 closeProducer |> doWithAllProducers
 
-    let runKafkaApplication<'InputEvent, 'OutputEvent>
+    let internal runKafkaApplication<'InputEvent, 'OutputEvent>
+        (beforeRun: KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit)
         (KafkaApplication application: KafkaApplication<'InputEvent, 'OutputEvent>)
         (parseEvent: ParseEvent<'InputEvent>) =
 
@@ -124,14 +125,15 @@ module ApplicationRunner =
 
         match application with
         | Ok app ->
-            KafkaApplicationRunner.run
+            app
+            |> (tee beforeRun)
+            |> KafkaApplicationRunner.run
                 consume
                 consumeLast
                 Producer.connect
                 Producer.produceSingle
                 Producer.TopicProducer.flush
                 Producer.TopicProducer.close
-                app
         | Error error -> failwithf "[Application] Error:\n%A" error
 
     // todo remove
