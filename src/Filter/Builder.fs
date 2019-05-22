@@ -94,16 +94,12 @@ module FilterBuilder =
         member __.ParseConfiguration(state, configurationPath): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    if not (System.IO.File.Exists(configurationPath)) then
-                        return!
-                            configurationPath
-                            |> sprintf "Filter configuration was not found at \"%s\"."
-                            |> NotFound
-                            |> Error
+                    let! filter =
+                        configurationPath
+                        |> FileParser.parseFromPath Filter.parseFilterConfiguration (sprintf "Filter configuration was not found at \"%s\".")
+                        |> Result.mapError NotFound
 
-                    let configuration = Filter.parseFilterConfiguration configurationPath
-
-                    return { parts with FilterConfiguration = Some configuration }
+                    return { parts with FilterConfiguration = Some filter }
                 }
                 |> Result.mapError FilterConfigurationError
 

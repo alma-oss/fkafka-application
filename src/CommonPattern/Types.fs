@@ -33,11 +33,14 @@ module internal PatternRunner =
             |> run (beforeRun patternParts)
         | Error error -> failwithf "[%s Application] Error:\n%A" pattern error
 
+// Build Patterns
+
+type GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
+type DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
+
 module internal PatternBuilder =
     open ApplicationBuilder
     open OptionOperators
-
-    type DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> ('PatternParts -> Configuration<'InputEvent, 'OutputEvent> option) -> 'PatternParts -> unit
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> =
         fun (PatternName pattern) getConfiguration patternParts ->
