@@ -12,4 +12,4 @@ module ContentBasedRouterRunner =
                 |> app.Logger.VeryVerbose "Router"
 
             application
-            |> PatternRunner.runPattern "Router" ContentBasedRouterApplication.application beforeRun run
+            |> PatternRunner.runPattern (PatternName "Router") ContentBasedRouterApplication.application beforeRun run

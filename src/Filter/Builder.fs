@@ -3,8 +3,8 @@ namespace KafkaApplication.Filter
 module FilterBuilder =
     open KafkaApplication
     open KafkaApplication.Pattern
+    open KafkaApplication.Pattern.PatternBuilder
     open ApplicationBuilder
-    open OptionOperators
     open Filter
 
     module FilterApplicationBuilder =
@@ -71,19 +71,9 @@ module FilterBuilder =
             |> FilterApplication
 
     type FilterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
-        let debugConfiguration (parts: FilterParts<'InputEvent, 'OutputEvent>) =
-            parts.Configuration
-            |>! fun configuration ->
-                configuration <!> tee (fun configurationParts ->
-                    parts
-                    |> sprintf "%A"
-                    |> configurationParts.Logger.Debug "FilterContentFilter"
-                )
-                |> ignore
-
         let (>>=) (FilterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration (PatternName "FilterContentFilter") (fun { Configuration = c } -> c ))) >> f)
             |> FilterApplicationConfiguration
 
         let (<!>) state f =

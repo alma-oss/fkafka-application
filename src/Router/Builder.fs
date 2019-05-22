@@ -4,8 +4,8 @@ module ContentBasedRouterBuilder =
     open Kafka
     open KafkaApplication
     open KafkaApplication.Pattern
+    open KafkaApplication.Pattern.PatternBuilder
     open ApplicationBuilder
-    open OptionOperators
     open Router
 
     module ContentBasedRouterApplicationBuilder =
@@ -72,19 +72,9 @@ module ContentBasedRouterBuilder =
             |> ContentBasedRouterApplication
 
     type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
-        let debugConfiguration (parts: RouterParts<'InputEvent, 'OutputEvent>) =    // todo - this could be common if it is parametrized
-            parts.Configuration
-            |>! fun configuration ->
-                configuration <!> tee (fun configurationParts ->
-                    parts
-                    |> sprintf "%A"
-                    |> configurationParts.Logger.Debug "ContentBasedRouter"
-                )
-                |> ignore
-
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration (PatternName "ContentBasedRouter") (fun { Configuration = c } -> c))) >> f)
             |> ContentBasedRouterApplicationConfiguration
 
         let (<!>) state f =

@@ -12,4 +12,4 @@ module FilterRunner =
                 |> app.Logger.VeryVerbose "Filter"
 
             application
-            |> PatternRunner.runPattern "Filter" FilterApplication.application beforeRun run
+            |> PatternRunner.runPattern (PatternName "Filter") FilterApplication.application beforeRun run

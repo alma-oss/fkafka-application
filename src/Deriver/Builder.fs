@@ -3,8 +3,8 @@ namespace KafkaApplication.Deriver
 module DeriverBuilder =
     open KafkaApplication
     open KafkaApplication.Pattern
+    open KafkaApplication.Pattern.PatternBuilder
     open ApplicationBuilder
-    open OptionOperators
 
     module DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
@@ -63,19 +63,9 @@ module DeriverBuilder =
             |> DeriverApplication
 
     type DeriverBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
-        let debugConfiguration (parts: DeriverParts<'InputEvent, 'OutputEvent>) =
-            parts.Configuration
-            |>! fun configuration ->
-                configuration <!> tee (fun configurationParts ->
-                    parts
-                    |> sprintf "%A"
-                    |> configurationParts.Logger.Debug "Deriver"
-                )
-                |> ignore
-
         let (>>=) (DeriverApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration (PatternName "Deriver") (fun { Configuration = c } -> c))) >> f)
             |> DeriverApplicationConfiguration
 
         let (<!>) state f =

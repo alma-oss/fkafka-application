@@ -9,4 +9,4 @@ module DeriverRunner =
             let beforeRun _ = ignore
 
             application
-            |> PatternRunner.runPattern "Deriver" DeriverApplication.application beforeRun run
+            |> PatternRunner.runPattern (PatternName "Deriver") DeriverApplication.application beforeRun run
