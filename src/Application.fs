@@ -23,7 +23,7 @@ module KafkaApplication =
         | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
 
     //
-    // Build applications
+    // Application builders
     //
 
     let kafkaApplication<'InputEvent, 'OutputEvent> =
@@ -53,28 +53,6 @@ module KafkaApplication =
     // Run applications
     //
 
-    let private runKafkaApplication<'InputEvent, 'OutputEvent>
-        (KafkaApplication application: KafkaApplication<'InputEvent, 'OutputEvent>)
-        (parseEvent: ParseEvent<'InputEvent>) =
-
-        let consume configuration =
-            Consumer.consume configuration parseEvent
-
-        let consumeLast configuration =
-            Consumer.consumeLast configuration parseEvent
-
-        match application with
-        | Ok app ->
-            runApplication
-                consume
-                consumeLast
-                Producer.connect
-                Producer.produceSingle
-                Producer.TopicProducer.flush
-                Producer.TopicProducer.close
-                app
-        | Error error -> failwithf "[Application] Error:\n%A" error
-
     let run<'InputEvent, 'OutputEvent>
         (parseEvent: ParseEvent<'InputEvent>)
         (application: Application<'InputEvent, 'OutputEvent>) =
@@ -94,6 +72,6 @@ module KafkaApplication =
     let _runDummy (kafka_consume: ConsumerConfiguration -> 'InputEvent seq) (kafka_consumeLast: ConsumerConfiguration -> 'InputEvent option) = function
         | CustomApplication (KafkaApplication application) ->
             match application with
-            | Ok app -> runApplication kafka_consume kafka_consumeLast Producer.connect Producer.produceSingle Producer.TopicProducer.flush Producer.TopicProducer.close app
+            | Ok app -> _runDummy kafka_consume kafka_consumeLast Producer.connect Producer.produceSingle Producer.TopicProducer.flush Producer.TopicProducer.close app
             | Error error -> failwithf "[Application] Error:\n%A" error
         | app -> failwithf "Run Dummy is not implemented for %A." app

@@ -4,10 +4,6 @@ module ResourceChecker =
     open Kafka
     open Metrics
 
-    let private tee f a =
-        f a
-        a
-
     let updateResourceStatusOnCheck instance (BrokerList brokerList) kafkaChecker: Kafka.Checker =
         let kafkaClusterResource = ResourceAvailability.createFromStrings "kafka_cluster" brokerList brokerList Audience.Sys
         let kafkaTopicResource (StreamName topic) = ResourceAvailability.createFromStrings "kafka_topic" topic brokerList Audience.Sys
