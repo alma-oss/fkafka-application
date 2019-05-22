@@ -64,11 +64,41 @@ module ApplicationBuilder =
                         FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
                 }
 
+        let addProduceToMany<'InputEvent, 'OutputEvent> topics fromDomain configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts ->
+                let connectionNames =
+                    topics
+                    |> List.map ConnectionName
+
+                let fromDomain =
+                    connectionNames
+                    |> List.map (fun name -> (name, fromDomain))
+                    |> Map.ofList
+
+                {
+                    parts with
+                        ProduceTo = parts.ProduceTo @ connectionNames
+                        FromDomain = parts.FromDomain |> Map.merge fromDomain
+                }
+
         let addCreateInputEventKeys<'InputEvent, 'OutputEvent> createInputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
 
         let addCreateOutputEventKeys<'InputEvent, 'OutputEvent> createOutputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
+
+        let addConnectToMany<'InputEvent, 'OutputEvent> connectionConfigurations configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts ->
+                let configurationConnections: Connections =
+                    connectionConfigurations.Topics
+                    |> List.map (fun topic ->
+                        (
+                            topic |> StreamName.value |> ConnectionName,
+                            { BrokerList = connectionConfigurations.BrokerList; Topic = topic }
+                        )
+                    )
+                    |> Map.ofList
+                { parts with Connections = parts.Connections |> Map.merge configurationConnections }
 
         let private assertNotEmpty error collection =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
@@ -329,17 +359,7 @@ module ApplicationBuilder =
 
         [<CustomOperation("connectManyToBroker")>]
         member __.ConnectManyToBroker(state, connectionConfigurations: ManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts ->
-                let configurationConnections: Connections =
-                    connectionConfigurations.Topics
-                    |> List.map (fun topic ->
-                        (
-                            topic |> StreamName.value |> ConnectionName,
-                            { BrokerList = connectionConfigurations.BrokerList; Topic = topic }
-                        )
-                    )
-                    |> Map.ofList
-                { parts with Connections = parts.Connections |> Map.merge configurationConnections }
+            state |> addConnectToMany connectionConfigurations
 
         [<CustomOperation("useSupervision")>]
         member __.Supervision(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
@@ -375,21 +395,7 @@ module ApplicationBuilder =
 
         [<CustomOperation("produceToMany")>]
         member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts ->
-                let connectionNames =
-                    topics
-                    |> List.map ConnectionName
-
-                let fromDomain =
-                    connectionNames
-                    |> List.map (fun name -> (name, fromDomain))
-                    |> Map.ofList
-
-                {
-                    parts with
-                        ProduceTo = parts.ProduceTo @ connectionNames
-                        FromDomain = parts.FromDomain |> Map.merge fromDomain
-                }
+            state |> addProduceToMany topics fromDomain
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
