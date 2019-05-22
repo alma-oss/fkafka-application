@@ -2,6 +2,7 @@ namespace KafkaApplication.Filter
 
 module FilterBuilder =
     open KafkaApplication
+    open KafkaApplication.Pattern
     open ApplicationBuilder
     open OptionOperators
     open Filter

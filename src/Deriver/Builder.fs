@@ -2,6 +2,7 @@ namespace KafkaApplication.Deriver
 
 module DeriverBuilder =
     open KafkaApplication
+    open KafkaApplication.Pattern
     open ApplicationBuilder
     open OptionOperators
 

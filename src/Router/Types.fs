@@ -2,6 +2,7 @@ namespace KafkaApplication.Router
 
 open Kafka
 open KafkaApplication
+open KafkaApplication.Pattern
 
 //
 // Event data
@@ -62,11 +63,6 @@ module Router =
         |> List.map snd
 
 // Errors
-
-type ApplicationConfigurationError =    // todo - common
-    | ConfigurationNotSet
-    | AlreadySetConfiguration
-    | InvalidConfiguration of KafkaApplicationError
 
 type RouterConfigurationError =
     | NotFound of string

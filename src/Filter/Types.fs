@@ -1,15 +1,11 @@
 namespace KafkaApplication.Filter
 
-open KafkaApplication
 open ServiceIdentification
 open Kafka
+open KafkaApplication
+open KafkaApplication.Pattern
 
 // Errors
-
-type ApplicationConfigurationError =
-    | ConfigurationNotSet
-    | AlreadySetConfiguration
-    | InvalidConfiguration of KafkaApplicationError
 
 type FilterConfigurationError =
     | NotFound of string

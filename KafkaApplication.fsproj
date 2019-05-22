@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Common pattern parts -->
+    <Compile Include="src/CommonPattern/Types.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Filter pattern application -->
     <Compile Include="src/Filter/Types.fs" />
     <Compile Include="src/Filter/Filter.fs" />
@@ -38,7 +43,7 @@
     <Compile Include="src/Router/Builder.fs" />
     <Compile Include="src/Router/Runner.fs" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <!-- Deriver pattern application -->
     <Compile Include="src/Deriver/Types.fs" />

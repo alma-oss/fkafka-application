@@ -1,14 +1,10 @@
 namespace KafkaApplication.Deriver
 
-open KafkaApplication
 open Kafka
+open KafkaApplication
+open KafkaApplication.Pattern
 
 // Errors
-
-type ApplicationConfigurationError =
-    | ConfigurationNotSet
-    | AlreadySetConfiguration
-    | InvalidConfiguration of KafkaApplicationError
 
 type DeriverConfigurationError =
     | NotFound of string
