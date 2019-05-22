@@ -9,12 +9,17 @@ type ApplicationConfigurationError =
     | AlreadySetConfiguration
     | InvalidConfiguration of KafkaApplicationError
 
+// Run Patterns
+
+type RunPatternApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>
+type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunPatternApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> unit
+
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
         pattern
         (getKafkaApplication: 'PatternParts -> KafkaApplication<'InputEvent,'OutputEvent>)
-        (beforeRun: 'PatternParts -> KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit)
-        (run: (KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit) -> KafkaApplication<'InputEvent, 'OutputEvent> -> unit)
+        (beforeRun: 'PatternParts -> BeforeRun<'InputEvent, 'OutputEvent>)
+        (run: RunPatternApplication<'InputEvent, 'OutputEvent>)
         (patternApplication: Result<'PatternParts, 'PatternError>) =
 
         match patternApplication with

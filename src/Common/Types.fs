@@ -319,3 +319,12 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
 }
 
 type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+
+//
+// Application types
+//
+
+type BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
+type Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> unit
+
+type RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> ParseEvent<'InputEvent> -> Run<'InputEvent, 'OutputEvent>

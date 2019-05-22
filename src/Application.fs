@@ -57,7 +57,7 @@ module KafkaApplication =
         (parseEvent: ParseEvent<'InputEvent>)
         (application: Application<'InputEvent, 'OutputEvent>) =
         let runApplication beforeRun kafkaApplication =
-            runKafkaApplication beforeRun kafkaApplication parseEvent
+            runKafkaApplication beforeRun parseEvent kafkaApplication
 
         match application with
         | CustomApplication kafkaApplication -> runApplication ignore kafkaApplication
