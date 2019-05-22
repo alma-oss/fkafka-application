@@ -9,6 +9,8 @@ module KafkaApplication =
     open KafkaApplication.Filter.FilterBuilder
     open KafkaApplication.Router
     open KafkaApplication.Router.ContentBasedRouterBuilder
+    open KafkaApplication.Deriver
+    open KafkaApplication.Deriver.DeriverBuilder
 
     //
     // Applications
@@ -18,6 +20,7 @@ module KafkaApplication =
         | CustomApplication of KafkaApplication<'InputEvent, 'OutputEvent>
         | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent>
         | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent>
+        | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
 
     //
     // Build applications
@@ -40,6 +43,11 @@ module KafkaApplication =
         let buildApplication: Configuration<EventToRoute, EventToRoute> -> KafkaApplication<EventToRoute, EventToRoute> = KafkaApplicationBuilder.buildApplication Producer.prepareProducer Producer.produce
         let buildRouter: ContentBasedRouterApplicationConfiguration<EventToRoute, EventToRoute> -> ContentBasedRouterApplication<EventToRoute, EventToRoute> = ContentBasedRouterApplicationBuilder.build buildApplication
         ContentBasedRouterBuilder(buildRouter >> ContentBasedRouter)
+
+    let deriver<'InputEvent, 'OutputEvent> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepareProducer Producer.produce
+        let buildDeriver: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> -> DeriverApplication<'InputEvent, 'OutputEvent> = DeriverApplicationBuilder.buildDeriver buildApplication
+        DeriverBuilder(buildDeriver >> Deriver)
 
     //
     // Run applications
@@ -77,6 +85,7 @@ module KafkaApplication =
         | CustomApplication kafkaApplication -> runApplication kafkaApplication
         | FilterContentFilter filterApplication -> FilterRunner.runFilter runApplication filterApplication
         | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runApplication routerApplication
+        | Deriver deriverApplication -> DeriverRunner.runDeriver runApplication deriverApplication
 
     let runRouter (application: Application<EventToRoute, EventToRoute>) =
         application |> run EventToRoute.parse

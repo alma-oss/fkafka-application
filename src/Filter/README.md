@@ -45,7 +45,7 @@ Filter will use configuration to filter input events. Values in configuration de
 
 ## Example
 ```fs
-filter {
+filterContentFilter {
     parseConfiguration "./configuration/configuration.json"
 
     from (partialKafkaApplication {

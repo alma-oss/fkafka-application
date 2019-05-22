@@ -26,8 +26,8 @@
     <Compile Include="src/Filter/Types.fs" />
     <Compile Include="src/Filter/Filter.fs" />
     <Compile Include="src/Filter/Metrics.fs" />
-    <Compile Include="src/Filter/FilterBuilder.fs" />
-    <Compile Include="src/Filter/FilterRunner.fs" />
+    <Compile Include="src/Filter/Builder.fs" />
+    <Compile Include="src/Filter/Runner.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,8 +35,16 @@
     <Compile Include="src/Router/Types.fs" />
     <Compile Include="src/Router/Router.fs" />
     <Compile Include="src/Router/Metrics.fs" />
-    <Compile Include="src/Router/RouterBuilder.fs" />
-    <Compile Include="src/Router/RouterRunner.fs" />
+    <Compile Include="src/Router/Builder.fs" />
+    <Compile Include="src/Router/Runner.fs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- Deriver pattern application -->
+    <Compile Include="src/Deriver/Types.fs" />
+    <Compile Include="src/Deriver/Metrics.fs" />
+    <Compile Include="src/Deriver/Builder.fs" />
+    <Compile Include="src/Deriver/Runner.fs" />
   </ItemGroup>
 
   <ItemGroup>
