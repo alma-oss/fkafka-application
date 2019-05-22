@@ -19,11 +19,7 @@
     <Compile Include="src/Common/Environment.fs" />
     <Compile Include="src/Common/Builder.fs" />
     <Compile Include="src/Common/Runner.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Common pattern parts -->
-    <Compile Include="src/CommonPattern/Types.fs" />
+    <Compile Include="src/Common/Pattern.fs" />
   </ItemGroup>
 
   <ItemGroup>
