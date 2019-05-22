@@ -10,7 +10,7 @@ module DeriverBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
             (ConnectionName deriverOutputStream)
             (deriveEvent: DeriveEvent<'InputEvent, 'OutputEvent>)
-            (getCommonEventData: GetCommonEventData<'InputEvent, 'OutputEvent>)
+            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             //let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
@@ -36,9 +36,9 @@ module DeriverBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError DeriverConfigurationError
 
-                let! getCommonEventData =
-                    deriverParts.GetCommonEventData
-                    |> Result.ofOption MissingGetCommonEventData
+                let! getCommonEvent =
+                    deriverParts.GetCommonEvent
+                    |> Result.ofOption MissingGetCommonEvent
                     |> Result.mapError DeriverConfigurationError
 
                 let! deriveEvent =
@@ -53,7 +53,7 @@ module DeriverBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addDeriverConfiguration deriveTo deriveEvent getCommonEventData
+                    |> addDeriverConfiguration deriveTo deriveEvent getCommonEvent
                     |> buildApplication
 
                 return {
@@ -106,6 +106,6 @@ module DeriverBuilder =
                     }
                 }
 
-        [<CustomOperation("getCommonEventDataBy")>]
-        member __.GetCommonEventDataBy(state, getCommonEventData): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with GetCommonEventData = Some getCommonEventData }
+        [<CustomOperation("getCommonEventBy")>]
+        member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }

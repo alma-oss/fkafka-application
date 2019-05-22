@@ -1,7 +1,6 @@
 namespace KafkaApplication.Filter
 
 open ServiceIdentification
-open Kafka
 open KafkaApplication
 open KafkaApplication.Pattern
 
@@ -12,7 +11,7 @@ type FilterConfigurationError =
     | NotSet
     | MissingOutputStream
     | MissingFilterContent
-    | MissingGetCommonEventData
+    | MissingGetCommonEvent
 
 type FilterApplicationError =
     | ApplicationConfigurationError of ApplicationConfigurationError
@@ -24,18 +23,7 @@ type FilterConfiguration = {
     Spots: Spot list
 }
 
-type InputOrOutputEvent<'InputEvent, 'OutputEvent> =
-    | Input of 'InputEvent
-    | Output of 'OutputEvent
-
-type CommonEventData = {
-    Event: EventName
-    Spot: Spot
-}
-
 type FilterContent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
-
-type GetCommonEventData<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEventData
 
 // Filter Application Configuration
 
@@ -43,8 +31,8 @@ type FilterParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     FilterConfiguration: FilterConfiguration option
     FilterTo: ConnectionName option
-    FilterContent: FilterContent<'InputEvent, 'OutputEvent> option  // todo - maybe it should be just `input to output` or something more generic, because filtering a content is just an option
-    GetCommonEventData: GetCommonEventData<'InputEvent, 'OutputEvent> option
+    FilterContent: FilterContent<'InputEvent, 'OutputEvent> option
+    GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }
 
 module FilterParts =
@@ -53,7 +41,7 @@ module FilterParts =
         FilterConfiguration = None
         FilterTo = None
         FilterContent = None
-        GetCommonEventData = None
+        GetCommonEvent = None
     }
 
 type FilterApplicationConfiguration<'InputEvent, 'OutputEvent> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent>, FilterApplicationError>

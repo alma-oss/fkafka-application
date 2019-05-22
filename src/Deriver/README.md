@@ -10,13 +10,13 @@ It reads input stream and derives events to the derived events into output strea
 ## Deriver computed expression
 It allows you to create a deriver application easier. It has build-in a deriver consumer, metrics, etc.
 
-Deriver computed expression returns `DeriverApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Deriver computed expression returns `Application of DeriverApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |
 | deriveTo | `connectionName: string`, `DeriveEvent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with derive event function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
-| getCommonEventDataBy | `GetCommonEventData<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |
+| getCommonEventBy | `GetCommonEvent<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |
 
 ## Deriver Configuration
 
@@ -54,7 +54,7 @@ deriver {
 
     deriveTo "outputStream" Deriver.deriveInputEvent Serializer.fromDomain
 
-    getCommonEventDataBy (function
+    getCommonEventBy (function
         | Input event ->
             match event with
             | InputEvent.PersonGaveConsentToIntent personGaveConsentToIntent ->

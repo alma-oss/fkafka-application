@@ -4,6 +4,7 @@ module FilterBuilder =
     open KafkaApplication
     open KafkaApplication.Pattern
     open KafkaApplication.Pattern.PatternBuilder
+    open KafkaApplication.Pattern.PatternMetrics
     open ApplicationBuilder
     open Filter
 
@@ -12,19 +13,19 @@ module FilterBuilder =
             filterConfiguration
             (ConnectionName filterOutputStream)
             (filterContentFromInputEvent: FilterContent<'InputEvent, 'OutputEvent>)
-            (getCommonEventData: GetCommonEventData<'InputEvent, 'OutputEvent>)
+            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
                 events
-                |> Seq.choose (filterByConfiguration getCommonEventData filterConfiguration)
+                |> Seq.choose (filterByConfiguration getCommonEvent filterConfiguration)
                 |> Seq.collect filterContentFromInputEvent
                 |> Seq.iter app.ProduceTo.[filterOutputStream]
 
             configuration
             |> addDefaultConsumeHandler filterConsumeHandler
-            |> addCreateInputEventKeys (Metrics.createKeysForInputEvent getCommonEventData)
-            |> addCreateOutputEventKeys (Metrics.createKeysForOutputEvent getCommonEventData)
+            |> addCreateInputEventKeys (createKeysForInputEvent getCommonEvent)
+            |> addCreateOutputEventKeys (createKeysForOutputEvent getCommonEvent)
 
         let buildFilter<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
@@ -43,9 +44,9 @@ module FilterBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError FilterConfigurationError
 
-                let! getCommonEventData =
-                    filterParts.GetCommonEventData
-                    |> Result.ofOption MissingGetCommonEventData
+                let! getCommonEvent =
+                    filterParts.GetCommonEvent
+                    |> Result.ofOption MissingGetCommonEvent
                     |> Result.mapError FilterConfigurationError
 
                 let! filterContent =
@@ -60,7 +61,7 @@ module FilterBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addFilterConfiguration filterConfiguration filterTo filterContent getCommonEventData
+                    |> addFilterConfiguration filterConfiguration filterTo filterContent getCommonEvent
                     |> buildApplication
 
                 return {
@@ -127,6 +128,6 @@ module FilterBuilder =
                     }
                 }
 
-        [<CustomOperation("getCommonEventDataBy")>]
-        member __.GetCommonEventDataBy(state, getCommonEventData): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with GetCommonEventData = Some getCommonEventData }
+        [<CustomOperation("getCommonEventBy")>]
+        member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }

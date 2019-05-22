@@ -1,5 +1,6 @@
 namespace KafkaApplication.Pattern
 
+open Kafka
 open KafkaApplication
 
 // Errors
@@ -53,3 +54,28 @@ module internal PatternBuilder =
                     |> parts.Logger.Debug pattern
                 )
                 |> ignore
+
+// Pattern Metrics
+
+type InputOrOutputEvent<'InputEvent, 'OutputEvent> =
+    | Input of 'InputEvent
+    | Output of 'OutputEvent
+
+type GetCommonEvent<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent
+
+module internal PatternMetrics =
+    let createKeysForInputEvent<'InputEvent, 'OutputEvent> (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>) (InputStreamName (StreamName inputStream)) event =
+        let commonEvent = event |> Input |> getCommonEvent
+
+        SimpleDataSetKeys [
+            ("event", commonEvent.Event |> EventName.value)
+            ("input_stream", inputStream)
+        ]
+
+    let createKeysForOutputEvent<'InputEvent, 'OutputEvent> (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>) (OutputStreamName (StreamName outputStream)) event =
+        let commonData = event |> Output |> getCommonEvent
+
+        SimpleDataSetKeys [
+            ("event", commonData.Event |> EventName.value)
+            ("output_stream", outputStream)
+        ]
