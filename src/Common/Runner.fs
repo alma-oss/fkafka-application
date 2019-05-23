@@ -59,7 +59,7 @@ module ApplicationRunner =
                             logger.Log context "Continue to next consume ..."
                             runConsuming <- false
                         | Shutdown ->
-                            logger.Log context "Shuting down the application ..."
+                            logger.Log context "Shutting down the application ..."
                             raise e
                 finally
                     logger.Verbose context "Flush all producers ..."
