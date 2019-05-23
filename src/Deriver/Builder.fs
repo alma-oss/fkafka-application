@@ -4,6 +4,7 @@ module DeriverBuilder =
     open KafkaApplication
     open KafkaApplication.Pattern
     open KafkaApplication.Pattern.PatternBuilder
+    open KafkaApplication.Pattern.PatternMetrics
     open ApplicationBuilder
 
     module DeriverApplicationBuilder =
@@ -13,16 +14,15 @@ module DeriverBuilder =
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
-            //let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
-            //    events
-            //    |> Seq.choose (filterByConfiguration getCommonEventData filterConfiguration)
-            //    |> Seq.collect filterContentFromInputEvent
-            //    |> Seq.iter app.ProduceTo.[filterOutputStream]
+            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
+                events
+                |> Seq.collect deriveEvent
+                |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
             configuration
-            //|> addDefaultConsumeHandler filterConsumeHandler
-            //|> addCreateInputEventKeys (Metrics.createKeysForInputEvent getCommonEventData)
-            //|> addCreateOutputEventKeys (Metrics.createKeysForOutputEvent getCommonEventData)
+            |> addDefaultConsumeHandler deriveEventHandler
+            |> addCreateInputEventKeys (createKeysForInputEvent getCommonEvent)
+            |> addCreateOutputEventKeys (createKeysForOutputEvent getCommonEvent)
 
         let buildDeriver<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
