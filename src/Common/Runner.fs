@@ -6,6 +6,30 @@ module ApplicationRunner =
     open OptionOperators
 
     module private KafkaApplicationRunner =
+        let rec private connectProducersWithErrorHandling connectProducer application =
+            try
+                application.Producers |> Map.map (fun _ -> connectProducer)
+            with
+            | e ->
+                application.Logger.Error "Application" <| sprintf "%A" e
+                let log = application.Logger.Log "Application"
+
+                match application.ProducerErrorHandler application.Logger e.Message with
+                | ProducerErrorPolicy.Shutdown ->
+                    log "Producer could not connect, application will shutdown."
+                    failwithf "Producer could not connect due to:\n\t%A" e.Message
+                | ProducerErrorPolicy.ShutdownIn seconds ->
+                    log <| sprintf "Producer could not connect, application will shutdown in %i seconds." seconds
+                    wait seconds
+                    failwithf "Producer could not connect due to:\n\t%A" e.Message
+                | ProducerErrorPolicy.Retry ->
+                    log "Producer could not connect, try again."
+                    connectProducersWithErrorHandling connectProducer application
+                | ProducerErrorPolicy.RetryIn seconds ->
+                    log <| sprintf "Producer could not connect, try again in %i seconds." seconds
+                    wait seconds
+                    connectProducersWithErrorHandling connectProducer application
+
         let private produceInstanceStarted produceSingleMessage logger box (supervisionProducer: ConnectedProducer) =
             box
             |> ApplicationEvents.createInstanceStarted
@@ -50,16 +74,25 @@ module ApplicationRunner =
                     with
                     | :? Confluent.Kafka.KafkaException as e ->
                         logger.Error context <| sprintf "%A" e
+                        let log = logger.Log context
 
                         match consumeHandler.OnError logger e.Message with
-                        | Reboot ->
+                        | Retry ->
                             runConsuming <- true
-                            logger.Log context "Reboot current consume ..."
+                            log "Retry current consume ..."
+                        | RetryIn seconds ->
+                            runConsuming <- true
+                            log <| sprintf "Retry current consume in %i seconds ..." seconds
+                            wait seconds
                         | Continue ->
-                            logger.Log context "Continue to next consume ..."
+                            log "Continue to next consume ..."
                             runConsuming <- false
                         | Shutdown ->
-                            logger.Log context "Shutting down the application ..."
+                            log "Shutting down the application ..."
+                            raise e
+                        | ShutdownIn seconds ->
+                            log <| sprintf "Shutting down the application in %i seconds ..." seconds
+                            wait seconds
                             raise e
                 finally
                     logger.Verbose context "Flush all producers ..."
@@ -91,7 +124,12 @@ module ApplicationRunner =
             |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance)
             |>! Async.Start
 
-            let connectedProducers = application.Producers |> Map.map (fun _ -> connectProducer)
+            application.Logger.Verbose "Application" "Connect producers ..."
+            let connectedProducers =
+                application
+                |> connectProducersWithErrorHandling connectProducer
+            application.Logger.Verbose "Application" "All producers are connected."
+
             let doWithAllProducers = doWithAllProducers connectedProducers
 
             let runtimeParts =
@@ -120,18 +158,28 @@ module ApplicationRunner =
             let consumeLast configuration =
                 Consumer.consumeLast configuration parseEvent
 
-            match application with
-            | Ok app ->
-                app
-                |> (tee beforeRun)
-                |> KafkaApplicationRunner.run
-                    consume
-                    consumeLast
-                    Producer.connect
-                    Producer.produceSingle
-                    Producer.TopicProducer.flush
-                    Producer.TopicProducer.close
-            | Error error -> failwithf "[Application] Error:\n%A" error
+            try
+                match application with
+                | Ok app ->
+                    app
+                    |> (tee beforeRun)
+                    |> KafkaApplicationRunner.run
+                        consume
+                        consumeLast
+                        Producer.connect
+                        Producer.produceSingle
+                        Producer.TopicProducer.flush
+                        Producer.TopicProducer.close
+                    Successfully
+                | Error error ->
+                    error
+                    |> logApplicationError "Application"
+                    |> WithError
+            with
+            | error ->
+                error
+                |> logApplicationError "Application"
+                |> WithRuntimeError
 
     // todo remove
     let _runDummy = KafkaApplicationRunner.run

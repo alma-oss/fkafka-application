@@ -31,8 +31,9 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
 | consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
-| onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
-| onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
+| onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
+| onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
+| onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will _register_ an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
@@ -49,7 +50,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 - You have to define at least one consume handler and its connection.
 
 ### Defaults
-- Default error handler is set to `ShutDown` on error.
+- Default error handler for consuming is set to `RetryIn 60 seconds` on error.
+- Default error handler for connecting producers is set to `RetryIn 60 seconds` on error.
 - Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
 - Default `Spot` is `Zone = common; Bucket = all`.
 - Default `Checker` for kafka is default checker defined in Kafka library.
@@ -152,9 +154,8 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run
-
-    0
+    |> run id
+    |> ApplicationShutdown.withStatusCode
 ```
 Notes:
 - It does NOT matter in which order you create connections - they are just _registered_.

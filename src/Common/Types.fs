@@ -115,12 +115,31 @@ module Connections =
 // Errors
 //
 
-type OnErrorPolicy =
-    | Reboot
-    | Continue
-    | Shutdown
+[<Measure>] type second
+[<Measure>] type attempt
 
-type ErrorHandler = ApplicationLogger -> string -> OnErrorPolicy
+// Handlers and policies
+
+type ErrorMessage = string
+
+type ProducerErrorPolicy =
+    | Shutdown
+    | ShutdownIn of int<second>
+    | Retry
+    | RetryIn of int<second>
+
+type ProducerErrorHandler = ApplicationLogger -> ErrorMessage -> ProducerErrorPolicy
+
+type ConsumeErrorPolicy =
+    | Shutdown
+    | ShutdownIn of int<second>
+    | Retry
+    | RetryIn of int<second>
+    | Continue
+
+type ConsumeErrorHandler = ApplicationLogger -> ErrorMessage -> ConsumeErrorPolicy
+
+// Error types
 
 [<RequireQualifiedAccess>]
 type EnvironmentError =
@@ -159,7 +178,7 @@ type MetricsError =
     | MetricError of Metrics.MetricError
 
 type KafkaApplicationError =
-    | KafkaApplicationError of string
+    | KafkaApplicationError of ErrorMessage
     | InstanceError of InstanceError
     | SpotError of SpotError
     | GroupIdError of GroupIdError
@@ -188,8 +207,10 @@ type private PreparedProducer<'OutputEvent> = {
 }
 
 // Output events
-type Serialize = Serialize of (obj -> string)
-type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> string
+type SerializedEvent = string
+
+type Serialize = Serialize of (obj -> SerializedEvent)
+type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> SerializedEvent
 
 //
 // Consume handlers
@@ -247,7 +268,7 @@ type ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
 type RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
-    OnError: ErrorHandler
+    OnError: ConsumeErrorHandler
     Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
     IncrementInputCount: 'InputEvent -> unit
 }
@@ -265,8 +286,9 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     GroupIds: Map<ConnectionName, GroupId>
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
-    OnConsumeErrorHandlers: Map<ConnectionName, ErrorHandler>
+    OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
     ProduceTo: ConnectionName list
+    ProducerErrorHandler: ProducerErrorHandler option
     FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
     MetricsRoute: MetricsRoute option
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
@@ -288,6 +310,7 @@ module internal ConfigurationParts =
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
             ProduceTo = []
+            ProducerErrorHandler = None
             FromDomain = Map.empty
             MetricsRoute = None
             CreateInputEventKeys = None
@@ -314,6 +337,7 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
+    ProducerErrorHandler: ProducerErrorHandler
     MetricsRoute: MetricsRoute option
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
@@ -324,7 +348,17 @@ type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of 
 // Application types
 //
 
+type ApplicationShutdown =
+    | Successfully
+    | WithError of ErrorMessage
+    | WithRuntimeError of ErrorMessage
+
+module ApplicationShutdown =
+    let withStatusCode = function
+        | Successfully -> 0
+        | _ -> 1
+
 type BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
-type Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> unit
+type Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown
 
 type RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> ParseEvent<'InputEvent> -> Run<'InputEvent, 'OutputEvent>

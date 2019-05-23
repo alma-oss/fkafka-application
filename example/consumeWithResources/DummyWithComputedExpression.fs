@@ -205,7 +205,7 @@ module Program =
                 logger.Log "Application" "Waiting for reboot ..."
                 System.Threading.Thread.Sleep(10 * 1000)
 
-                Reboot
+                Retry
             )
 
             showMetricsOn "/metrics"

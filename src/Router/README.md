@@ -102,4 +102,5 @@ contentBasedRouter {
     routeToBrokerFromEnv "KAFKA_BROKER"
 }
 |> runRouter
+|> ApplicationShutdown.withStatusCode
 ```

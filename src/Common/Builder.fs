@@ -38,6 +38,7 @@ module ApplicationBuilder =
                         ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
                         ProduceTo = currentParts.ProduceTo @ newParts.ProduceTo
+                        ProducerErrorHandler = currentParts.ProducerErrorHandler <??> newParts.ProducerErrorHandler
                         FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
@@ -155,7 +156,7 @@ module ApplicationBuilder =
 
         let private composeRuntimeConsumeHandlersForConnections<'InputEvent, 'OutputEvent>
             runtimeConsumerConfigurations
-            (getErrorHandler: ConnectionName -> ErrorHandler)
+            (getErrorHandler: ConnectionName -> ConsumeErrorHandler)
             incrementInputCount
             ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) =
             result {
@@ -192,11 +193,13 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
-                let defaultErrorHandler = (fun _ _ -> Shutdown)
+                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<KafkaApplication.second>)
+                let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
+
+                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<KafkaApplication.second>)
                 let getErrorHandler connection =
-                    match configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection with
-                    | Some errorHandler -> errorHandler
-                    | _ -> (fun _ _ -> Shutdown)
+                    configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
+                    <?=> defaultConsumeErrorHandler
 
                 let spot = configurationParts.Spot <?=> { Zone = Zone "common"; Bucket = Bucket "all" }
                 let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version spot.Zone spot.Bucket
@@ -307,6 +310,7 @@ module ApplicationBuilder =
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
                     Producers = producers
+                    ProducerErrorHandler = producerErrorHandler
                     MetricsRoute = configurationParts.MetricsRoute
                     PreparedRuntimeParts = preparedRuntimeParts
                 }
@@ -396,6 +400,10 @@ module ApplicationBuilder =
         [<CustomOperation("produceToMany")>]
         member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
             state |> addProduceToMany topics fromDomain
+
+        [<CustomOperation("onProducerError")>]
+        member __.OnProducerError(state, producerErrorHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with ProducerErrorHandler = Some producerErrorHandler }
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
