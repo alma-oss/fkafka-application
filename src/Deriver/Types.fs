@@ -1,7 +1,6 @@
 namespace KafkaApplication.Deriver
 
 open KafkaApplication
-open KafkaApplication.Pattern
 
 // Errors
 

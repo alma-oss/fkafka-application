@@ -1,4 +1,4 @@
-namespace KafkaApplication.Pattern
+namespace KafkaApplication
 
 open Kafka
 open KafkaApplication

@@ -2,7 +2,6 @@ namespace KafkaApplication.Filter
 
 open ServiceIdentification
 open KafkaApplication
-open KafkaApplication.Pattern
 
 // Errors
 

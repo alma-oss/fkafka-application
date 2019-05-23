@@ -2,9 +2,8 @@ namespace KafkaApplication.Deriver
 
 module DeriverBuilder =
     open KafkaApplication
-    open KafkaApplication.Pattern
-    open KafkaApplication.Pattern.PatternBuilder
-    open KafkaApplication.Pattern.PatternMetrics
+    open KafkaApplication.PatternBuilder
+    open KafkaApplication.PatternMetrics
     open ApplicationBuilder
 
     module DeriverApplicationBuilder =

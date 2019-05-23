@@ -2,7 +2,6 @@ namespace KafkaApplication.Router
 
 open Kafka
 open KafkaApplication
-open KafkaApplication.Pattern
 
 //
 // Event data

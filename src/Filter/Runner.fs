@@ -2,7 +2,6 @@ namespace KafkaApplication.Filter
 
 module FilterRunner =
     open KafkaApplication
-    open KafkaApplication.Pattern
 
     let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =
         fun run (FilterApplication application) ->

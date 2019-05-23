@@ -5,7 +5,7 @@ module internal Filter =
     open FSharp.Data
     open ServiceIdentification
     open Kafka
-    open KafkaApplication.Pattern
+    open KafkaApplication
 
     type private ConfigurationSchema = JsonProvider<"src/Filter/schema/configuration.json", SampleIsList=true>
 

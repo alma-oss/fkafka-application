@@ -3,8 +3,7 @@ namespace KafkaApplication.Router
 module ContentBasedRouterBuilder =
     open Kafka
     open KafkaApplication
-    open KafkaApplication.Pattern
-    open KafkaApplication.Pattern.PatternBuilder
+    open KafkaApplication.PatternBuilder
     open ApplicationBuilder
     open Router
 
