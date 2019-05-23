@@ -12,7 +12,7 @@ It routes events from `inputStream` to the different streams based on configurat
 ## Content-Based Router computed expression
 It allows you to create a Content-Based router application easier. It has build-in a routing, metrics, etc.
 
-Router computed expression returns `RouterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Router computed expression returns `Application of RouterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

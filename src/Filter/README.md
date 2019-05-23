@@ -10,13 +10,13 @@ It filters input stream by specific configuration and then filters out content y
 ## Filter computed expression
 It allows you to create a filter application easier. It has build-in a filter consumer, metrics, etc.
 
-Filter computed expression returns `FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Filter computed expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |
 | filterTo | `connectionName: string`, `FilterContent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with filter content function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
-| getCommonEventDataBy | `GetCommonEventData<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |
+| getCommonEventBy | `GetCommonEvent<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |
 | parseConfiguration | `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
 ## Filter Configuration
@@ -45,7 +45,7 @@ Filter will use configuration to filter input events. Values in configuration de
 
 ## Example
 ```fs
-filter {
+filterContentFilter {
     parseConfiguration "./configuration/configuration.json"
 
     from (partialKafkaApplication {
@@ -77,7 +77,7 @@ filter {
 
     filterTo "outputStream" filterContentFromInputEvent fromDomain
 
-    getCommonEventDataBy (function
+    getCommonEventBy (function
         | Input event ->
             match event with
             | InputEvent.NewPersonIdentified (NewPersonIdentified e) -> { Event = e.Event; Spot = { Zone = e.Zone; Bucket = e.Bucket } }

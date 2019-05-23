@@ -1,14 +1,12 @@
 namespace KafkaApplication
 
 module ApplicationMetrics =
-    open Kafka
     open ServiceIdentification
 
     type private Count = Count of int
 
     module private Count =
         let value (Count count) = count
-
 
     module private SimpleDataSetKeys =
         let value (SimpleDataSetKeys dataSetKeys) = dataSetKeys

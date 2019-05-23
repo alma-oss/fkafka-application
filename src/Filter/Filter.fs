@@ -1,10 +1,11 @@
 namespace KafkaApplication.Filter
 
-open ServiceIdentification
-
 module internal Filter =
     open System.IO
     open FSharp.Data
+    open ServiceIdentification
+    open Kafka
+    open KafkaApplication
 
     type private ConfigurationSchema = JsonProvider<"src/Filter/schema/configuration.json", SampleIsList=true>
 
@@ -31,14 +32,14 @@ module internal Filter =
     let private isAllowedBy { Spots = spots } zone bucket =
         { Zone = zone; Bucket = bucket } |> isValueAllowed spots
 
-    let filterByConfiguration getCommonEventData configuration inputEvent =
+    let filterByConfiguration getCommonEvent configuration inputEvent =
         let isAllowedBy = isAllowedBy configuration
 
-        let commonEventData =
+        let commonEvent: CommonEvent =
             inputEvent
             |> Input
-            |> getCommonEventData
+            |> getCommonEvent
 
-        match commonEventData.Spot with
+        match { Zone = commonEvent.Zone; Bucket = commonEvent.Bucket} with
         | { Zone = zone; Bucket = bucket } when isAllowedBy zone bucket -> Some inputEvent
         | _ -> None

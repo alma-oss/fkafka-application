@@ -63,11 +63,6 @@ module Router =
 
 // Errors
 
-type ApplicationConfigurationError =    // todo - common
-    | ConfigurationNotSet
-    | AlreadySetConfiguration
-    | InvalidConfiguration of KafkaApplicationError
-
 type RouterConfigurationError =
     | NotFound of string
     | NotSet
@@ -101,3 +96,6 @@ type ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent> = {
 }
 
 type ContentBasedRouterApplication<'InputEvent, 'OutputEvent> = internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
+
+module ContentBasedRouterApplication =
+    let application { Application = application } = application

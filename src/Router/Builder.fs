@@ -3,8 +3,8 @@ namespace KafkaApplication.Router
 module ContentBasedRouterBuilder =
     open Kafka
     open KafkaApplication
+    open KafkaApplication.PatternBuilder
     open ApplicationBuilder
-    open OptionOperators
     open Router
 
     module ContentBasedRouterApplicationBuilder =
@@ -71,19 +71,9 @@ module ContentBasedRouterBuilder =
             |> ContentBasedRouterApplication
 
     type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
-        let debugConfiguration (parts: RouterParts<'InputEvent, 'OutputEvent>) =    // todo - this could be common if it is parametrized
-            parts.Configuration
-            |>! fun configuration ->
-                configuration <!> tee (fun configurationParts ->
-                    parts
-                    |> sprintf "%A"
-                    |> configurationParts.Logger.Debug "ContentBasedRouter"
-                )
-                |> ignore
-
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration (PatternName "ContentBasedRouter") (fun { Configuration = c } -> c))) >> f)
             |> ContentBasedRouterApplicationConfiguration
 
         let (<!>) state f =
@@ -104,22 +94,18 @@ module ContentBasedRouterBuilder =
         member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    if not (System.IO.File.Exists(configurationPath)) then  // todo - could be common
-                        return!
-                            configurationPath
-                            |> sprintf "Routing configuration was not found at \"%s\"."
-                            |> NotFound
-                            |> Error
+                    let! router =
+                        configurationPath
+                        |> FileParser.parseFromPath Router.parse (sprintf "Routing configuration was not found at \"%s\".")
+                        |> Result.mapError NotFound
 
-                    let configuration = Router.parse configurationPath
-
-                    return { parts with RouterConfiguration = Some configuration }
+                    return { parts with RouterConfiguration = Some router }
                 }
                 |> Result.mapError RouterConfigurationError
 
         [<CustomOperation("from")>]
         member __.From(state, configuration): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->  // todo - could be common
+            state >>= fun parts ->
                 match parts.Configuration with
                 | None -> Ok { parts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error

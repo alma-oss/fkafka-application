@@ -9,6 +9,8 @@ module KafkaApplication =
     open KafkaApplication.Filter.FilterBuilder
     open KafkaApplication.Router
     open KafkaApplication.Router.ContentBasedRouterBuilder
+    open KafkaApplication.Deriver
+    open KafkaApplication.Deriver.DeriverBuilder
 
     //
     // Applications
@@ -18,9 +20,10 @@ module KafkaApplication =
         | CustomApplication of KafkaApplication<'InputEvent, 'OutputEvent>
         | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent>
         | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent>
+        | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
 
     //
-    // Build applications
+    // Application builders
     //
 
     let kafkaApplication<'InputEvent, 'OutputEvent> =
@@ -41,42 +44,26 @@ module KafkaApplication =
         let buildRouter: ContentBasedRouterApplicationConfiguration<EventToRoute, EventToRoute> -> ContentBasedRouterApplication<EventToRoute, EventToRoute> = ContentBasedRouterApplicationBuilder.build buildApplication
         ContentBasedRouterBuilder(buildRouter >> ContentBasedRouter)
 
+    let deriver<'InputEvent, 'OutputEvent> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepareProducer Producer.produce
+        let buildDeriver: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> -> DeriverApplication<'InputEvent, 'OutputEvent> = DeriverApplicationBuilder.buildDeriver buildApplication
+        DeriverBuilder(buildDeriver >> Deriver)
+
     //
     // Run applications
     //
 
-    let private runKafkaApplication<'InputEvent, 'OutputEvent>
-        (KafkaApplication application: KafkaApplication<'InputEvent, 'OutputEvent>)
-        (parseEvent: ParseEvent<'InputEvent>) =
-
-        let consume configuration =
-            Consumer.consume configuration parseEvent
-
-        let consumeLast configuration =
-            Consumer.consumeLast configuration parseEvent
-
-        match application with
-        | Ok app ->
-            runApplication
-                consume
-                consumeLast
-                Producer.connect
-                Producer.produceSingle
-                Producer.TopicProducer.flush
-                Producer.TopicProducer.close
-                app
-        | Error error -> failwithf "[Application] Error:\n%A" error
-
     let run<'InputEvent, 'OutputEvent>
         (parseEvent: ParseEvent<'InputEvent>)
         (application: Application<'InputEvent, 'OutputEvent>) =
-        let runApplication kafkaApplication =
-            runKafkaApplication kafkaApplication parseEvent
+        let runApplication beforeRun kafkaApplication =
+            runKafkaApplication beforeRun parseEvent kafkaApplication
 
         match application with
-        | CustomApplication kafkaApplication -> runApplication kafkaApplication
+        | CustomApplication kafkaApplication -> runApplication ignore kafkaApplication
         | FilterContentFilter filterApplication -> FilterRunner.runFilter runApplication filterApplication
         | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runApplication routerApplication
+        | Deriver deriverApplication -> DeriverRunner.runDeriver runApplication deriverApplication
 
     let runRouter (application: Application<EventToRoute, EventToRoute>) =
         application |> run EventToRoute.parse
@@ -85,6 +72,6 @@ module KafkaApplication =
     let _runDummy (kafka_consume: ConsumerConfiguration -> 'InputEvent seq) (kafka_consumeLast: ConsumerConfiguration -> 'InputEvent option) = function
         | CustomApplication (KafkaApplication application) ->
             match application with
-            | Ok app -> runApplication kafka_consume kafka_consumeLast Producer.connect Producer.produceSingle Producer.TopicProducer.flush Producer.TopicProducer.close app
+            | Ok app -> _runDummy kafka_consume kafka_consumeLast Producer.connect Producer.produceSingle Producer.TopicProducer.flush Producer.TopicProducer.close app
             | Error error -> failwithf "[Application] Error:\n%A" error
         | app -> failwithf "Run Dummy is not implemented for %A." app

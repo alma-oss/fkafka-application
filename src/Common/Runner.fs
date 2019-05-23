@@ -59,7 +59,7 @@ module ApplicationRunner =
                             logger.Log context "Continue to next consume ..."
                             runConsuming <- false
                         | Shutdown ->
-                            logger.Log context "Shuting down the application ..."
+                            logger.Log context "Shutting down the application ..."
                             raise e
                 finally
                     logger.Verbose context "Flush all producers ..."
@@ -112,4 +112,26 @@ module ApplicationRunner =
                 application.Logger.Verbose "Application" "Close producers ..."
                 closeProducer |> doWithAllProducers
 
-    let runApplication = KafkaApplicationRunner.run
+    let internal runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
+        fun beforeRun parseEvent (KafkaApplication application) ->
+            let consume configuration =
+                Consumer.consume configuration parseEvent
+
+            let consumeLast configuration =
+                Consumer.consumeLast configuration parseEvent
+
+            match application with
+            | Ok app ->
+                app
+                |> (tee beforeRun)
+                |> KafkaApplicationRunner.run
+                    consume
+                    consumeLast
+                    Producer.connect
+                    Producer.produceSingle
+                    Producer.TopicProducer.flush
+                    Producer.TopicProducer.close
+            | Error error -> failwithf "[Application] Error:\n%A" error
+
+    // todo remove
+    let _runDummy = KafkaApplicationRunner.run

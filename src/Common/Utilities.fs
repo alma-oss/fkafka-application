@@ -33,3 +33,16 @@ module internal Map =
             if merged |> Map.containsKey name then merged
             else merged.Add(name, connection)
         ) newValues
+
+module internal FileParser =
+    open System.IO
+
+    type FilePath = string
+
+    let parseFromPath parse notFound (path: FilePath): Result<'Parsed, 'NotFoundError> =
+        result {
+            if not (File.Exists(path)) then
+                return! Error (notFound path)
+
+            return parse path
+        }
