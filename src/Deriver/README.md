@@ -60,15 +60,12 @@ deriver {
             | InputEvent.PersonGaveConsentToIntent personGaveConsentToIntent ->
                 personGaveConsentToIntent
                 |> PersonGaveConsentToIntent.Event.toCommon
-                |> createCommonData
             | InputEvent.PersonWithdrewConsentToIntent personWithdrewConsentToIntent ->
                 personWithdrewConsentToIntent
                 |> PersonWithdrewConsentToIntent.Event.toCommon
-                |> createCommonData
             | InputEvent.NotRelevant rawEvent ->
                 rawEvent
                 |> RawEvent.toCommon
-                |> createCommonData
 
         | Output event ->
             match event with
@@ -76,13 +73,11 @@ deriver {
                 consentAcquired
                 |> ConsentAcquired.InternalEvent.event
                 |> Event.toCommon
-                |> createCommonData
             | OutputEvent.ConsentLost consentLost ->
                 consentLost
                 |> ConsentLost.InternalEvent.event
                 |> Event.toCommon
-                |> createCommonData
     )
 }
-|> runFilter parseInputEvent
+|> run Parser.parseInputEvent
 ```
