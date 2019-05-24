@@ -2,7 +2,7 @@ F-Kafka Application
 ===================
 
 Framework for kafka application.
-It contains computed expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc..
+It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc..
 
 ## Install
 ```
@@ -12,13 +12,55 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
 - it should be http://development-nugetserver-common-stable.service.devel1-services.consul:{PORT} (_make sure you have a correct port, since it changes with deployment_)
 - see http://consul-1.infra.pprod/ui/devel1-services/services/development-nugetServer-common-stable for detailed information (and port)
 
+## Application life cycle
+
+    Entry point (your application)
+    ├─> Build (computation expression) builds the Application out of your configuration
+    └─> Run Application, which might be either Ok or with the Error
+              ┌────────────────────────────────┘               └──────────────────────────────────────────<Ends with the Error>───────┐
+              ├─> Before Run (Debug pattern specific configuration)                                                                   │
+              └─> Run Kafka Application                                                                                               │
+                   ├─> Debug Configuration      (only with debug verbosity)                                                           │
+                   ├─> Enable Context Metric                                                                                          │
+                   ├─> Start Metrics on Route   (only if route is set)                                                                │
+                   ├─> Connect Producers <─────────────────────────────────────────────────────────┐                                  │
+                   │     └─<On Error>───> Producer Error Handler  (Default - RetryIn 60 seconds)   │                                  │
+                   │                        └─> One of Following:                                  │                                  │
+          <All connected>                       └─> Retry ─────────────────────────────────────────┘                                  │
+                   │                            └─> RetryIn X seconds ─────────────────────────────┘                                  │
+                   │                            └─> Shutdown ──────────────────────────────────────<Ends with the RuntimeError>────┐  │
+                   │                            └─> ShutdownIn X seconds ──────────────────────────<Ends with the RuntimeError>────┐  │
+                   ├─> Produce instance_started event to the [Supervision stream]     (only if supervision stream is registered)   │  │
+                   ├─> Consume all registered Consume Handlers, one by one <───────────────────────┐                               │  │
+                   │     └─<On Error>───> Consume Error Handler   (Default - RetryIn 60 seconds)   │                               │  │
+                   │     │                   └─> One of Following:                                 │                               │  │
+          <All consumed> │                       └─> Continue (with next Consume Handler) ─────────┘                               │  │
+                   │     │                       └─> Retry ────────────────────────────────────────┘                               │  │
+                   │     │                       └─> RetryIn X seconds ────────────────────────────┘                               │  │
+                   │     │                       └─> Shutdown ─────────────────────────────────────<Ends with the RuntimeError>────┐  │
+                   │     │                       └─> ShutdownIn X seconds ─────────────────────────<Ends with the RuntimeError>────┐  │
+                   │     └─<On Success>─> Flush all Producers                                                                      │  │
+                   ├─> Close all Producers                                                                                         │  │
+                   │   (Successfully end) ──────────┐                                                                              │  │
+                   └─> Return ApplicationShutdown   │                                                                              │  │
+                         └─> One of Following:      │                                                                              │  │
+                             └─> Successfully <─────┘                                                                              │  │
+                             └─> WithRuntimeError <────────────────────────────────────────────────────────────────────────────────┘  │
+                             └─> WithError <──────────────────────────────────────────────────────────────────────────────────────────┘
+        ┌────<ApplicationShutdown>────┘
+        └─> ApplicationShutdown.withStatusCode ─┐
+    <────────<Status code - [0|1]>──────────────┘
+
 ## Patterns
+Definitions for patterns could is in the [Confluence](https://confluence.int.lmc.cz/display/ARCH/Event+Driven+Architecture).
 You can simply use predefined patterns for application you want.
 
 - [FilterContentFilter](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Filter/README.md)
+- [ContentBasedRouter](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Router/README.md)
+- [Deriver](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Deriver/README.md)
 
 ## Custom Kafka Application functions
-_NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computed expression._
+_NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computation expression._
 
 | Function | Arguments | Description |
 | --- | --- | --- |
@@ -31,8 +73,9 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
 | consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) | |
-| onConsumeError | `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a default connection. And it determines what will happen next. |
-| onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> string -> OnErrorPolicy` | It will register an error handler, which will be called on consuming a connection. And it determines what will happen next. |
+| onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
+| onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
+| onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will _register_ an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
@@ -41,7 +84,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
-| useSpot | `Spot` | It is optional with default `Zone = common; Bucket = all` |
+| useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |
 | useSupervision | `Kafka.ConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ### Mandatory
@@ -49,20 +92,35 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 - You have to define at least one consume handler and its connection.
 
 ### Defaults
-- Default error handler is set to `ShutDown` on error.
+- Default error handler for consuming is set to `RetryIn 60 seconds` on error.
+- Default error handler for connecting producers is set to `RetryIn 60 seconds` on error.
 - Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
-- Default `Spot` is `Zone = common; Bucket = all`.
+- Default `Spot` is `Zone = "common"; Bucket = "all"`.
 - Default `Checker` for kafka is default checker defined in Kafka library.
 
-### Environment computed expression
-It allows you to parse .env files and get other environment variables to use in you application workflow.
+### Runtime parts for Consume Handler
 
-Environment computed expression returns `Configuration<'Event>` so you can `merge` it to the Kafka Application.
+In every Consume Handler, the first parameter you will receive is the `ConsumeRuntimeParts`. There are all _parts_ of the application, you might need on runtime.
 
-| Function | Arguments | --- |
+```fs
+type ConsumeRuntimeParts<'OutputEvent> = {
+    Logger: ApplicationLogger
+    Environment: Map<string, string>
+    Connections: Connections
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
+    ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
+}
+```
+
+### Environment computation expression
+It allows you to parse .env files and get other environment variables to use in your application workflow.
+
+Environment computation expression returns `Configuration<'Event>` so you can `merge` it to the Kafka Application.
+
+| Function | Arguments | Description |
 | --- | --- | --- |
 | **PARSING_IS_NOT_IMPLEMENTED_YET** spot | `variable name: string` | It will parse Spot from the environment variable. |
-| check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is passed to the checker and it passes when `Some` is returned. |
+| check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is forwarded to the checker and it passes when `Some` is returned. |
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
 | connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
@@ -73,14 +131,11 @@ Environment computed expression returns `Configuration<'Event>` so you can `merg
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
-## Runtime parts
-- TODO ...
-
 ## Examples
 
 ### Connect to kafka stream
 This is the most elemental reason for this application framework, so there are simple ways for simple cases.
-But there are also more complex, for moc complex applications, where you need more connections.
+But there are also more complex, for more complex applications, where you need more connections.
 
 This is also mandatory, to define at least one connection.
 
@@ -107,9 +162,8 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run
-
-    0
+    |> run id
+    |> ApplicationShutdown.withStatusCode
 ```
 
 #### More than one connection
@@ -152,18 +206,17 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run
-
-    0
+    |> run id
+    |> ApplicationShutdown.withStatusCode
 ```
 Notes:
 - It does NOT matter in which order you create connections - they are just _registered_.
 - It does matter in which order you consume events - they are run in the same order of registration and the next consume will be run ONLY when the previous ended. So make sure it is not infinite, if you want to consume the other ones too.
-- All connections are available in the `ApplicationRuntimeParts.Connections` of the consume handler function ([__TODO__ - link to example])
+- All connections are available in the `ConsumeRuntimeParts.Connections` of the consume handler function
 
-#### Event more connections
+#### Even more connections
 Now we have even more connection and different relationships between them.
-Keep in mind, that this example is simplified and it is missing the parsing logic ([__TODO__ - link to example])
+Keep in mind, that this example is simplified and it is missing the parsing logic (which is passed to the `run` function)
 
 ```fs
 open Kafka
@@ -201,9 +254,8 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run
-
-    0
+    |> run id
+    |> ApplicationShutdown.withStatusCode
 ```
 
 #### Tips, Notes, ...

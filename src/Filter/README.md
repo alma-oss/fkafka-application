@@ -88,4 +88,5 @@ filterContentFilter {
     )
 }
 |> runFilter parseInputEvent
+|> ApplicationShutdown.withStatusCode
 ```

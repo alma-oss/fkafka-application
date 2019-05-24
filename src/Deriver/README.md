@@ -80,4 +80,5 @@ deriver {
     )
 }
 |> run Parser.parseInputEvent
+|> ApplicationShutdown.withStatusCode
 ```

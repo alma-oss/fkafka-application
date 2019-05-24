@@ -17,7 +17,7 @@ type PatternName = PatternName of string
 // Run Patterns
 
 type RunPatternApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>
-type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunPatternApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> unit
+type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunPatternApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
@@ -32,7 +32,10 @@ module internal PatternRunner =
             patternParts
             |> getKafkaApplication
             |> run (beforeRun patternParts)
-        | Error error -> failwithf "[%s Application] Error:\n%A" pattern error
+        | Error error ->
+            error
+            |> logApplicationError (sprintf "%s Application" pattern)
+            |> WithError
 
 // Build Patterns
 
