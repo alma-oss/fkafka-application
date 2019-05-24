@@ -16,15 +16,14 @@ type PatternName = PatternName of string
 
 // Run Patterns
 
-type RunPatternApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>
-type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunPatternApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
+type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
         (PatternName pattern)
         (getKafkaApplication: 'PatternParts -> KafkaApplication<'InputEvent,'OutputEvent>)
         (beforeRun: 'PatternParts -> BeforeRun<'InputEvent, 'OutputEvent>)
-        (run: RunPatternApplication<'InputEvent, 'OutputEvent>)
+        (run: RunKafkaApplication<'InputEvent, 'OutputEvent>)
         (patternApplication: Result<'PatternParts, 'PatternError>) =
 
         match patternApplication with

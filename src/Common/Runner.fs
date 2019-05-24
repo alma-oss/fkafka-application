@@ -151,16 +151,16 @@ module ApplicationRunner =
                 closeProducer |> doWithAllProducers
 
     let internal runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
-        fun beforeRun parseEvent (KafkaApplication application) ->
-            let consume configuration =
-                Consumer.consume configuration parseEvent
-
-            let consumeLast configuration =
-                Consumer.consumeLast configuration parseEvent
-
+        fun beforeRun (KafkaApplication application) ->
             try
                 match application with
                 | Ok app ->
+                    let consume configuration =
+                        Consumer.consume configuration app.ParseEvent
+
+                    let consumeLast configuration =
+                        Consumer.consumeLast configuration app.ParseEvent
+
                     app
                     |> (tee beforeRun)
                     |> KafkaApplicationRunner.run

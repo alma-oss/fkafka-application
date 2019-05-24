@@ -281,6 +281,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Spot: Spot option
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
+    ParseEvent: ParseEvent<'InputEvent> option
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
@@ -303,6 +304,7 @@ module internal ConfigurationParts =
             Spot = None
             GroupId = None
             GroupIds = Map.empty
+            ParseEvent = None
             Connections = Connections.empty
             ConsumeHandlers = []
             OnConsumeErrorHandlers = Map.empty
@@ -331,6 +333,7 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Box: Box
+    ParseEvent: ParseEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
@@ -358,4 +361,4 @@ module ApplicationShutdown =
 type BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
 type Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown
 
-type RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> ParseEvent<'InputEvent> -> Run<'InputEvent, 'OutputEvent>
+type RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>

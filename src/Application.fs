@@ -53,20 +53,12 @@ module KafkaApplication =
     // Run applications
     //
 
-    let run<'InputEvent, 'OutputEvent>
-        (parseEvent: ParseEvent<'InputEvent>)
-        (application: Application<'InputEvent, 'OutputEvent>) =
-        let runApplication beforeRun kafkaApplication =
-            runKafkaApplication beforeRun parseEvent kafkaApplication
-
+    let run<'InputEvent, 'OutputEvent> (application: Application<'InputEvent, 'OutputEvent>) =
         match application with
-        | CustomApplication kafkaApplication -> runApplication ignore kafkaApplication
-        | FilterContentFilter filterApplication -> FilterRunner.runFilter runApplication filterApplication
-        | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runApplication routerApplication
-        | Deriver deriverApplication -> DeriverRunner.runDeriver runApplication deriverApplication
-
-    let runRouter (application: Application<EventToRoute, EventToRoute>) =
-        application |> run EventToRoute.parse
+        | CustomApplication kafkaApplication -> runKafkaApplication ignore kafkaApplication
+        | FilterContentFilter filterApplication -> FilterRunner.runFilter runKafkaApplication filterApplication
+        | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runKafkaApplication routerApplication
+        | Deriver deriverApplication -> DeriverRunner.runDeriver runKafkaApplication deriverApplication
 
     // todo - remove
     let _runDummy (kafka_consume: ConsumerConfiguration -> 'InputEvent seq) (kafka_consumeLast: ConsumerConfiguration -> 'InputEvent option) = function

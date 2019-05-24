@@ -34,6 +34,7 @@ module ApplicationBuilder =
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
+                        ParseEvent = newParts.ParseEvent <??> currentParts.ParseEvent
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
                         ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
                         OnConsumeErrorHandlers = newParts.OnConsumeErrorHandlers |> Map.merge currentParts.OnConsumeErrorHandlers
@@ -87,6 +88,9 @@ module ApplicationBuilder =
 
         let addCreateOutputEventKeys<'InputEvent, 'OutputEvent> createOutputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
+
+        let addParseEvent<'InputEvent, 'OutputEvent> parseEvent configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts -> { parts with ParseEvent = Some parseEvent }
 
         let addConnectToMany<'InputEvent, 'OutputEvent> connectionConfigurations configuration: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts ->
@@ -189,6 +193,7 @@ module ApplicationBuilder =
                 let! instance = configurationParts.Instance <?!> "Instance is required."
                 let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
                 let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
+                let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required."
 
                 //
                 // optional parts
@@ -306,6 +311,7 @@ module ApplicationBuilder =
                     Logger = logger
                     Environment = environment
                     Box = box
+                    ParseEvent = parseEvent
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
                     Producers = producers
@@ -347,6 +353,10 @@ module ApplicationBuilder =
         [<CustomOperation("useGroupId")>]
         member __.GroupId(state, groupId): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
+
+        [<CustomOperation("parseEventWith")>]
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent parseEvent
 
         [<CustomOperation("checkKafkaWith")>]
         member __.CheckKafkaWith(state, checker): Configuration<'InputEvent, 'OutputEvent> =
