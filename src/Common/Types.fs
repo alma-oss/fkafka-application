@@ -221,7 +221,6 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    IncrementOutputEventCount: (OutputStreamName -> 'OutputEvent -> unit)
     ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
 }
 
@@ -230,7 +229,6 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    IncrementOutputEventCount: (OutputStreamName -> 'OutputEvent -> unit)
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
 }
 
@@ -241,7 +239,6 @@ module internal PreparedConsumeRuntimeParts =
             Environment = preparedRuntimeParts.Environment
             Connections = preparedRuntimeParts.Connections
             ConsumerConfigurations = preparedRuntimeParts.ConsumerConfigurations
-            IncrementOutputEventCount = preparedRuntimeParts.IncrementOutputEventCount
             ProduceTo =
                 preparedRuntimeParts.ProduceTo
                 |> Map.map (fun connection produce -> produce producers.[connection])

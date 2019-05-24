@@ -291,7 +291,6 @@ module ApplicationBuilder =
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = runtimeConsumerConfigurations
-                    IncrementOutputEventCount = incrementOutputCount
                     ProduceTo = produces
                 }
 
