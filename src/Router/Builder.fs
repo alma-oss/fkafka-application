@@ -30,6 +30,7 @@ module ContentBasedRouterBuilder =
                 fun _ -> EventToRoute.serialized
 
             configuration
+            |> addParseEvent EventToRoute.parse
             |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreams }
             |> addProduceToMany outputStreamNames fromDomain
             |> addDefaultConsumeHandler routerConsumeHandler

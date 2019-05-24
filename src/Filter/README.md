@@ -87,6 +87,6 @@ filterContentFilter {
             | OutputEvent.NewPersonIdentified (FilteredNewPersonIdentified e) -> { Event = e.Event; Spot = { Zone = e.Zone; Bucket = e.Bucket } }
     )
 }
-|> runFilter parseInputEvent
+|> run
 |> ApplicationShutdown.withStatusCode
 ```

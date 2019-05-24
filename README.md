@@ -76,6 +76,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
 | onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will _register_ an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
+| parseEventWith | `ParseEvent<'InputEvent>` | It will register a parser for input events. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
@@ -90,6 +91,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 ### Mandatory
 - Instance of the application is required.
 - You have to define at least one consume handler and its connection.
+- You have to define `ParseEvent<'InputEvent>` function.
 
 ### Defaults
 - Default error handler for consuming is set to `RetryIn 60 seconds` on error.
@@ -162,7 +164,7 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run id
+    |> run
     |> ApplicationShutdown.withStatusCode
 ```
 
@@ -206,7 +208,7 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run id
+    |> run
     |> ApplicationShutdown.withStatusCode
 ```
 Notes:
@@ -254,7 +256,7 @@ let main argv =
             |> Seq.iter (printfn "%A")
         )
     }
-    |> run id
+    |> run
     |> ApplicationShutdown.withStatusCode
 ```
 

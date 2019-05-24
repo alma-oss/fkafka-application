@@ -79,6 +79,6 @@ deriver {
                 |> Event.toCommon
     )
 }
-|> run Parser.parseInputEvent
+|> run
 |> ApplicationShutdown.withStatusCode
 ```
