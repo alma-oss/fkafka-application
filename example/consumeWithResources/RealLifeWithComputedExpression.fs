@@ -64,6 +64,8 @@ module Program =
                 }
             })
 
+            parseEventWith RawEvent.parse
+
             merge (partialKafkaApplication {
                 produceTo "outputStream" fromDomain
 
@@ -89,4 +91,4 @@ module Program =
             showInputEventsWith createInputKeys
             showOutputEventsWith createOutputKeys
         }
-        |> run RawEvent.parse
+        |> run

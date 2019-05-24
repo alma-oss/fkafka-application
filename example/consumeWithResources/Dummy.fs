@@ -178,3 +178,5 @@ module Program =
 
             if runConsuming then
                 printfn "Reboot ..."
+
+        Successfully

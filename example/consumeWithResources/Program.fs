@@ -2,6 +2,7 @@
 
 open System
 open MF.ConsoleStyle
+open KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -22,6 +23,8 @@ let main argv =
     | _ ->
         Console.section "Dummy example"
         DummyWithComputedExpressionExample.Program.run()
-
-    Console.success "Done"
-    0 // return an integer exit code
+    |> function
+        | Successfully ->
+            Console.success "Done"
+            0
+        | _ -> 1

@@ -107,37 +107,19 @@ module Program =
         // run simple app
         //
 
-        // ------ producer ------
-        let produce incrementOutputCount outputStream event =
+        let dummyProduce outputStream event =
             event
-            |> tee (incrementOutputCount outputStream)
             |> printfn " -> response<%A>: %A" outputStream
-
-        // in consume
-        // try
-        //      use producer = parts.Producer.["connection"]
-        //      let produce = parts.Produce.["connection"] producer
-
-        //      events
-        //      |> Seq.iter produce
-
-        // finally
-        //      producer.Flush()
-
-        // ------ /producer ------
 
         Log.setVerbosityLevel "vv"
 
         let logger = ApplicationLogger.defaultLogger
 
-        let environment = environmentWithLogger logger
-
         kafkaApplication {
             useLogger logger
 
-            merge (environment {
+            merge (environmentWithLogger logger {
                 file ["./.env"; "./.dist.env"]
-
                 ifSetDo "VERBOSITY" Log.setVerbosityLevel
 
                 instance "INSTANCE"
@@ -187,10 +169,6 @@ module Program =
             )
 
             consume (fun parts events ->
-                // todo - produce instance_started event
-                // todo - event parsers?
-                // todo - `produce` should have resource checking for target kafka+topic
-
                 let outputStream =
                     parts.Environment.["OUTPUT_STREAM"]
                     |> StreamName
@@ -198,7 +176,7 @@ module Program =
 
                 events
                 //|> Seq.take 20
-                |> Seq.iter (double >> produce parts.IncrementOutputEventCount outputStream)
+                |> Seq.iter (double >> dummyProduce outputStream)
             )
 
             onConsumeError (fun logger _ ->
@@ -213,4 +191,5 @@ module Program =
             showOutputEventsWith createOutputKeys
         }
         |> _runDummy DummyKafka.consume (fun _ -> None)
-        ()
+
+        Successfully

@@ -124,3 +124,5 @@ module Program =
         //|> Seq.take 20
         //|> Seq.map (tee incrementInputCount)
         //|> Seq.iter (route >> produce)
+
+        Successfully
