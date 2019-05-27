@@ -7,10 +7,10 @@ It reads input stream and derives events to the derived events into output strea
 [InputStream] ───> (Deriver) ───> [OutputStream]
 ```
 
-## Deriver computed expression
+## Deriver computation expression
 It allows you to create a deriver application easier. It has build-in a deriver consumer, metrics, etc.
 
-Deriver computed expression returns `Application of DeriverApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Deriver computation expression returns `Application of DeriverApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

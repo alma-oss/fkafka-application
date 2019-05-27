@@ -1,4 +1,4 @@
-namespace DummyWithComputedExpressionExample
+namespace DummyWithComputationExpressionExample
 
 module Dice =
     let private random = System.Random()

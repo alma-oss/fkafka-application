@@ -13,16 +13,16 @@ let main argv =
     match argv with
     | [|"reallife"|] ->
         Console.section "Real-life example"
-        RealLifeWithComputedExpressionExample.Program.run()
-    | [|"reallife"; "not-computed"|] ->
-        Console.section "Real-life without computed expression example"
+        RealLifeWithComputationExpressionExample.Program.run()
+    | [|"reallife"; "not-computation"|] ->
+        Console.section "Real-life without computation expression example"
         RealLifeExample.Program.run()
-    | [|"not-computed"|] ->
-        Console.section "Dummy without computed expression example"
+    | [|"not-computation"|] ->
+        Console.section "Dummy without computation expression example"
         DummyExample.Program.run()
     | _ ->
         Console.section "Dummy example"
-        DummyWithComputedExpressionExample.Program.run()
+        DummyWithComputationExpressionExample.Program.run()
     |> function
         | Successfully ->
             Console.success "Done"

@@ -7,10 +7,10 @@ It filters input stream by specific configuration and then filters out content y
 [InputStream] ───> (Filter<configuration> >> ContentFilter<'UnwantedData>) ───> [OutputStream]
 ```
 
-## Filter computed expression
+## Filter computation expression
 It allows you to create a filter application easier. It has build-in a filter consumer, metrics, etc.
 
-Filter computed expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Filter computation expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

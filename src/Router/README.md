@@ -9,11 +9,11 @@ It routes events from `inputStream` to the different streams based on configurat
                            └─────> [OutputStream-3]
 ```
 
-## Content-Based Router computed expression
+## Content-Based Router computation expression
 It allows you to create a Content-Based router application easier. It has build-in a routing, metrics, etc.
 Keep in mind, that `RouterApplication` is not generic as the other patterns, because it uses its own type `EventToRoute` which is specifically designed for the router.
 
-Router computed expression returns `Application of RouterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Router computation expression returns `Application of RouterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
 | Function | Arguments | --- |
 | --- | --- | --- |

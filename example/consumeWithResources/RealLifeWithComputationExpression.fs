@@ -1,4 +1,4 @@
-namespace RealLifeWithComputedExpressionExample
+namespace RealLifeWithComputationExpressionExample
 open Kafka
 
 module Program =

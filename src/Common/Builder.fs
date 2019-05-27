@@ -323,7 +323,7 @@ module ApplicationBuilder =
             |> KafkaApplication
 
     //
-    // Kafka Application Builder computed expression
+    // Kafka Application Builder computation expression
     //
 
     type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> 'a) =

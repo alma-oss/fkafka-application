@@ -18,7 +18,7 @@ resourceAvailability {
     ==> kafkaTopics "kfall-dev1" [ outputStreams ]
 }
 |> tee (ResourceAvailability.checkInInterval 15s)   // state of the resources will be _only_ checked and reported to the /metrics - it will NOT change the result of `map` function
-|> ResourceAvailability.map (runApp ...)            // this will be mapped by the current result of the Run of computed expression - not by checking in interval
+|> ResourceAvailability.map (runApp ...)            // this will be mapped by the current result of the Run of computation expression - not by checking in interval
 ```
 
 ```fs
@@ -59,7 +59,7 @@ let checkInInterval (interval: seconds) resourceState =
 ```
 
 
-## All in computed expression???
+## All in computation expression???
 
 ```fs
 resourceAvailability {
@@ -296,7 +296,7 @@ application {
         |> StreamName
         |> OutputStreamName
 
-    let! configuration = configuration {        // configuration computed expression to help parsing configuration
+    let! configuration = configuration {        // configuration computation expression to help parsing configuration
         file "configuration.json"
         findIn [ "configuration"; "../configuration" ]
         parseBy Filter.parseFilterConfiguration
@@ -355,7 +355,7 @@ application {
     verbosity                                       // since the value is optional, it has explicit map
     |> ApplicationPart.map Log.setVerbosityLevel    // if Some, use it as verbosity level
 
-    let! instance = instance {              // computed expression to help with parsing instance
+    let! instance = instance {              // computation expression to help with parsing instance
         fromEnv "INSTANCE"
     }
 
@@ -395,7 +395,7 @@ application {
     let incrementOuputCount = incrementTotalOutputEventCount instance outputStream       // output metric should be in application itself (input is internal, since whole application is consumer which logs input events)
 
     // prepare producer
-    use! produce = producer {               // computed expression to help create producer and produce function
+    use! produce = producer {               // computation expression to help create producer and produce function
         toStream outputStream
         serialize Serializer.serialize
         increment incrementOutputCount
@@ -427,7 +427,7 @@ application {
 
     let verbosity = envAs "VERBOSITY" Log.setVerbosityLevel                 // get env from envFile
 
-    let! instance = instance {              // computed expression to help with parsing instance
+    let! instance = instance {              // computation expression to help with parsing instance
         fromEnv "INSTANCE"                  // it also calls `useInstance`
     }
 
@@ -485,14 +485,14 @@ application {
     // fill state to the offset
     let (fillStatePerEvent, cancelationToken) = startFillStateToOffset kafkaConfiguration rule getStatePerIntent setStatePerIntent countTotalStates // this will start showing the current progress
 
-    // todo - this is tricky because kafkaConfiguration is "inside" the computed expression and not visible here, so all consuming should be done with application functions
+    // todo - this is tricky because kafkaConfiguration is "inside" the computation expression and not visible here, so all consuming should be done with application functions
     consumeStreamToOffset offset consentsInputEventReader {
         OnInputEvent = fillStatePerEvent
     }
     cancelationToken |> cancel // cancel showing status on async
 
     // prepare producer
-    use! produce = producer {               // computed expression to help create producer and produce function
+    use! produce = producer {               // computation expression to help create producer and produce function
         toStream outputStream
         serialize Serializer.serialize
         increment incrementOutputCount
@@ -593,7 +593,7 @@ application {
         // cancel cancelationToken to cance async showing of filling progress
 
         // prepare producer
-        let produce = producer {               // computed expression to help create producer and produce function
+        let produce = producer {               // computation expression to help create producer and produce function
             toStream outputStream
             serialize Serializer.serialize
             increment incrementOutputCount
