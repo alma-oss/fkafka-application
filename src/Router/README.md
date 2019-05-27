@@ -15,7 +15,7 @@ Keep in mind, that `RouterApplication` is not generic as the other patterns, bec
 
 Router computation expression returns `Application of RouterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
-| Function | Arguments | --- |
+| Function | Arguments | Description |
 | --- | --- | --- |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | parseConfiguration | `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
