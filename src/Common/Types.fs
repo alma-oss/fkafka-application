@@ -7,7 +7,9 @@ open ServiceIdentification
 // Logging
 //
 
-type Log = string -> string -> unit
+type Context = string
+type Message = string
+type Log = Context -> Message -> unit
 
 type ApplicationLogger = {
     Debug: Log
@@ -22,7 +24,7 @@ module ApplicationLogger =
     open Logging
 
     let quietLogger =
-        let ignore _context _message = ()
+        let ignore: Log = fun _ _ -> ()
         {
             Debug = ignore
             Log = ignore
