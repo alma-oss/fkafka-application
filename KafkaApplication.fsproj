@@ -12,7 +12,6 @@
     <!-- Common kafka application -->
     <Compile Include="src/Common/Types.fs" />
     <Compile Include="src/Common/Utilities.fs" />
-    <Compile Include="src/Common/Serializer.fs" />
     <Compile Include="src/Common/Resource.fs" />
     <Compile Include="src/Common/Metrics.fs" />
     <Compile Include="src/Common/ApplicationEvents.fs" />

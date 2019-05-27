@@ -57,3 +57,12 @@ module internal FileParser =
 
             return parse path
         }
+
+module internal Serializer =
+    module private Json =
+        open Newtonsoft.Json
+
+        let serialize obj =
+            JsonConvert.SerializeObject obj
+
+    let toJson = Serialize Json.serialize

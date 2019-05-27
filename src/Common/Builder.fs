@@ -140,7 +140,7 @@ module ApplicationBuilder =
 
                 let produceEvent producer event =
                     event
-                    |> tee (fromDomain Serializer.serialize >> produceMessage producer)
+                    |> tee (fromDomain Serializer.toJson >> produceMessage producer)
                     |> incrementOutputCount
 
                 return {
