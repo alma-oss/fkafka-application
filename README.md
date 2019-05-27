@@ -121,7 +121,6 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 
 | Function | Arguments | Description |
 | --- | --- | --- |
-| **PARSING_IS_NOT_IMPLEMENTED_YET** spot | `variable name: string` | It will parse Spot from the environment variable. |
 | check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is forwarded to the checker and it passes when `Some` is returned. |
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
 | connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
@@ -129,8 +128,9 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
-| instance | `variable name: string` | It will parse Instance from the environment variable. |
+| instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
+| spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
 | supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ## Examples

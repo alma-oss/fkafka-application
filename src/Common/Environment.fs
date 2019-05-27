@@ -140,15 +140,13 @@ module EnvironmentBuilder =
                         spotVariableName
                         |> getEnvironmentValue parts id SpotError.VariableNotFoundError
 
-                    return! Error (SpotError.InvalidFormatError (sprintf "Parsing for Spot \"%s\" is not implemented yet." spotString))
+                    let! spot =
+                        spotString
+                        |> Spot.parse "-"
+                        |> Result.ofOption (sprintf "Value \"%s\" for Spot is not in correct format (expecting values separated by \"-\")." spotString)
+                        |> Result.mapError SpotError.InvalidFormatError
 
-                    //let! spot =
-                    //    spotString
-                    //    |> Spot.parse "-"
-                    //    |> Result.ofOption (sprintf "Value \"%s\" for Spot is not in correct format (expecting values separated by \"-\")." spotString)
-                    //    |> Result.mapError SpotError.InvalidFormatError
-
-                    //return { parts with Spot = Some spot }
+                    return { parts with Spot = Some spot }
                 }
                 |> Result.mapError SpotError
 
