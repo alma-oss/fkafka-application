@@ -1,7 +1,7 @@
-namespace RealLifeWithComputationExpressionExample
-open Kafka
+namespace RealLifeExample
 
 module Program =
+    open Kafka
     open KafkaApplication
 
     let createInputKeys (InputStreamName (StreamName inputStream)) (event: RawEvent) =
@@ -38,7 +38,7 @@ module Program =
 
         kafkaApplication {
             merge (environment {
-                file [".reallife.env"]
+                file [".env"]
 
                 instance "INSTANCE"
                 ifSetDo "VERBOSITY" Logging.Log.setVerbosityLevel

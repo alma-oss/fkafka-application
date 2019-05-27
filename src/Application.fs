@@ -59,11 +59,3 @@ module KafkaApplication =
         | FilterContentFilter filterApplication -> FilterRunner.runFilter runKafkaApplication filterApplication
         | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runKafkaApplication routerApplication
         | Deriver deriverApplication -> DeriverRunner.runDeriver runKafkaApplication deriverApplication
-
-    // todo - remove
-    let _runDummy (kafka_consume: ConsumerConfiguration -> 'InputEvent seq) (kafka_consumeLast: ConsumerConfiguration -> 'InputEvent option) = function
-        | CustomApplication (KafkaApplication application) ->
-            match application with
-            | Ok app -> _runDummy kafka_consume kafka_consumeLast Producer.connect Producer.produceSingle Producer.TopicProducer.flush Producer.TopicProducer.close app
-            | Error error -> failwithf "[Application] Error:\n%A" error
-        | app -> failwithf "Run Dummy is not implemented for %A." app

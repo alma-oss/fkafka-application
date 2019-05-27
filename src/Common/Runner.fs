@@ -180,6 +180,3 @@ module ApplicationRunner =
                 error
                 |> logApplicationError "Application"
                 |> WithRuntimeError
-
-    // todo remove
-    let _runDummy = KafkaApplicationRunner.run
