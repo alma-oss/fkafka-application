@@ -1,0 +1,12 @@
+{
+    "route": [
+        {
+            "event": "event_1",
+            "targetStream": "consents-event1Stream-development-v1"
+        },
+        {
+            "event": "event_2",
+            "targetStream": "consents-event2Stream-development-v1"
+        }
+    ]
+}

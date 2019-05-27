@@ -1,0 +1,14 @@
+[
+  {
+    "filter": {
+      "spot": []
+    }
+  },
+  {
+    "filter": {
+      "spot": [
+        { "zone": "prod", "bucket": "all" }
+      ]
+    }
+  }
+]
