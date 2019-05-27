@@ -12,7 +12,7 @@ It allows you to create a deriver application easier. It has build-in a deriver 
 
 Deriver computation expression returns `Application of DeriverApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
-| Function | Arguments | --- |
+| Function | Arguments | Description |
 | --- | --- | --- |
 | deriveTo | `connectionName: string`, `DeriveEvent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with derive event function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |

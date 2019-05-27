@@ -12,7 +12,7 @@ It allows you to create a filter application easier. It has build-in a filter co
 
 Filter computation expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
 
-| Function | Arguments | --- |
+| Function | Arguments | Description |
 | --- | --- | --- |
 | filterTo | `connectionName: string`, `FilterContent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with filter content function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
