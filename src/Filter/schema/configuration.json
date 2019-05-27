@@ -10,5 +10,30 @@
         { "zone": "prod", "bucket": "all" }
       ]
     }
+  },
+  {
+    "filter": {
+      "spot": [],
+      "intents": []
+    }
+  },
+  {
+    "filter": {
+      "spot": [
+        { "zone": "prod", "bucket": "all" }
+      ],
+      "intents": []
+    }
+  },
+  {
+    "filter": {
+      "spot": [
+        { "zone": "prod", "bucket": "all" }
+      ],
+      "intents": [
+        { "purpose": "data_processing", "scope": "lmc_cz" },
+        { "purpose": "employers_assessment", "scope": "lmc_cz" }
+      ]
+    }
   }
 ]

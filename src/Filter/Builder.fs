@@ -15,11 +15,12 @@ module FilterBuilder =
             (filterContentFromInputEvent: FilterContent<'InputEvent, 'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
+            (getIntent: GetIntent<'InputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
                 events
-                |> Seq.choose (filterByConfiguration getCommonEvent filterConfiguration)
+                |> Seq.choose (filterByConfiguration getCommonEvent getIntent filterConfiguration)
                 |> Seq.collect filterContentFromInputEvent
                 |> Seq.iter app.ProduceTo.[filterOutputStream]
 
@@ -45,6 +46,7 @@ module FilterBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError FilterConfigurationError
 
+                let getIntent = filterParts.GetIntent <?=> (fun _ -> None)
                 let createCustomValues = filterParts.CreateCustomValues <?=> (fun _ -> [])
 
                 let! getCommonEvent =
@@ -64,7 +66,7 @@ module FilterBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent
+                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent getIntent
                     |> buildApplication
 
                 return {
@@ -134,6 +136,10 @@ module FilterBuilder =
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+
+        [<CustomOperation("getIntentBy")>]
+        member __.GetIntentBy(state, getIntent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with GetIntent = Some getIntent }
 
         [<CustomOperation("addCustomMetricValues")>]
         member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =

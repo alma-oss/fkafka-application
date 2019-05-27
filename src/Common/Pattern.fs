@@ -2,6 +2,7 @@ namespace KafkaApplication
 
 open Kafka
 open KafkaApplication
+open ConsentEvents.Intent
 
 // Errors
 
@@ -65,6 +66,7 @@ type InputOrOutputEvent<'InputEvent, 'OutputEvent> =
 
 type CreateCustomValues<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> (string * string) list
 type GetCommonEvent<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent
+type GetIntent<'InputEvent> = 'InputEvent -> Intent option
 
 module internal PatternMetrics =
     let createKeysForInputEvent<'InputEvent, 'OutputEvent>
