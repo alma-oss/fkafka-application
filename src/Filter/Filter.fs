@@ -4,6 +4,7 @@ module internal Filter =
     open System.IO
     open FSharp.Data
     open ServiceIdentification
+    open ConsentEvents.Intent
     open Kafka
     open KafkaApplication
 
@@ -20,26 +21,35 @@ module internal Filter =
                 configuration.Filter.Spot
                 |> Seq.map (fun spot -> { Zone = Zone spot.Zone; Bucket = Bucket spot.Bucket } )
                 |> List.ofSeq
+            Intents =
+                configuration.Filter.Intents
+                |> Seq.map (fun intent -> { Purpose = IntentPurpose intent.Purpose; Scope = IntentScope intent.Scope } )
+                |> List.ofSeq
         }
 
-    let private isValueAllowed allowedValues value =
-        match allowedValues with
-        | [] -> true
-        | allowedValues ->
-            allowedValues
-            |> List.contains value
+    let private isValueAllowed allowedValues = function
+        | None -> true
+        | Some value ->
+            match allowedValues with
+            | [] -> true
+            | allowedValues ->
+                allowedValues
+                |> List.contains value
 
-    let private isAllowedBy { Spots = spots } zone bucket =
-        { Zone = zone; Bucket = bucket } |> isValueAllowed spots
+    let private isAllowedBy { Spots = spots; Intents = intents } (spot, intent) =
+        Some spot |> isValueAllowed spots
+        || intent |> isValueAllowed intents
 
-    let filterByConfiguration getCommonEvent configuration inputEvent =
-        let isAllowedBy = isAllowedBy configuration
-
+    let filterByConfiguration getCommonEvent getIntent configuration inputEvent =
         let commonEvent: CommonEvent =
             inputEvent
             |> Input
             |> getCommonEvent
+        let spot = { Zone = commonEvent.Zone; Bucket = commonEvent.Bucket}
 
-        match { Zone = commonEvent.Zone; Bucket = commonEvent.Bucket} with
-        | { Zone = zone; Bucket = bucket } when isAllowedBy zone bucket -> Some inputEvent
-        | _ -> None
+        let intent: Intent option =
+            inputEvent
+            |> getIntent
+
+        if (spot, intent) |> isAllowedBy configuration then Some inputEvent
+        else None

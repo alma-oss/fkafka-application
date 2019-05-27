@@ -14,9 +14,11 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 
 | Function | Arguments | Description |
 | --- | --- | --- |
+| addCustomMetricValues | `CreateCustomValues: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> (string * string) list` | It will _register_ a function to which create a custom values. Those values will be added to metric set key to both input and output events for metrics. |
 | filterTo | `connectionName: string`, `FilterContent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with filter content function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
-| getCommonEventBy | `GetCommonEvent<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |
+| getCommonEventBy | `GetCommonEvent: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent` | It will _register_ a function to get common data out of both input and output events for metrics. |
+| getIntentBy | `GetIntent: 'InputEvent -> Intent option` | It will _register_ a function to get an Intent from the Input Event - to be used in Filter. Otherwise Intent is ignored. |
 | parseConfiguration | `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
 ## Filter Configuration
@@ -24,6 +26,8 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 Filter will use configuration to filter input events. Values in configuration determines, what is allowed. If section is empty, all values are allowed.
 
 #### Allow everything:
+This allows all intents implicitly.
+
 ```json
 {
     "filter": {
@@ -32,12 +36,41 @@ Filter will use configuration to filter input events. Values in configuration de
 }
 ```
 
+#### Allow everything explicitly:
+This allows all intents explicitly.
+
+```json
+{
+    "filter": {
+        "spot": [],
+        "intents": []
+    }
+}
+```
+
 #### Allow only specific spot:
+And all intents.
+
 ```json
 {
     "filter": {
         "spot": [
             { "zone": "prod", "bucket": "all" }
+        ]
+    }
+}
+```
+
+#### Allow one spot and 2 intents
+```json
+{
+    "filter": {
+        "spot": [
+            { "zone": "prod", "bucket": "all" }
+        ],
+        "intents": [
+            { "purpose": "data_processing", "scope": "lmc_cz" },
+            { "purpose": "employers_assessment", "scope": "lmc_cz" }
         ]
     }
 }
@@ -76,16 +109,24 @@ filterContentFilter {
         parseEventWith Parser.parseInputEvent
     })
 
-    filterTo "outputStream" filterContentFromInputEvent fromDomain
+    filterTo "outputStream" Filter.filterContentFromInputEvent Serializer.fromDomain
 
     getCommonEventBy (function
         | Input event ->
             match event with
-            | InputEvent.NewPersonIdentified (NewPersonIdentified e) -> { Event = e.Event; Spot = { Zone = e.Zone; Bucket = e.Bucket } }
-            | InputEvent.NotRelevant e -> { Event = e.Event; Spot = { Zone = e.Zone; Bucket = e.Bucket } }
+            | InputEvent.NewPersonIdentified newPersonIdentified ->
+                newPersonIdentified
+                |> NewPersonIdentified.Event.toCommon
+            | InputEvent.NotRelevant rawEvent ->
+                rawEvent
+                |> RawEvent.toCommon
+
         | Output event ->
             match event with
-            | OutputEvent.NewPersonIdentified (FilteredNewPersonIdentified e) -> { Event = e.Event; Spot = { Zone = e.Zone; Bucket = e.Bucket } }
+            | OutputEvent.NewPersonIdentified publicEvent ->
+                publicEvent
+                |> NewPersonIdentified.PublicEvent.event
+                |> Event.toCommon
     )
 }
 |> run

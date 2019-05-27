@@ -2,6 +2,7 @@ namespace KafkaApplication.Filter
 
 open ServiceIdentification
 open KafkaApplication
+open ConsentEvents.Intent
 
 // Errors
 
@@ -20,6 +21,7 @@ type FilterApplicationError =
 
 type FilterConfiguration = {
     Spots: Spot list
+    Intents: Intent list
 }
 
 type FilterContent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
@@ -31,7 +33,9 @@ type FilterParts<'InputEvent, 'OutputEvent> = {
     FilterConfiguration: FilterConfiguration option
     FilterTo: ConnectionName option
     FilterContent: FilterContent<'InputEvent, 'OutputEvent> option
+    CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
+    GetIntent: GetIntent<'InputEvent> option
 }
 
 module FilterParts =
@@ -40,7 +44,9 @@ module FilterParts =
         FilterConfiguration = None
         FilterTo = None
         FilterContent = None
+        CreateCustomValues = None
         GetCommonEvent = None
+        GetIntent = None
     }
 
 type FilterApplicationConfiguration<'InputEvent, 'OutputEvent> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent>, FilterApplicationError>

@@ -5,6 +5,7 @@ module FilterBuilder =
     open KafkaApplication.PatternBuilder
     open KafkaApplication.PatternMetrics
     open ApplicationBuilder
+    open OptionOperators
     open Filter
 
     module FilterApplicationBuilder =
@@ -12,19 +13,21 @@ module FilterBuilder =
             filterConfiguration
             (ConnectionName filterOutputStream)
             (filterContentFromInputEvent: FilterContent<'InputEvent, 'OutputEvent>)
+            (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
+            (getIntent: GetIntent<'InputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
                 events
-                |> Seq.choose (filterByConfiguration getCommonEvent filterConfiguration)
+                |> Seq.choose (filterByConfiguration getCommonEvent getIntent filterConfiguration)
                 |> Seq.collect filterContentFromInputEvent
                 |> Seq.iter app.ProduceTo.[filterOutputStream]
 
             configuration
             |> addDefaultConsumeHandler filterConsumeHandler
-            |> addCreateInputEventKeys (createKeysForInputEvent getCommonEvent)
-            |> addCreateOutputEventKeys (createKeysForOutputEvent getCommonEvent)
+            |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
+            |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 
         let buildFilter<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
@@ -43,6 +46,9 @@ module FilterBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError FilterConfigurationError
 
+                let getIntent = filterParts.GetIntent <?=> (fun _ -> None)
+                let createCustomValues = filterParts.CreateCustomValues <?=> (fun _ -> [])
+
                 let! getCommonEvent =
                     filterParts.GetCommonEvent
                     |> Result.ofOption MissingGetCommonEvent
@@ -60,7 +66,7 @@ module FilterBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addFilterConfiguration filterConfiguration filterTo filterContent getCommonEvent
+                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent getIntent
                     |> buildApplication
 
                 return {
@@ -130,3 +136,11 @@ module FilterBuilder =
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+
+        [<CustomOperation("getIntentBy")>]
+        member __.GetIntentBy(state, getIntent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with GetIntent = Some getIntent }
+
+        [<CustomOperation("addCustomMetricValues")>]
+        member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with CreateCustomValues = Some createCustomValues }

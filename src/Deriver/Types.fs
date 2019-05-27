@@ -25,6 +25,7 @@ type DeriverParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     DeriveTo: ConnectionName option
     DeriveEvent: DeriveEvent<'InputEvent, 'OutputEvent> option
+    CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }
 
@@ -33,6 +34,7 @@ module DeriverParts =
         Configuration = None
         DeriveTo = None
         DeriveEvent = None
+        CreateCustomValues = None
         GetCommonEvent = None
     }
 
