@@ -36,7 +36,7 @@ module ApplicationRunner =
             |> ApplicationEvents.fromDomain Serializer.toJson
             |> produceSingleMessage supervisionProducer
 
-            logger.Verbose "Supervision" "Instance started produced."
+            logger.Verbose "Application<Supervision>" "Instance started produced."
 
         let private consume<'InputEvent>
             (consumeEvents: ConsumerConfiguration -> 'InputEvent seq)
