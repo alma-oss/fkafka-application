@@ -31,6 +31,7 @@ type FilterParts<'InputEvent, 'OutputEvent> = {
     FilterConfiguration: FilterConfiguration option
     FilterTo: ConnectionName option
     FilterContent: FilterContent<'InputEvent, 'OutputEvent> option
+    CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }
 
@@ -40,6 +41,7 @@ module FilterParts =
         FilterConfiguration = None
         FilterTo = None
         FilterContent = None
+        CreateCustomValues = None
         GetCommonEvent = None
     }
 

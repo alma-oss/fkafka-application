@@ -5,11 +5,13 @@ module DeriverBuilder =
     open KafkaApplication.PatternBuilder
     open KafkaApplication.PatternMetrics
     open ApplicationBuilder
+    open OptionOperators
 
     module DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
             (ConnectionName deriverOutputStream)
             (deriveEvent: DeriveEvent<'InputEvent, 'OutputEvent>)
+            (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
@@ -20,8 +22,8 @@ module DeriverBuilder =
 
             configuration
             |> addDefaultConsumeHandler deriveEventHandler
-            |> addCreateInputEventKeys (createKeysForInputEvent getCommonEvent)
-            |> addCreateOutputEventKeys (createKeysForOutputEvent getCommonEvent)
+            |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
+            |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 
         let buildDeriver<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
@@ -34,6 +36,8 @@ module DeriverBuilder =
                     deriverParts.DeriveTo
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError DeriverConfigurationError
+
+                let createCustomValues = deriverParts.CreateCustomValues <?=> (fun _ -> [])
 
                 let! getCommonEvent =
                     deriverParts.GetCommonEvent
@@ -52,7 +56,7 @@ module DeriverBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addDeriverConfiguration deriveTo deriveEvent getCommonEvent
+                    |> addDeriverConfiguration deriveTo deriveEvent createCustomValues getCommonEvent
                     |> buildApplication
 
                 return {
@@ -108,3 +112,7 @@ module DeriverBuilder =
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+
+        [<CustomOperation("addCustomMetricValues")>]
+        member __.AddCustomMetricValues(state, createCustomValues): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with CreateCustomValues = Some createCustomValues }

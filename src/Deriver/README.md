@@ -14,6 +14,7 @@ Deriver computation expression returns `Application of DeriverApplication<'Input
 
 | Function | Arguments | Description |
 | --- | --- | --- |
+| addCustomMetricValues | `CreateCustomValues: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> (string * string) list` | It will _register_ a function to which create a custom values. Those values will be added to metric set key to both input and output events for metrics. |
 | deriveTo | `connectionName: string`, `DeriveEvent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with derive event function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | getCommonEventBy | `GetCommonEvent<'InputEvent, 'OutputEvent>` | It will _register_ a function to get common data out of both input and output events for metrics. |

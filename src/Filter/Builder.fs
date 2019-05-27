@@ -5,6 +5,7 @@ module FilterBuilder =
     open KafkaApplication.PatternBuilder
     open KafkaApplication.PatternMetrics
     open ApplicationBuilder
+    open OptionOperators
     open Filter
 
     module FilterApplicationBuilder =
@@ -12,6 +13,7 @@ module FilterBuilder =
             filterConfiguration
             (ConnectionName filterOutputStream)
             (filterContentFromInputEvent: FilterContent<'InputEvent, 'OutputEvent>)
+            (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
@@ -23,8 +25,8 @@ module FilterBuilder =
 
             configuration
             |> addDefaultConsumeHandler filterConsumeHandler
-            |> addCreateInputEventKeys (createKeysForInputEvent getCommonEvent)
-            |> addCreateOutputEventKeys (createKeysForOutputEvent getCommonEvent)
+            |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
+            |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 
         let buildFilter<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
@@ -43,6 +45,8 @@ module FilterBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError FilterConfigurationError
 
+                let createCustomValues = filterParts.CreateCustomValues <?=> (fun _ -> [])
+
                 let! getCommonEvent =
                     filterParts.GetCommonEvent
                     |> Result.ofOption MissingGetCommonEvent
@@ -60,7 +64,7 @@ module FilterBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addFilterConfiguration filterConfiguration filterTo filterContent getCommonEvent
+                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent
                     |> buildApplication
 
                 return {
@@ -130,3 +134,7 @@ module FilterBuilder =
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+
+        [<CustomOperation("addCustomMetricValues")>]
+        member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun filterparts -> { filterparts with CreateCustomValues = Some createCustomValues }
