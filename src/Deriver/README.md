@@ -50,6 +50,7 @@ deriver {
         })
 
         showMetricsOn "/metrics"
+        parseEventWith Parser.parseInputEvent
     })
 
     deriveTo "outputStream" Deriver.deriveInputEvent Serializer.fromDomain

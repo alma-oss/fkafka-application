@@ -73,6 +73,7 @@ filterContentFilter {
         })
 
         showMetricsOn "/metrics"
+        parseEventWith Parser.parseInputEvent
     })
 
     filterTo "outputStream" filterContentFromInputEvent fromDomain
