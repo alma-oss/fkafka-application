@@ -83,6 +83,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
+| useGroupIdFor | `connectionName: string`, `GroupId` | Set group id for connection. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |

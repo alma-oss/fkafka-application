@@ -354,6 +354,10 @@ module ApplicationBuilder =
         member __.GroupId(state, groupId): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
 
+        [<CustomOperation("useGroupIdFor")>]
+        member __.GroupIdFor(state, name, groupId): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with GroupIds = parts.GroupIds.Add(ConnectionName name, groupId) }
+
         [<CustomOperation("parseEventWith")>]
         member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
             state |> addParseEvent parseEvent
