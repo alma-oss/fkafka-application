@@ -293,6 +293,7 @@ module ApplicationBuilder =
                 //
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
+                    Box = box
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = runtimeConsumerConfigurations

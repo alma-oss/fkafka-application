@@ -108,6 +108,7 @@ In every Consume Handler, the first parameter you will receive is the `ConsumeRu
 ```fs
 type ConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
+    Box: Box
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>

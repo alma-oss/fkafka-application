@@ -220,6 +220,7 @@ type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> SerializedEvent
 
 type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
+    Box: Box
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -228,6 +229,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
 
 type ConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
+    Box: Box
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -238,6 +240,7 @@ module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
         {
             Logger = preparedRuntimeParts.Logger
+            Box = preparedRuntimeParts.Box
             Environment = preparedRuntimeParts.Environment
             Connections = preparedRuntimeParts.Connections
             ConsumerConfigurations = preparedRuntimeParts.ConsumerConfigurations
