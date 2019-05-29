@@ -74,6 +74,7 @@ module internal PatternMetrics =
         (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
         (InputStreamName (StreamName inputStream))
         event =
+
         let event = Input event
         let commonEvent = event |> getCommonEvent
 
@@ -90,6 +91,7 @@ module internal PatternMetrics =
         (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
         (OutputStreamName (StreamName outputStream))
         event =
+
         let event = Output event
         let commonEvent = event |> getCommonEvent
 
