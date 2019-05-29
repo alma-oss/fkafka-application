@@ -113,6 +113,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
+    IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
 }
 ```
 

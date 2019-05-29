@@ -1,6 +1,7 @@
 namespace KafkaApplication
 
 module ApplicationMetrics =
+    open Metrics
     open ServiceIdentification
 
     type private Count = Count of int
@@ -14,11 +15,10 @@ module ApplicationMetrics =
     type private ApplicationMetric<'InputEvent, 'OutputEvent> =
         | InputEventsTotal of Instance * InputStreamName * 'InputEvent
         | OutputEventsTotal of Instance * OutputStreamName * 'OutputEvent
+        | CustomMetricWithDataSetKey of Instance * MetricName * SimpleDataSetKeys
 
     [<AutoOpen>]
     module private InternalState =
-        open Metrics
-
         let private failOnError = function
             | Ok success -> success
             | Error error -> failwithf "Error: %A" error
@@ -58,6 +58,11 @@ module ApplicationMetrics =
                 event
                 |> createKeyForOutputEvent createOutputKeys instance outputStream
                 |> State.incrementMetricSetValue (Int 1) (metricTotalOutputEvent instance.Context)
+                |> metricValueToCount
+            | CustomMetricWithDataSetKey (instance, metricName, (SimpleDataSetKeys labels)) ->
+                labels
+                |> createKey instance
+                |> State.incrementMetricSetValue (Int 1) metricName
                 |> metricValueToCount
 
         let enableContextStatus (instance: Instance) =
@@ -117,6 +122,12 @@ module ApplicationMetrics =
         (instance, outputStream, event)
         |> OutputEventsTotal
         |> incrementState createNoInputKeys createKeys
+        |> ignore
+
+    let incrementCustomMetricCount instance metricName labels =
+        (instance, metricName, labels)
+        |> CustomMetricWithDataSetKey
+        |> incrementState createNoInputKeys createNoOutputKeys
         |> ignore
 
     // Showing state
