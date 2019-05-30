@@ -244,10 +244,14 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
 }
 
 module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
+        let instance = preparedRuntimeParts.Box |> Box.instance
+
         {
             Logger = preparedRuntimeParts.Logger
             Box = preparedRuntimeParts.Box
@@ -258,6 +262,8 @@ module internal PreparedConsumeRuntimeParts =
                 preparedRuntimeParts.ProduceTo
                 |> Map.map (fun connection produce -> produce producers.[connection])
             IncrementMetric = preparedRuntimeParts.IncrementMetric
+            EnableResource = ResourceAvailability.enable instance >> ignore
+            DisableResource = ResourceAvailability.disable instance >> ignore
         }
 
 type ConsumeHandler<'InputEvent, 'OutputEvent> =
