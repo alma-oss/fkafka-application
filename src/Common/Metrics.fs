@@ -73,7 +73,7 @@ module ApplicationMetrics =
 
             State.enableStatusMetric metricName dataSetKey
 
-        let getFormattedMetricsForPrometheus (instance: Instance) _ =
+        let getFormattedMetricsForPrometheus (customMetrics: CustomMetric list) (instance: Instance) _ =
             let formatMetric metricType description metricName =
                 metricName
                 |> State.getMetric
@@ -87,6 +87,13 @@ module ApplicationMetrics =
                     | _ -> ""
             let formatCounter = formatMetric MetricType.Counter
 
+            let customMetrics =
+                customMetrics
+                |> List.rev
+                |> List.map (fun customMetric ->
+                    formatMetric customMetric.Type customMetric.Description customMetric.Name
+                )
+
             [
                 instance.Context |> metricStatus |> formatMetric MetricType.Gauge "Current instance status."
                 ServiceStatus.getFormattedValue()
@@ -94,6 +101,7 @@ module ApplicationMetrics =
                 instance.Context |> metricTotalInputEvent |> formatCounter "Total input event count."
                 instance.Context |> metricTotalOutputEvent |> formatCounter "Total output event count."
             ]
+            @ customMetrics
             |> String.concat ""
 
     //
@@ -132,11 +140,11 @@ module ApplicationMetrics =
 
     // Showing state
 
-    let showStateOnWebServerAsync instance route =
+    let showStateOnWebServerAsync instance customMetrics route =
         let route =
             route
             |> MetricsRoute.value
 
         instance
-        |> getFormattedMetricsForPrometheus
+        |> getFormattedMetricsForPrometheus customMetrics
         |> Metrics.WebServer.showStateAsync route

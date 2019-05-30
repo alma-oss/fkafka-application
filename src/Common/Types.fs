@@ -1,6 +1,7 @@
 namespace KafkaApplication
 
 open Kafka
+open Metrics
 open ServiceIdentification
 
 //
@@ -47,6 +48,12 @@ module ApplicationLogger =
 //
 // Metrics
 //
+
+type CustomMetric = {
+    Name: MetricName
+    Type: MetricType
+    Description: string
+}
 
 type MetricsRoute = private MetricsRoute of string
 
@@ -177,7 +184,8 @@ type ProduceError =
 
 type MetricsError =
     | InvalidRoute of InvalidMetricsRouteError
-    | MetricError of Metrics.MetricError
+    | MetricError of MetricError
+    | InvalidMetricName of MetricNameError
 
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
@@ -225,7 +233,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
-    IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
@@ -235,7 +243,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
-    IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
 }
 
 module internal PreparedConsumeRuntimeParts =
@@ -297,6 +305,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     ProducerErrorHandler: ProducerErrorHandler option
     FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
     MetricsRoute: MetricsRoute option
+    CustomMetrics: CustomMetric list
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
@@ -320,6 +329,7 @@ module internal ConfigurationParts =
             ProducerErrorHandler = None
             FromDomain = Map.empty
             MetricsRoute = None
+            CustomMetrics = []
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
@@ -347,6 +357,7 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
     MetricsRoute: MetricsRoute option
+    CustomMetrics: CustomMetric list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
 

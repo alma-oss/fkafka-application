@@ -121,7 +121,7 @@ module ApplicationRunner =
                 |> tee (ApplicationMetrics.enableContext)
 
             application.MetricsRoute
-            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance)
+            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics)
             |>! Async.Start
 
             application.Logger.Verbose "Application" "Connect producers ..."
