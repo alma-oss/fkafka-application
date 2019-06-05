@@ -60,7 +60,7 @@
     <PackageReference Include="Lmc.Environment" Version="2.1" />
     <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
     <PackageReference Include="Lmc.Kafka" Version="6.4" />
-    <PackageReference Include="Lmc.Logging" Version="1.1" />
+    <PackageReference Include="Lmc.Logging" Version="1.3" />
     <PackageReference Include="Lmc.Metrics" Version="2.0" />
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.1" />
     <PackageReference Include="Lmc.ConsentEvents" Version="1.1" />

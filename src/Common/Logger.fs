@@ -47,15 +47,33 @@ module ApplicationLogger =
             |> Graylog.Logger.create
             |> Graylog.Logger.withArgs
 
-        let createMessage = sprintf "[{context}] %s"
+        let createMessage (message: string) =
+            message
+                .Replace("{", "(")
+                .Replace("}", ")")
+            |> sprintf "[{application_context}] %s"
 
         {
-            Debug = fun context message -> logger.Debug(createMessage message, context)
-            Log = fun context message -> logger.Info(createMessage message, context)
-            Verbose = fun context message -> logger.Info(createMessage message, context)
-            VeryVerbose = fun context message -> logger.Info(createMessage message, context)
-            Warning = fun context message -> logger.Warning(createMessage message, context)
-            Error = fun context message -> logger.Error(createMessage message, context)
+            Debug = fun context message ->
+                if Log.isDebug() then
+                    logger.Debug(createMessage message, context)
+
+            Log = fun context message ->
+                logger.Info(createMessage message, context)
+
+            Verbose = fun context message ->
+                if Log.isVerbose() then
+                    logger.Info(createMessage message, context)
+
+            VeryVerbose = fun context message ->
+                if Log.isVeryVerbose() then
+                    logger.Info(createMessage message, context)
+
+            Warning = fun context message ->
+                logger.Warning(createMessage message, context)
+
+            Error = fun context message ->
+                logger.Error(createMessage message, context)
         }
 
     /// Compose two functions with 2 parameters and returning unit
