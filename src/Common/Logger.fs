@@ -51,7 +51,7 @@ module ApplicationLogger =
             message
                 .Replace("{", "(")
                 .Replace("}", ")")
-            |> sprintf "[{context}] %s"
+            |> sprintf "[{application_context}] %s"
 
         {
             Debug = fun context message ->

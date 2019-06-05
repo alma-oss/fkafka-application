@@ -4,6 +4,7 @@
 ## Unreleased
 - Fix debug logging to the Graylog by replacing `{`, `}` characters to `(`, `)`
 - Use `Logging.Log` verbosity in the Graylog Logger
+- Change Graylog message field `context` to `application_context` to prevent misleading with Service Identification naming
 
 ## 1.1.0 - 2019-06-05
 - Add `IncrementMetric` to Consume Runtime Parts to allow custom metrics
