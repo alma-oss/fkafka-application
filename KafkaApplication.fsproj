@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <!-- Common kafka application -->
+    <Compile Include="src/Common/Common.fs" />
+    <Compile Include="src/Common/Logger.fs" />
     <Compile Include="src/Common/Types.fs" />
     <Compile Include="src/Common/Utilities.fs" />
     <Compile Include="src/Common/Resource.fs" />
@@ -55,25 +57,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../consent-events/ConsentEvents.fsproj">
-      <Name>ConsentEvents.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../flogging/Logging.fsproj">
-      <Name>Logging.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Lmc.Environment" Version="2.1" />
     <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
     <PackageReference Include="Lmc.Kafka" Version="6.4" />
-    <!--<PackageReference Include="Lmc.Logging" Version="1.0" />-->
+    <PackageReference Include="Lmc.Logging" Version="1.1" />
     <PackageReference Include="Lmc.Metrics" Version="2.0" />
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.1" />
-    <!--<PackageReference Include="Lmc.ConsentEvents" Version="1.0" />-->
+    <PackageReference Include="Lmc.ConsentEvents" Version="1.1" />
   </ItemGroup>
 
 </Project>
