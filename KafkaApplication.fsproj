@@ -17,8 +17,8 @@
     <Compile Include="src/Common/Resource.fs" />
     <Compile Include="src/Common/Metrics.fs" />
     <Compile Include="src/Common/ApplicationEvents.fs" />
-    <Compile Include="src/Common/Environment.fs" />
     <Compile Include="src/Common/Builder.fs" />
+    <Compile Include="src/Common/Environment.fs" />
     <Compile Include="src/Common/Runner.fs" />
     <Compile Include="src/Common/Pattern.fs" />
   </ItemGroup>

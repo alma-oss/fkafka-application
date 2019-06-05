@@ -51,6 +51,16 @@ module ApplicationBuilder =
                     }
                 |> Configuration.result
 
+        let addGraylogHostToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) graylogHost =
+            result {
+                let! host =
+                    graylogHost
+                    |> Logging.Graylog.Host.create
+                    |> Result.mapError LoggingError.InvalidGraylogHost
+
+                return { parts with GraylogHost = Some host }
+            }
+
         let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
 
@@ -361,12 +371,9 @@ module ApplicationBuilder =
         member __.LogToGraylog(state, graylogHost): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    let! host =
+                    return!
                         graylogHost
-                        |> Logging.Graylog.Host.create
-                        |> Result.mapError InvalidGraylogHost
-
-                    return { parts with GraylogHost = Some host }
+                        |> addGraylogHostToParts parts
                 }
                 |> Result.mapError LoggingError
 

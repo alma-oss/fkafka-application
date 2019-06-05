@@ -136,6 +136,7 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
+| logToGraylog | `graylogHostVariableName: string` | It will register graylog host. All logs will be sent to the graylog using UDP with Instance as facility. (_It must not start with protocol._) |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
 | supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |

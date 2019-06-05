@@ -146,8 +146,10 @@ type MetricsError =
     | MetricError of MetricError
     | InvalidMetricName of MetricNameError
 
+[<RequireQualifiedAccess>]
 type LoggingError =
     | InvalidGraylogHost of Logging.Graylog.HostError
+    | VariableNotFoundError of string
 
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
