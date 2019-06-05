@@ -1,22 +1,5 @@
 namespace KafkaApplication
 
-[<AutoOpen>]
-module Utilities =
-    open System
-
-    let tee f a =
-        f a
-        a
-
-    let wait (seconds: int<second>) =
-        Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
-
-    let logApplicationError context error =
-        error
-        |> sprintf "[%s] Error:\n%A" context
-        |> tee (printfn "%s")
-        |> tee (eprintfn "%s")
-
 module internal OptionOperators =
     /// Default value - if value is None, default value will be used
     let (<?=>) defaultValue opt = Option.defaultValue opt defaultValue

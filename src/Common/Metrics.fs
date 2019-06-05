@@ -1,6 +1,7 @@
 namespace KafkaApplication
 
 module ApplicationMetrics =
+    open Metrics
     open ServiceIdentification
 
     type private Count = Count of int
@@ -14,11 +15,10 @@ module ApplicationMetrics =
     type private ApplicationMetric<'InputEvent, 'OutputEvent> =
         | InputEventsTotal of Instance * InputStreamName * 'InputEvent
         | OutputEventsTotal of Instance * OutputStreamName * 'OutputEvent
+        | CustomMetricWithDataSetKey of Instance * MetricName * SimpleDataSetKeys
 
     [<AutoOpen>]
     module private InternalState =
-        open Metrics
-
         let private failOnError = function
             | Ok success -> success
             | Error error -> failwithf "Error: %A" error
@@ -59,6 +59,11 @@ module ApplicationMetrics =
                 |> createKeyForOutputEvent createOutputKeys instance outputStream
                 |> State.incrementMetricSetValue (Int 1) (metricTotalOutputEvent instance.Context)
                 |> metricValueToCount
+            | CustomMetricWithDataSetKey (instance, metricName, (SimpleDataSetKeys labels)) ->
+                labels
+                |> createKey instance
+                |> State.incrementMetricSetValue (Int 1) metricName
+                |> metricValueToCount
 
         let enableContextStatus (instance: Instance) =
             let metricName = metricStatus instance.Context
@@ -68,7 +73,7 @@ module ApplicationMetrics =
 
             State.enableStatusMetric metricName dataSetKey
 
-        let getFormattedMetricsForPrometheus (instance: Instance) _ =
+        let getFormattedMetricsForPrometheus (customMetrics: CustomMetric list) (instance: Instance) _ =
             let formatMetric metricType description metricName =
                 metricName
                 |> State.getMetric
@@ -82,6 +87,13 @@ module ApplicationMetrics =
                     | _ -> ""
             let formatCounter = formatMetric MetricType.Counter
 
+            let customMetrics =
+                customMetrics
+                |> List.rev
+                |> List.map (fun customMetric ->
+                    formatMetric customMetric.Type customMetric.Description customMetric.Name
+                )
+
             [
                 instance.Context |> metricStatus |> formatMetric MetricType.Gauge "Current instance status."
                 ServiceStatus.getFormattedValue()
@@ -89,6 +101,7 @@ module ApplicationMetrics =
                 instance.Context |> metricTotalInputEvent |> formatCounter "Total input event count."
                 instance.Context |> metricTotalOutputEvent |> formatCounter "Total output event count."
             ]
+            @ customMetrics
             |> String.concat ""
 
     //
@@ -119,13 +132,19 @@ module ApplicationMetrics =
         |> incrementState createNoInputKeys createKeys
         |> ignore
 
+    let incrementCustomMetricCount instance metricName labels =
+        (instance, metricName, labels)
+        |> CustomMetricWithDataSetKey
+        |> incrementState createNoInputKeys createNoOutputKeys
+        |> ignore
+
     // Showing state
 
-    let showStateOnWebServerAsync instance route =
+    let showStateOnWebServerAsync instance customMetrics route =
         let route =
             route
             |> MetricsRoute.value
 
         instance
-        |> getFormattedMetricsForPrometheus
+        |> getFormattedMetricsForPrometheus customMetrics
         |> Metrics.WebServer.showStateAsync route

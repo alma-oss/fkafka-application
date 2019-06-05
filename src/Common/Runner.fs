@@ -6,6 +6,11 @@ module ApplicationRunner =
     open OptionOperators
 
     module private KafkaApplicationRunner =
+        open System
+
+        let private wait (seconds: int<KafkaApplication.second>) =
+            Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
+
         let rec private connectProducersWithErrorHandling connectProducer application =
             try
                 application.Producers |> Map.map (fun _ -> connectProducer)
@@ -121,7 +126,7 @@ module ApplicationRunner =
                 |> tee (ApplicationMetrics.enableContext)
 
             application.MetricsRoute
-            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance)
+            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics)
             |>! Async.Start
 
             application.Logger.Verbose "Application" "Connect producers ..."

@@ -2,6 +2,7 @@ namespace KafkaApplication
 
 module ApplicationBuilder =
     open Kafka
+    open Metrics
     open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
@@ -45,6 +46,8 @@ module ApplicationBuilder =
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
+                        CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
+                        GraylogHost = currentParts.GraylogHost <??> newParts.GraylogHost
                     }
                 |> Configuration.result
 
@@ -219,6 +222,15 @@ module ApplicationBuilder =
                 // composed parts
                 //
 
+                // logging
+                let logger =
+                    match configurationParts.GraylogHost with
+                    | Some host ->
+                        host
+                        |> ApplicationLogger.graylogLogger instance
+                        |> ApplicationLogger.combine logger
+                    | _ -> logger
+
                 // kafka parts
                 let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
@@ -293,6 +305,7 @@ module ApplicationBuilder =
                 //
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
+                    IncrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
                     Box = box
                     Environment = environment
                     Connections = connections
@@ -318,6 +331,7 @@ module ApplicationBuilder =
                     Producers = producers
                     ProducerErrorHandler = producerErrorHandler
                     MetricsRoute = configurationParts.MetricsRoute
+                    CustomMetrics = configurationParts.CustomMetrics
                     PreparedRuntimeParts = preparedRuntimeParts
                 }
             }
@@ -342,6 +356,19 @@ module ApplicationBuilder =
         [<CustomOperation("useLogger")>]
         member __.Logger(state, logger: ApplicationLogger): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Logger = logger }
+
+        [<CustomOperation("logToGraylog")>]
+        member __.LogToGraylog(state, graylogHost): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! host =
+                        graylogHost
+                        |> Logging.Graylog.Host.create
+                        |> Result.mapError InvalidGraylogHost
+
+                    return { parts with GraylogHost = Some host }
+                }
+                |> Result.mapError LoggingError
 
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
@@ -393,11 +420,11 @@ module ApplicationBuilder =
 
         [<CustomOperation("consumeLast")>]
         member __.ConsumeLast(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.LastEvent consumeHandler } :: parts.ConsumeHandlers }
 
         [<CustomOperation("consumeLastFrom")>]
         member __.ConsumeLastFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.LastEvent consumeHandler} :: parts.ConsumeHandlers }
+            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.LastEvent consumeHandler } :: parts.ConsumeHandlers }
 
         [<CustomOperation("onConsumeError")>]
         member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =
@@ -447,3 +474,22 @@ module ApplicationBuilder =
         [<CustomOperation("showOutputEventsWith")>]
         member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
             state |> addCreateOutputEventKeys createOutputEventKeys
+
+        [<CustomOperation("showCustomMetric")>]
+        member __.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! metricName =
+                        name
+                        |> MetricName.create
+                        |> Result.mapError InvalidMetricName
+
+                    let customMetric = {
+                        Name = metricName
+                        Type = metricType
+                        Description = description
+                    }
+
+                    return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+                }
+                |> Result.mapError MetricsError

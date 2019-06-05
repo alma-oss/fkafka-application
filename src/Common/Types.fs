@@ -1,52 +1,18 @@
 namespace KafkaApplication
 
 open Kafka
+open Metrics
 open ServiceIdentification
-
-//
-// Logging
-//
-
-type Context = string
-type Message = string
-type Log = Context -> Message -> unit
-
-type ApplicationLogger = {
-    Debug: Log
-    Log: Log
-    Verbose: Log
-    VeryVerbose: Log
-    Warning: Log
-    Error: Log
-}
-
-module ApplicationLogger =
-    open Logging
-
-    let quietLogger =
-        let ignore: Log = fun _ _ -> ()
-        {
-            Debug = ignore
-            Log = ignore
-            Verbose = ignore
-            VeryVerbose = ignore
-            Warning = ignore
-            Error = ignore
-        }
-
-    let defaultLogger =
-        {
-            Debug = Log.debug
-            Log = Log.normal
-            Verbose = Log.verbose
-            VeryVerbose = Log.veryVerbose
-            Warning = Log.warning
-            Error = Log.error
-        }
 
 //
 // Metrics
 //
+
+type CustomMetric = {
+    Name: MetricName
+    Type: MetricType
+    Description: string
+}
 
 type MetricsRoute = private MetricsRoute of string
 
@@ -117,10 +83,10 @@ module Connections =
 // Errors
 //
 
+// Handlers and policies
+
 [<Measure>] type second
 [<Measure>] type attempt
-
-// Handlers and policies
 
 type ErrorMessage = string
 
@@ -177,7 +143,11 @@ type ProduceError =
 
 type MetricsError =
     | InvalidRoute of InvalidMetricsRouteError
-    | MetricError of Metrics.MetricError
+    | MetricError of MetricError
+    | InvalidMetricName of MetricNameError
+
+type LoggingError =
+    | InvalidGraylogHost of Logging.Graylog.HostError
 
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
@@ -189,6 +159,7 @@ type KafkaApplicationError =
     | ConsumeHandlerError of ConsumeHandlerError
     | ProduceError of ProduceError
     | MetricsError of MetricsError
+    | LoggingError of LoggingError
 
 //
 // Produce
@@ -225,6 +196,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
@@ -234,10 +206,15 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
 }
 
 module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
+        let instance = preparedRuntimeParts.Box |> Box.instance
+
         {
             Logger = preparedRuntimeParts.Logger
             Box = preparedRuntimeParts.Box
@@ -247,6 +224,9 @@ module internal PreparedConsumeRuntimeParts =
             ProduceTo =
                 preparedRuntimeParts.ProduceTo
                 |> Map.map (fun connection produce -> produce producers.[connection])
+            IncrementMetric = preparedRuntimeParts.IncrementMetric
+            EnableResource = ResourceAvailability.enable instance >> ignore
+            DisableResource = ResourceAvailability.disable instance >> ignore
         }
 
 type ConsumeHandler<'InputEvent, 'OutputEvent> =
@@ -294,9 +274,11 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     ProducerErrorHandler: ProducerErrorHandler option
     FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
     MetricsRoute: MetricsRoute option
+    CustomMetrics: CustomMetric list
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
+    GraylogHost: Logging.Graylog.Host option
 }
 
 [<AutoOpen>]
@@ -317,9 +299,11 @@ module internal ConfigurationParts =
             ProducerErrorHandler = None
             FromDomain = Map.empty
             MetricsRoute = None
+            CustomMetrics = []
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
+            GraylogHost = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
@@ -344,6 +328,7 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
     MetricsRoute: MetricsRoute option
+    CustomMetrics: CustomMetric list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
 
