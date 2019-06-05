@@ -5,6 +5,7 @@
 - Add `IncrementMetric` to Consume Runtime Parts to allow custom metrics
 - Add `CustomMetrics`
 - Allow Enable/Disable Resource Availability from `ConsumeRuntimeParts`
+- Add `Graylog` logger for runtime
 
 ## 1.0.0 - 2019-05-29
 - Initial implementation

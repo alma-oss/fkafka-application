@@ -45,6 +45,45 @@ module ApplicationLogger =
             Error = Log.error
         }
 
+    let graylogLogger instance host =
+        let logger =
+            instance
+            |> Instance.concat "-"
+            |> Graylog.Facility
+            |> Graylog.Configuration.createDefault host
+            |> Graylog.Logger.create
+            |> Graylog.Logger.withArgs
+
+        let createMessage = sprintf "[{context}] %s"
+
+        {
+            Debug = fun context message -> logger.Debug(createMessage message, context)
+            Log = fun context message -> logger.Info(createMessage message, context)
+            Verbose = fun context message -> logger.Info(createMessage message, context)
+            VeryVerbose = fun context message -> logger.Info(createMessage message, context)
+            Warning = fun context message -> logger.Warning(createMessage message, context)
+            Error = fun context message -> logger.Error(createMessage message, context)
+        }
+
+    let private tee f a  =
+        f a
+        a
+
+    /// Compose two functions with 2 parameters and returning unit
+    let private (>*>) (f1: 'a -> 'b -> unit) (f2: 'a -> 'b -> unit) a =
+        tee (f1 a)
+        >> f2 a
+
+    let combine logger additionalLogger =
+        {
+            Debug = logger.Debug >*> additionalLogger.Debug
+            Log = logger.Log >*> additionalLogger.Log
+            Verbose = logger.Verbose >*> additionalLogger.Verbose
+            VeryVerbose = logger.VeryVerbose >*> additionalLogger.VeryVerbose
+            Warning = logger.Warning >*> additionalLogger.Warning
+            Error = logger.Error >*> additionalLogger.Error
+        }
+
 //
 // Metrics
 //
@@ -99,6 +138,9 @@ type EnvironmentManyTopicsConnectionConfiguration = {
 // Kafka connections
 //
 
+[<Measure>] type second
+[<Measure>] type attempt
+
 type ManyTopicsConnectionConfiguration = {
     BrokerList: BrokerList
     Topics: StreamName list
@@ -123,9 +165,6 @@ module Connections =
 //
 // Errors
 //
-
-[<Measure>] type second
-[<Measure>] type attempt
 
 // Handlers and policies
 
@@ -187,6 +226,9 @@ type MetricsError =
     | MetricError of MetricError
     | InvalidMetricName of MetricNameError
 
+type LoggingError =
+    | InvalidGraylogHost of Logging.Graylog.HostError
+
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
     | InstanceError of InstanceError
@@ -197,6 +239,7 @@ type KafkaApplicationError =
     | ConsumeHandlerError of ConsumeHandlerError
     | ProduceError of ProduceError
     | MetricsError of MetricsError
+    | LoggingError of LoggingError
 
 //
 // Produce
@@ -315,6 +358,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
+    GraylogHost: Logging.Graylog.Host option
 }
 
 [<AutoOpen>]
@@ -339,6 +383,7 @@ module internal ConfigurationParts =
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
+            GraylogHost = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =

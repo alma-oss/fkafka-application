@@ -47,6 +47,7 @@ module ApplicationBuilder =
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
+                        GraylogHost = currentParts.GraylogHost <??> newParts.GraylogHost
                     }
                 |> Configuration.result
 
@@ -221,6 +222,15 @@ module ApplicationBuilder =
                 // composed parts
                 //
 
+                // logging
+                let logger =
+                    match configurationParts.GraylogHost with
+                    | Some host ->
+                        host
+                        |> ApplicationLogger.graylogLogger instance
+                        |> ApplicationLogger.combine logger
+                    | _ -> logger
+
                 // kafka parts
                 let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
@@ -346,6 +356,19 @@ module ApplicationBuilder =
         [<CustomOperation("useLogger")>]
         member __.Logger(state, logger: ApplicationLogger): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Logger = logger }
+
+        [<CustomOperation("logToGraylog")>]
+        member __.LogToGraylog(state, graylogHost): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! host =
+                        graylogHost
+                        |> Logging.Graylog.Host.create
+                        |> Result.mapError InvalidGraylogHost
+
+                    return { parts with GraylogHost = Some host }
+                }
+                |> Result.mapError LoggingError
 
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
