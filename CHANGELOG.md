@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 1.2.0 - 2019-06-05
 - Fix debug logging to the Graylog by replacing `{`, `}` characters to `(`, `)`
 - Use `Logging.Log` verbosity in the Graylog Logger
 - Change Graylog message field `context` to `application_context` to prevent misleading with Service Identification naming
