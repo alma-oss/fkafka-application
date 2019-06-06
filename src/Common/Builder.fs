@@ -43,13 +43,18 @@ module ApplicationBuilder =
                         ProducerErrorHandler = currentParts.ProducerErrorHandler <??> newParts.ProducerErrorHandler
                         FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
                         MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
+                        CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
+                        IntervalResourceCheckers = currentParts.IntervalResourceCheckers @ newParts.IntervalResourceCheckers
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
-                        CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
                         GraylogHost = currentParts.GraylogHost <??> newParts.GraylogHost
                     }
                 |> Configuration.result
+
+        let checkResourceInInteval<'InputEvent, 'OutputEvent> resource configuration: Configuration<'InputEvent, 'OutputEvent> =
+            configuration <!> fun parts ->
+                { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
 
         let addGraylogHostToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) graylogHost =
             result {
@@ -58,7 +63,17 @@ module ApplicationBuilder =
                     |> Logging.Graylog.Host.create
                     |> Result.mapError LoggingError.InvalidGraylogHost
 
-                return { parts with GraylogHost = Some host }
+                let resource = {
+                    Resource = ResourceAvailability.createFromStrings "graylog" graylogHost graylogHost Audience.Sys
+                    Interval = 30<KafkaApplication.second>
+                    Checker = fun () -> ResourceStatus.Down   // todo
+                }
+
+                return { parts
+                    with
+                        GraylogHost = Some host
+                        IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers
+                }
             }
 
         let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
@@ -342,6 +357,7 @@ module ApplicationBuilder =
                     ProducerErrorHandler = producerErrorHandler
                     MetricsRoute = configurationParts.MetricsRoute
                     CustomMetrics = configurationParts.CustomMetrics
+                    IntervalResourceCheckers = configurationParts.IntervalResourceCheckers
                     PreparedRuntimeParts = preparedRuntimeParts
                 }
             }
@@ -500,3 +516,11 @@ module ApplicationBuilder =
                     return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
                 }
                 |> Result.mapError MetricsError
+
+        [<CustomOperation("checkResourceInInterval")>]
+        member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent> =
+            state |> checkResourceInInteval {
+                Resource = resource
+                Interval = interval
+                Checker = checker
+            }

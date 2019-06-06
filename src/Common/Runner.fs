@@ -7,6 +7,34 @@ module ApplicationRunner =
 
     module private KafkaApplicationRunner =
         open System
+        open Metrics
+
+        let private checkResources (application: KafkaApplicationParts<_, _>) =
+            let instance = application.Box |> Box.instance
+            let enable = ResourceAvailability.enable instance >> ignore
+            let disable = ResourceAvailability.disable instance >> ignore
+
+            application.IntervalResourceCheckers
+            |> List.rev
+            |> List.map (fun { Resource = resource; Interval = interval; Checker = checker } ->
+                application.Logger.Verbose "Resource" <| sprintf "Start checking for %A" resource
+
+                let checkResource () =
+                    application.Logger.Debug "Resource" <| sprintf "Check %A" resource
+
+                    match checker() with
+                    | Up -> enable resource
+                    | Down -> disable resource
+
+                async {
+                    checkResource()
+
+                    while true do
+                        do! Async.Sleep (int interval)
+                        checkResource()
+                }
+            )
+            |> List.iter Async.Start
 
         let private wait (seconds: int<KafkaApplication.second>) =
             Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
@@ -124,6 +152,8 @@ module ApplicationRunner =
                 application.Box
                 |> Box.instance
                 |> tee (ApplicationMetrics.enableContext)
+
+            application |> checkResources
 
             application.MetricsRoute
             |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics)

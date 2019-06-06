@@ -3,6 +3,7 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 - Add `Environment.logToGraylog` function to allow getting Graylog host from environment variable
+- Add `CheckResourceInInterval` function
 
 ## 1.2.0 - 2019-06-05
 - Fix debug logging to the Graylog by replacing `{`, `}` characters to `(`, `)`

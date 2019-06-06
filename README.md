@@ -6,7 +6,7 @@ It contains computation expressions to help with building this kind of applicati
 
 ## Install
 ```
-dotnet add package -s $NUGET_SERVER_PATH Lmc.FkafkaApplication
+dotnet add package -s $NUGET_SERVER_PATH Lmc.KafkaApplication
 ```
 Where `$NUGET_SERVER_PATH` is the URL of nuget server
 - it should be http://development-nugetserver-common-stable.service.devel1-services.consul:{PORT} (_make sure you have a correct port, since it changes with deployment_)
@@ -22,6 +22,7 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
               └─> Run Kafka Application                                                                                               │
                    ├─> Debug Configuration      (only with debug verbosity)                                                           │
                    ├─> Enable Context Metric                                                                                          │
+                   ├─> Check additionally registered resources and start interval checking                                            │
                    ├─> Start Metrics on Route   (only if route is set)                                                                │
                    ├─> Connect Producers <─────────────────────────────────────────────────────────┐                                  │
                    │     └─<On Error>───> Producer Error Handler  (Default - RetryIn 60 seconds)   │                                  │
@@ -65,9 +66,10 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | Function | Arguments | Description |
 | --- | --- | --- |
 | checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
-| connect | `Kafka.ConnectionConfiguration` | It will _register_ a default connection for Kafka. |
-| connectManyToBroker | `ManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
-| connectTo | `connectionName: string`, `Kafka.ConnectionConfiguration` | It will _register_ a named connection for Kafka. |
+| checkResourceInInterval | `checker: unit -> Metrics.ResourceStatus`, `ResourceAvailability`, `interval: int<second>` | It will register a resource which will be checked in runtime of the application in given interval. |
+| connect | `Kafka.ConnectionConfiguration` | It will register a default connection for Kafka. |
+| connectManyToBroker | `ManyTopicsConnectionConfiguration` | It will register a named connections for Kafka. Connection name will be the same as the topic name. |
+| connectTo | `connectionName: string`, `Kafka.ConnectionConfiguration` | It will register a named connection for Kafka. |
 | consume | `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the default Kafka connection. |
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
@@ -76,11 +78,11 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) |
 | onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
-| onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will _register_ an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
+| onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will register an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
 | parseEventWith | `ParseEvent<'InputEvent>` | It will register a parser for input events. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
-| showCustomMetric | `name: string`, `MetricType`, `description: string` | It will _register_ a custom metric, which will be shown (if it has a value) amongst other metrics on metrics route. (see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`) |
+| showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (if it has a value) amongst other metrics on metrics route. (see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`) |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
@@ -89,7 +91,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |
-| useSupervision | `Kafka.ConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
+| useSupervision | `Kafka.ConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ### Mandatory
 - Instance of the application is required.
@@ -129,9 +131,9 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | Function | Arguments | Description |
 | --- | --- | --- |
 | check | `variable name: string`, `checker: string -> 'a option` | If the variable name is defined it is forwarded to the checker and it passes when `Some` is returned. |
-| connect | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
-| connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will _register_ a named connections for Kafka. Connection name will be the same as the topic name. |
-| connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a named connection for Kafka. |
+| connect | `connection configuration: EnvironmentConnectionConfiguration` | It will register a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
+| connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will register a named connections for Kafka. Connection name will be the same as the topic name. |
+| connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will register a named connection for Kafka. |
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
@@ -139,7 +141,7 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | logToGraylog | `graylogHostVariableName: string` | It will register graylog host. All logs will be sent to the graylog using UDP with Instance as facility. (_It must not start with protocol._) |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
-| supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will _register_ a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
+| supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ## Examples
 
