@@ -355,6 +355,7 @@ module ApplicationBuilder =
                     ConsumeHandlers = runtimeConsumeHandlers
                     Producers = producers
                     ProducerErrorHandler = producerErrorHandler
+                    ServiceStatus = serviceStatus
                     MetricsRoute = configurationParts.MetricsRoute
                     CustomMetrics = configurationParts.CustomMetrics
                     IntervalResourceCheckers = configurationParts.IntervalResourceCheckers

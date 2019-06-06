@@ -20,10 +20,11 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
               ┌────────────────────────────────┘               └──────────────────────────────────────────<Ends with the Error>───────┐
               ├─> Before Run (Debug pattern specific configuration)                                                                   │
               └─> Run Kafka Application                                                                                               │
-                   ├─> Debug Configuration      (only with debug verbosity)                                                           │
+                   ├─> Debug Configuration          (only with debug verbosity)                                                       │
                    ├─> Enable Context Metric                                                                                          │
+                   ├─> Mark instance as disabled    (set service_status to 0)                                                         │
                    ├─> Check additionally registered resources and start interval checking                                            │
-                   ├─> Start Metrics on Route   (only if route is set)                                                                │
+                   ├─> Start Metrics on Route       (only if route is set)                                                            │
                    ├─> Connect Producers <─────────────────────────────────────────────────────────┐                                  │
                    │     └─<On Error>───> Producer Error Handler  (Default - RetryIn 60 seconds)   │                                  │
                    │                        └─> One of Following:                                  │                                  │

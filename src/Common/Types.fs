@@ -337,6 +337,7 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
+    ServiceStatus: ServiceStatus.ServiceStatus
     MetricsRoute: MetricsRoute option
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list

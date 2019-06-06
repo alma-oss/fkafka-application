@@ -8,6 +8,7 @@ module ApplicationRunner =
     module private KafkaApplicationRunner =
         open System
         open Metrics
+        open Metrics.ServiceStatus
 
         let private checkResources (application: KafkaApplicationParts<_, _>) =
             let instance = application.Box |> Box.instance
@@ -152,6 +153,9 @@ module ApplicationRunner =
                 application.Box
                 |> Box.instance
                 |> tee (ApplicationMetrics.enableContext)
+
+            application.ServiceStatus.MarkAsDisabled
+            |> MarkAsDisabled.execute
 
             application |> checkResources
 
