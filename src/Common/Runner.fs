@@ -15,23 +15,30 @@ module ApplicationRunner =
             let enable = ResourceAvailability.enable instance >> ignore
             let disable = ResourceAvailability.disable instance >> ignore
 
+            let debugResource = application.Logger.Debug "Resource"
+            let debugResourceResult resource = sprintf "Checked %A with %A" resource >> debugResource
+
             application.IntervalResourceCheckers
             |> List.rev
             |> List.map (fun { Resource = resource; Interval = interval; Checker = checker } ->
                 application.Logger.Verbose "Resource" <| sprintf "Start checking for %A" resource
 
-                let checkResource () =
-                    application.Logger.Debug "Resource" <| sprintf "Check %A" resource
+                let intervalInMilliseconds = (int interval) * 1000
 
-                    match checker() with
-                    | Up -> enable resource
-                    | Down -> disable resource
+                let checkResource () =
+                    debugResource <| sprintf "Check %A" resource
+
+                    checker()
+                    |> tee (debugResourceResult resource)
+                    |> function
+                        | Up -> enable resource
+                        | Down -> disable resource
 
                 async {
                     checkResource()
 
                     while true do
-                        do! Async.Sleep (int interval)
+                        do! Async.Sleep intervalInMilliseconds
                         checkResource()
                 }
             )

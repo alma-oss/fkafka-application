@@ -3,6 +3,7 @@ namespace KafkaApplication
 module ApplicationBuilder =
     open Kafka
     open Metrics
+    open Logging
     open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
@@ -60,13 +61,16 @@ module ApplicationBuilder =
             result {
                 let! host =
                     graylogHost
-                    |> Logging.Graylog.Host.create
+                    |> Graylog.Host.create
                     |> Result.mapError LoggingError.InvalidGraylogHost
 
                 let resource = {
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogHost graylogHost Audience.Sys
                     Interval = 30<KafkaApplication.second>
-                    Checker = fun () -> ResourceStatus.Down   // todo
+                    Checker = fun () ->
+                        if host |> Graylog.Diagnostics.isAlive |> Async.RunSynchronously
+                        then Up
+                        else Down
                 }
 
                 return { parts
