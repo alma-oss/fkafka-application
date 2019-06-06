@@ -7,6 +7,42 @@ module ApplicationRunner =
 
     module private KafkaApplicationRunner =
         open System
+        open Metrics
+        open Metrics.ServiceStatus
+
+        let private checkResources (application: KafkaApplicationParts<_, _>) =
+            let instance = application.Box |> Box.instance
+            let enable = ResourceAvailability.enable instance >> ignore
+            let disable = ResourceAvailability.disable instance >> ignore
+
+            let debugResource = application.Logger.Debug "Resource"
+            let debugResourceResult resource = sprintf "Checked %A with %A" resource >> debugResource
+
+            application.IntervalResourceCheckers
+            |> List.rev
+            |> List.map (fun { Resource = resource; Interval = interval; Checker = checker } ->
+                application.Logger.Verbose "Resource" <| sprintf "Start checking for %A" resource
+
+                let intervalInMilliseconds = (int interval) * 1000
+
+                let checkResource () =
+                    debugResource <| sprintf "Check %A" resource
+
+                    checker()
+                    |> tee (debugResourceResult resource)
+                    |> function
+                        | Up -> enable resource
+                        | Down -> disable resource
+
+                async {
+                    checkResource()
+
+                    while true do
+                        do! Async.Sleep intervalInMilliseconds
+                        checkResource()
+                }
+            )
+            |> List.iter Async.Start
 
         let private wait (seconds: int<KafkaApplication.second>) =
             Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
@@ -124,6 +160,11 @@ module ApplicationRunner =
                 application.Box
                 |> Box.instance
                 |> tee (ApplicationMetrics.enableContext)
+
+            application.ServiceStatus.MarkAsDisabled
+            |> MarkAsDisabled.execute
+
+            application |> checkResources
 
             application.MetricsRoute
             |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics)

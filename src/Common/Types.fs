@@ -4,6 +4,9 @@ open Kafka
 open Metrics
 open ServiceIdentification
 
+[<Measure>] type second
+[<Measure>] type attempt
+
 //
 // Metrics
 //
@@ -12,6 +15,12 @@ type CustomMetric = {
     Name: MetricName
     Type: MetricType
     Description: string
+}
+
+type ResourceMetricInInterval = {
+    Resource: ResourceAvailability
+    Interval: int<second>
+    Checker: unit -> ResourceStatus
 }
 
 type MetricsRoute = private MetricsRoute of string
@@ -85,9 +94,6 @@ module Connections =
 
 // Handlers and policies
 
-[<Measure>] type second
-[<Measure>] type attempt
-
 type ErrorMessage = string
 
 type ProducerErrorPolicy =
@@ -146,8 +152,10 @@ type MetricsError =
     | MetricError of MetricError
     | InvalidMetricName of MetricNameError
 
+[<RequireQualifiedAccess>]
 type LoggingError =
     | InvalidGraylogHost of Logging.Graylog.HostError
+    | VariableNotFoundError of string
 
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
@@ -275,6 +283,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
     MetricsRoute: MetricsRoute option
     CustomMetrics: CustomMetric list
+    IntervalResourceCheckers: ResourceMetricInInterval list
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
@@ -300,6 +309,7 @@ module internal ConfigurationParts =
             FromDomain = Map.empty
             MetricsRoute = None
             CustomMetrics = []
+            IntervalResourceCheckers = []
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
@@ -327,8 +337,10 @@ type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
+    ServiceStatus: ServiceStatus.ServiceStatus
     MetricsRoute: MetricsRoute option
     CustomMetrics: CustomMetric list
+    IntervalResourceCheckers: ResourceMetricInInterval list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
 }
 

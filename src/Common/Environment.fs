@@ -1,4 +1,5 @@
 namespace KafkaApplication
+open ApplicationBuilder
 
 [<AutoOpen>]
 module EnvironmentBuilder =
@@ -7,6 +8,7 @@ module EnvironmentBuilder =
     open Environment
     open ServiceIdentification
     open Kafka
+    open KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_, _>) =
@@ -186,6 +188,20 @@ module EnvironmentBuilder =
                 |>! action
 
                 parts
+
+        [<CustomOperation("logToGraylog")>]
+        member __.LogToGraylog(state, graylogHostVariableName): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! graylogHostValue =
+                        graylogHostVariableName
+                        |> getEnvironmentValue parts id LoggingError.VariableNotFoundError
+
+                    return!
+                        graylogHostValue
+                        |> addGraylogHostToParts parts
+                }
+                |> Result.mapError LoggingError
 
     let environmentWithLogger logger = EnvironmentBuilder(logger)
     let environment = EnvironmentBuilder(defaultParts.Logger)
