@@ -53,10 +53,6 @@ module ApplicationBuilder =
                     }
                 |> Configuration.result
 
-        let checkResourceInInteval<'InputEvent, 'OutputEvent> resource configuration: Configuration<'InputEvent, 'OutputEvent> =
-            configuration <!> fun parts ->
-                { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
-
         let addGraylogHostToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) graylogHost =
             result {
                 let! host =
@@ -524,8 +520,11 @@ module ApplicationBuilder =
 
         [<CustomOperation("checkResourceInInterval")>]
         member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent> =
-            state |> checkResourceInInteval {
-                Resource = resource
-                Interval = interval
-                Checker = checker
-            }
+            state <!> fun parts ->
+                let resource = {
+                    Resource = resource
+                    Interval = interval
+                    Checker = checker
+                }
+
+                { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
