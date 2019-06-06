@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 1.3.0 - 2019-06-06
 - Add `Environment.logToGraylog` function to allow getting Graylog host from environment variable
 - Add `CheckResourceInInterval` function
 - Mark application as disabled on start up

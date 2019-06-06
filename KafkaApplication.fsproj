@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Lmc.KafkaApplication</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <RepositoryUrl>https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse</RepositoryUrl>
   </PropertyGroup>
 
