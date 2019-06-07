@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 2.0.0 - 2019-06-07
 - Update Dependencies
     - [**BC**] Allow `Metrics.ResourceAvailability` to be `Common`, `Service` or `MultiTenantService`
 
