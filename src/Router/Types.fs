@@ -28,29 +28,45 @@ module EventToRoute =
 // Router
 //
 
+type RouterError =
+    | StreamNameIsNotInstance of string
+
 type Router = private Router of Map<EventName, StreamName>
 
 module Router =
     open FSharp.Data
     open System.IO
+    open ServiceIdentification
 
     type private RoutingSchema = JsonProvider<"src/Router/schema/routingSchema.json">
 
-    let private empty =
-        Router Map.empty<EventName, StreamName>
-
     let parse path =
-        let rawRouting =
-            path
-            |> File.ReadAllText
-            |> RoutingSchema.Parse
+        result {
+            let rawRouting =
+                path
+                |> File.ReadAllText
+                |> RoutingSchema.Parse
 
-        rawRouting.Route
-        |> Seq.fold (fun (Router router) route ->
-            (EventName route.Event, StreamName route.TargetStream)
-            |> router.Add
-            |> Router
-        ) empty
+            let! routing =
+                rawRouting.Route
+                |> Seq.map (fun route ->
+                    result {
+                        let! topicInstance =
+                            route.TargetStream
+                            |> Instance.parse "-"
+                            |> Result.ofOption (StreamNameIsNotInstance route.TargetStream)
+
+                        return (EventName route.Event, StreamName.Instance topicInstance)
+                    }
+                )
+                |> Seq.toList
+                |> Result.sequence
+
+            return
+                routing
+                |> Map.ofList
+                |> Router
+        }
 
     let getStreamFor event (Router router) =
         router
@@ -67,6 +83,7 @@ type RouterConfigurationError =
     | NotFound of string
     | NotSet
     | OutputBrokerListNotSet
+    | RouterError of RouterError
 
 type ContentBasedRouterApplicationError =
     | ApplicationConfigurationError of ApplicationConfigurationError

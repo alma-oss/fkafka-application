@@ -5,8 +5,8 @@ module internal ContentBasedRouter =
     open KafkaApplication
     open OptionOperators
 
-    let private formatLogMessage (EventName eventName) (StreamName streamName) =
-        (sprintf "Route event %s to %s ..." eventName streamName)
+    let private formatLogMessage (EventName eventName) (streamName: StreamName) =
+        (sprintf "Route event %s to %A ..." eventName streamName)
 
     let private sendToStream log produceTo eventToRoute (stream: StreamName) =
         log <| sprintf "-> Sending to stream %A ..." stream

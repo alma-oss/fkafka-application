@@ -11,31 +11,46 @@ module ContentBasedRouterBuilder =
         let private addRouterConfiguration
             router
             routeToBrokerList
-            (configuration: Configuration<EventToRoute, EventToRoute>): Configuration<EventToRoute, EventToRoute> =
+            (configuration: Configuration<EventToRoute, EventToRoute>): Result<Configuration<EventToRoute, EventToRoute>, ContentBasedRouterApplicationError> =
+            result {
+                let outputStreams = router |> Router.getOutputStreams
 
-            let outputStreams = router |> Router.getOutputStreams
-            let outputStreamNames = outputStreams |> List.map StreamName.value
+                let! outputStreamTopics =
+                    outputStreams
+                    |> List.map (function
+                        | (StreamName streamName) -> Error (RouterError.StreamNameIsNotInstance streamName)
+                        | Instance instance -> Ok instance
+                    )
+                    |> Result.sequence
+                    |> Result.mapError RouterError
 
-            let routerConsumeHandler (app: ConsumeRuntimeParts<EventToRoute>) (events: EventToRoute seq) =
-                let routeEvent =
-                    ContentBasedRouter.routeEvent
-                        (app.Logger.VeryVerbose "Routing")
-                        (fun (StreamName topic) -> app.ProduceTo.[topic])
-                        router
+                let outputStreamNames =
+                    outputStreams
+                    |> List.map StreamName.value
 
-                events
-                |> Seq.iter routeEvent
+                let routerConsumeHandler (app: ConsumeRuntimeParts<EventToRoute>) (events: EventToRoute seq) =
+                    let routeEvent =
+                        ContentBasedRouter.routeEvent
+                            (app.Logger.VeryVerbose "Routing")
+                            (fun topic -> app.ProduceTo.[topic |> StreamName.value])
+                            router
 
-            let fromDomain: FromDomain<EventToRoute> =
-                fun _ -> EventToRoute.serialized
+                    events
+                    |> Seq.iter routeEvent
 
-            configuration
-            |> addParseEvent EventToRoute.parse
-            |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreams }
-            |> addProduceToMany outputStreamNames fromDomain
-            |> addDefaultConsumeHandler routerConsumeHandler
-            |> addCreateInputEventKeys Metrics.createKeysForInputEvent
-            |> addCreateOutputEventKeys Metrics.createKeysForOutputEvent
+                let fromDomain: FromDomain<EventToRoute> =
+                    fun _ -> EventToRoute.serialized
+
+                return
+                    configuration
+                    |> addParseEvent EventToRoute.parse
+                    |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreamTopics }
+                    |> addProduceToMany outputStreamNames fromDomain
+                    |> addDefaultConsumeHandler routerConsumeHandler
+                    |> addCreateInputEventKeys Metrics.createKeysForInputEvent
+                    |> addCreateOutputEventKeys Metrics.createKeysForOutputEvent
+            }
+            |> Result.mapError RouterConfigurationError
 
         let build
             (buildApplication: Configuration<EventToRoute, EventToRoute> -> KafkaApplication<EventToRoute, EventToRoute>)
@@ -59,9 +74,12 @@ module ContentBasedRouterBuilder =
                     |> Result.ofOption ConfigurationNotSet
                     |> Result.mapError ApplicationConfigurationError
 
-                let kafkaApplication =
+                let! routerConfiguration =
                     configuration
                     |> addRouterConfiguration router routeToBrokerList
+
+                let kafkaApplication =
+                    routerConfiguration
                     |> buildApplication
 
                 return {
@@ -95,10 +113,15 @@ module ContentBasedRouterBuilder =
         member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    let! router =
+                    let! routerPath =
                         configurationPath
-                        |> FileParser.parseFromPath Router.parse (sprintf "Routing configuration was not found at \"%s\".")
+                        |> FileParser.parseFromPath id (sprintf "Routing configuration was not found at \"%s\".")
                         |> Result.mapError NotFound
+
+                    let! router =
+                        routerPath
+                        |> Router.parse
+                        |> Result.mapError RouterError
 
                     return { parts with RouterConfiguration = Some router }
                 }

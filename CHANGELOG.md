@@ -2,6 +2,12 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update Kafka library
+    - [**BC**] Use new version of `Confluent.Kafka` client
+    - [**BC**] Allow `StreamName` to be defined by `Instance`
+- [**BC**] Use `KafkaApplication.ConnectionConfiguration` instead of `Kafka.ConnectionConfiguration` to allow only `StreamName.Instance`
+- [**BC**] Use `Instance` instead of `StreamName` in `ManyTopicsConnectionConfiguration` to allow only `StreamName.Instance`
+- [**BC**] Use only `StreamName.Instance` in Router pattern
 
 ## 2.0.0 - 2019-06-07
 - Update Dependencies

@@ -2,6 +2,7 @@ namespace KafkaApplication
 
 module ApplicationBuilder =
     open Kafka
+    open KafkaApplication
     open Metrics
     open Logging
     open Metrics.ServiceStatus
@@ -126,7 +127,7 @@ module ApplicationBuilder =
                     connectionConfigurations.Topics
                     |> List.map (fun topic ->
                         (
-                            topic |> StreamName.value |> ConnectionName,
+                            topic |> Instance.concat "-" |> ConnectionName,
                             { BrokerList = connectionConfigurations.BrokerList; Topic = topic }
                         )
                     )
@@ -159,12 +160,12 @@ module ApplicationBuilder =
                     |> Result.ofOption (ProduceError.MissingFromDomainConfiguration name)
 
                 let producer = prepareProducer {
-                    Connection = connection
+                    Connection = connection |> ConnectionConfiguration.toKafkaConnectionConfiguration
                     Logger = name |> ConnectionName.runtimeName |> logger |> Some
                     Checker = checker connection.BrokerList |> Some
                     MarkAsDisabled = markAsDisabled |> Some
                 }
-                let incrementOutputCount = incrementOutputCount (OutputStreamName connection.Topic)
+                let incrementOutputCount = incrementOutputCount (OutputStreamName (connection.Topic |> StreamName.Instance))
 
                 let produceEvent producer event =
                     event
@@ -180,7 +181,7 @@ module ApplicationBuilder =
 
         let private prepareSupervisionProduce logger checker markAsDisabled prepareProducer supervisionConnection =
             prepareProducer {
-                Connection = supervisionConnection
+                Connection = supervisionConnection |> ConnectionConfiguration.toKafkaConnectionConfiguration
                 Logger = "Supervision" |> logger |> Some
                 Checker = checker supervisionConnection.BrokerList |> Some
                 MarkAsDisabled = markAsDisabled |> Some
@@ -278,7 +279,7 @@ module ApplicationBuilder =
                         runtimeConsumerConfigurations.Add(
                             runtimeConnection,
                             {
-                                Connection = connection
+                                Connection = connection |> ConnectionConfiguration.toKafkaConnectionConfiguration
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
                                 Logger = kafkaLogger runtimeConnection |> Some
                                 Checker = kafkaChecker connection.BrokerList |> Some

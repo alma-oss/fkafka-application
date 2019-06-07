@@ -72,7 +72,7 @@ module internal PatternMetrics =
     let createKeysForInputEvent<'InputEvent, 'OutputEvent>
         (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
         (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
-        (InputStreamName (StreamName inputStream))
+        (InputStreamName inputStream)
         event =
 
         let event = Input event
@@ -80,7 +80,7 @@ module internal PatternMetrics =
 
         [
             ("event", commonEvent.Event |> EventName.value)
-            ("input_stream", inputStream)
+            ("input_stream", inputStream |> StreamName.value)
         ]
         @ createCustomValues event
         |> List.distinctBy fst
@@ -89,7 +89,7 @@ module internal PatternMetrics =
     let createKeysForOutputEvent<'InputEvent, 'OutputEvent>
         (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
         (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
-        (OutputStreamName (StreamName outputStream))
+        (OutputStreamName outputStream)
         event =
 
         let event = Output event
@@ -97,7 +97,7 @@ module internal PatternMetrics =
 
         [
             ("event", commonEvent.Event |> EventName.value)
-            ("output_stream", outputStream)
+            ("output_stream", outputStream |> StreamName.value)
         ]
         @ createCustomValues event
         |> List.distinctBy fst
