@@ -2,7 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
-- Validate environment variables after reading a dotenv file
+- Fix reading environment variables, when no file is found.
 
 ## 3.1.0 - 2019-06-10
 - Log very verbosely all environment variables after reading a dotenv file

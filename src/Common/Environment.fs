@@ -1,15 +1,13 @@
 namespace KafkaApplication
-open ApplicationBuilder
 
 [<AutoOpen>]
 module EnvironmentBuilder =
     open System.IO
     open OptionOperators
-    open Environment
     open ServiceIdentification
     open Kafka
     open KafkaApplication
-    open KafkaApplicationBuilder
+    open ApplicationBuilder.KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_, _>) =
@@ -83,7 +81,11 @@ module EnvironmentBuilder =
                 |> Result.mapError ConnectionConfigurationError
 
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
-            { defaultParts with Logger = logger }
+            { defaultParts
+                with
+                    Logger = logger
+                    Environment = Environment.getEnvs()
+            }
             |> Ok
             |> Configuration
 
@@ -94,19 +96,19 @@ module EnvironmentBuilder =
         member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    let environment =
+                    do!
                         envFileLocations
                         |> List.tryFind File.Exists
-                        |> Option.map (getEnvs (parts.Logger.Warning "Dotenv") >> Environment.merge parts.Environment)
-                        <?=> parts.Environment
+                        |> function
+                            | Some file -> file |> Environment.loadFromFile
+                            | _ -> Ok ()
+                        |> Result.mapError EnvironmentError.LoadError
+
+                    let environment = Environment.getEnvs()
 
                     environment
                     |> Map.toList
-                    |> sprintf "%A"
-                    |> parts.Logger.VeryVerbose "Dotenv"
-
-                    if environment.IsEmpty then
-                        return! Error EnvironmentError.NoVariablesFoundError
+                    |> List.iter (sprintf "%A" >> parts.Logger.VeryVerbose "Dotenv")
 
                     return { parts with Environment = environment }
                 }
