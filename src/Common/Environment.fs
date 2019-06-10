@@ -93,13 +93,18 @@ module EnvironmentBuilder =
         [<CustomOperation("file")>]
         member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts ->
-                { parts with
-                    Environment =
-                        envFileLocations
-                        |> List.tryFind File.Exists
-                        |> Option.map (getEnvs (parts.Logger.Warning "Dotenv") >> Environment.merge parts.Environment)
-                        <?=> parts.Environment
-                }
+                let environment =
+                    envFileLocations
+                    |> List.tryFind File.Exists
+                    |> Option.map (getEnvs (parts.Logger.Warning "Dotenv") >> Environment.merge parts.Environment)
+                    <?=> parts.Environment
+
+                environment
+                |> Map.toList
+                |> sprintf "%A"
+                |> parts.Logger.VeryVerbose "Dotenv"
+
+                { parts with Environment = environment }
 
         [<CustomOperation("check")>]
         member __.Check(state, name, checker): Configuration<'InputEvent, 'OutputEvent> =

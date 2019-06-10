@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Log very verbosely all environment variables after reading a dotenv file.
 
 ## 3.0.0 - 2019-06-11
 - Update Kafka library
