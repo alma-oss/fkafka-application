@@ -131,6 +131,7 @@ type ConsumeErrorHandler = ApplicationLogger -> ErrorMessage -> ConsumeErrorPoli
 type EnvironmentError =
     | VariableNotFoundError of string
     | InvalidFormatError of string
+    | NoVariablesFoundError
 
 [<RequireQualifiedAccess>]
 type InstanceError =
