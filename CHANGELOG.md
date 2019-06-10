@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 3.0.0 - 2019-06-11
 - Update Kafka library
     - [**BC**] Use new version of `Confluent.Kafka` client
     - [**BC**] Allow `StreamName` to be defined by `Instance`
