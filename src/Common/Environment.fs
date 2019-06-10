@@ -8,6 +8,7 @@ module EnvironmentBuilder =
     open Environment
     open ServiceIdentification
     open Kafka
+    open KafkaApplication
     open KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =
@@ -33,11 +34,16 @@ module EnvironmentBuilder =
 
                     let! topic =
                         connectionConfiguration.Topic
-                        |> getEnvironmentValue parts StreamName ConnectionConfigurationError.VariableNotFoundError
+                        |> getEnvironmentValue parts id ConnectionConfigurationError.VariableNotFoundError
+
+                    let! topicInstance =
+                        topic
+                        |> Instance.parse "-"
+                        |> Result.ofOption (ConnectionConfigurationError.TopicIsNotInstanceError topic)
 
                     let connectionConfiguration: ConnectionConfiguration = {
                         BrokerList = brokerList
-                        Topic = topic
+                        Topic = topicInstance
                     }
 
                     return { parts with Connections = parts.Connections.Add(connectionName, connectionConfiguration) }
@@ -51,14 +57,25 @@ module EnvironmentBuilder =
                         connectionConfiguration.BrokerList
                         |> getEnvironmentValue parts BrokerList ConnectionConfigurationError.VariableNotFoundError
 
-                    let connectionConfigurations: Connections =
+                    let! configurations =
                         connectionConfiguration.Topics
                         |> List.map (fun topic ->
-                            (
-                                topic |> ConnectionName,
-                                { BrokerList = brokerList; Topic = StreamName topic }
-                            )
+                            result {
+                                let! topicInstance =
+                                    topic
+                                    |> Instance.parse "-"
+                                    |> Result.ofOption (ConnectionConfigurationError.TopicIsNotInstanceError topic)
+
+                                return (
+                                    topic |> ConnectionName,
+                                    { BrokerList = brokerList; Topic = topicInstance }
+                                )
+                            }
                         )
+                        |> Result.sequence
+
+                    let connectionConfigurations: Connections =
+                        configurations
                         |> Map.ofList
 
                     return { parts with Connections = parts.Connections |> Map.merge connectionConfigurations }

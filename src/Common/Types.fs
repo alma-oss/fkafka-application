@@ -69,7 +69,7 @@ type EnvironmentManyTopicsConnectionConfiguration = {
 
 type ManyTopicsConnectionConfiguration = {
     BrokerList: BrokerList
-    Topics: StreamName list
+    Topics: Instance list
 }
 
 type ConnectionName = ConnectionName of string
@@ -78,6 +78,18 @@ type RuntimeConnectionName = string
 module ConnectionName =
     let value (ConnectionName name) = name
     let runtimeName (ConnectionName name): RuntimeConnectionName = name
+
+type ConnectionConfiguration = {
+    BrokerList: BrokerList
+    Topic: Instance
+}
+
+module internal ConnectionConfiguration =
+    let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Kafka.ConnectionConfiguration =
+        {
+            BrokerList = connection.BrokerList
+            Topic = connection.Topic |> StreamName.Instance
+        }
 
 type Connections = Map<ConnectionName, ConnectionConfiguration>
 
@@ -137,6 +149,7 @@ type GroupIdError =
 [<RequireQualifiedAccess>]
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
+    | TopicIsNotInstanceError of string
 
 [<RequireQualifiedAccess>]
 type ConsumeHandlerError =

@@ -4,14 +4,14 @@ module internal Metrics =
     open Kafka
     open KafkaApplication
 
-    let createKeysForInputEvent (InputStreamName (StreamName inputStream)) { Raw = event } =
+    let createKeysForInputEvent (InputStreamName inputStream) { Raw = event } =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
-            ("input_stream", inputStream)
+            ("input_stream", inputStream |> StreamName.value)
         ]
 
-    let createKeysForOutputEvent (OutputStreamName (StreamName outputStream)) { Raw = event } =
+    let createKeysForOutputEvent (OutputStreamName outputStream) { Raw = event } =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
-            ("output_stream", outputStream)
+            ("output_stream", outputStream |> StreamName.value)
         ]
