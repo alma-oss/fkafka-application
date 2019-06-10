@@ -131,6 +131,8 @@ type ConsumeErrorHandler = ApplicationLogger -> ErrorMessage -> ConsumeErrorPoli
 type EnvironmentError =
     | VariableNotFoundError of string
     | InvalidFormatError of string
+    | NoVariablesFoundError
+    | LoadError of string
 
 [<RequireQualifiedAccess>]
 type InstanceError =
@@ -330,8 +332,8 @@ module internal ConfigurationParts =
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
-        name
-        |> Environment.tryGetEnv parts.Environment
+        parts.Environment
+        |> Map.tryFind name
         |> Option.map success
         |> Result.ofOption (sprintf "Environment variable for \"%s\" is not set." name)
         |> Result.mapError error

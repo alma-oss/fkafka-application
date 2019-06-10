@@ -1,15 +1,13 @@
 namespace KafkaApplication
-open ApplicationBuilder
 
 [<AutoOpen>]
 module EnvironmentBuilder =
     open System.IO
     open OptionOperators
-    open Environment
     open ServiceIdentification
     open Kafka
     open KafkaApplication
-    open KafkaApplicationBuilder
+    open ApplicationBuilder.KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_, _>) =
@@ -83,7 +81,11 @@ module EnvironmentBuilder =
                 |> Result.mapError ConnectionConfigurationError
 
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
-            { defaultParts with Logger = logger }
+            { defaultParts
+                with
+                    Logger = logger
+                    Environment = Environment.getEnvs()
+            }
             |> Ok
             |> Configuration
 
@@ -92,19 +94,25 @@ module EnvironmentBuilder =
 
         [<CustomOperation("file")>]
         member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts ->
-                let environment =
-                    envFileLocations
-                    |> List.tryFind File.Exists
-                    |> Option.map (getEnvs (parts.Logger.Warning "Dotenv") >> Environment.merge parts.Environment)
-                    <?=> parts.Environment
+            state >>= fun parts ->
+                result {
+                    do!
+                        envFileLocations
+                        |> List.tryFind File.Exists
+                        |> function
+                            | Some file -> file |> Environment.loadFromFile
+                            | _ -> Ok ()
+                        |> Result.mapError EnvironmentError.LoadError
 
-                environment
-                |> Map.toList
-                |> sprintf "%A"
-                |> parts.Logger.VeryVerbose "Dotenv"
+                    let environment = Environment.getEnvs()
 
-                { parts with Environment = environment }
+                    environment
+                    |> Map.toList
+                    |> List.iter (sprintf "%A" >> parts.Logger.VeryVerbose "Dotenv")
+
+                    return { parts with Environment = environment }
+                }
+                |> Result.mapError EnvironmentError
 
         [<CustomOperation("check")>]
         member __.Check(state, name, checker): Configuration<'InputEvent, 'OutputEvent> =

@@ -3,17 +3,18 @@ namespace RealLifeExample
 module Program =
     open Kafka
     open KafkaApplication
+    open Logging
 
-    let createInputKeys (InputStreamName (StreamName inputStream)) (event: RawEvent) =
+    let createInputKeys (InputStreamName inputStream) (event: RawEvent) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
-            ("input_stream", inputStream)
+            ("input_stream", inputStream |> StreamName.value)
         ]
 
-    let createOutputKeys (OutputStreamName (StreamName outputStream)) (event: RawEvent) =
+    let createOutputKeys (OutputStreamName outputStream) (event: RawEvent) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
-            ("output_stream", outputStream)
+            ("output_stream", outputStream |> StreamName.value)
         ]
 
     let run () =
@@ -41,7 +42,7 @@ module Program =
                 file [".env"]
 
                 instance "INSTANCE"
-                ifSetDo "VERBOSITY" Logging.Log.setVerbosityLevel
+                ifSetDo "VERBOSITY" Log.setVerbosityLevel
 
                 connect {
                     BrokerList = "BROKER_LIST"
