@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 3.1.1 - 2019-06-10
 - Fix reading environment variables, when no file is found.
 
 ## 3.1.0 - 2019-06-10
