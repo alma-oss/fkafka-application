@@ -243,6 +243,7 @@ module ApplicationBuilder =
                 let defaultGroupId = configurationParts.GroupId <?=> Kafka.GroupId.Random
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
+                let kafkaIntervalChecker = Kafka.IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
 
                 //
                 // composed parts
@@ -260,6 +261,7 @@ module ApplicationBuilder =
                 // kafka parts
                 let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
+                let kafkaIntervalChecker brokerList = kafkaIntervalChecker |> ResourceChecker.updateResourceStatusOnIntervalCheck instance brokerList
 
                 // service status
                 let! markAsEnabled =
@@ -283,6 +285,7 @@ module ApplicationBuilder =
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
                                 Logger = kafkaLogger runtimeConnection |> Some
                                 Checker = kafkaChecker connection.BrokerList |> Some
+                                IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
                             }
                         )

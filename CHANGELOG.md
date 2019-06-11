@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Check kafka resources in interval while consuming
 
 ## 3.1.1 - 2019-06-10
 - Fix reading environment variables, when no file is found.
