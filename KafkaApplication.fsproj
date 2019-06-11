@@ -59,7 +59,7 @@
   <ItemGroup>
     <PackageReference Include="Lmc.Environment" Version="3.0" />
     <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
-    <PackageReference Include="Lmc.Kafka" Version="7.0" />
+    <PackageReference Include="Lmc.Kafka" Version="7.1" />
     <PackageReference Include="Lmc.Logging" Version="1.4" />
     <PackageReference Include="Lmc.Metrics" Version="3.0" />
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.2" />
