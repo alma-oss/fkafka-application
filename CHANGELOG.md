@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `Service` (domain, context) to graylog logs, as additional fields
 
 ## 3.2.0 - 2019-06-11
 - Check kafka resources in interval while consuming
