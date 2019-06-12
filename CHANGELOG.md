@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 3.3.0 - 2019-06-12
 - Add `Service` (domain, context) to graylog logs, as additional fields
 
 ## 3.2.0 - 2019-06-11
