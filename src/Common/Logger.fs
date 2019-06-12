@@ -43,7 +43,7 @@ module ApplicationLogger =
             instance
             |> Instance.concat "-"
             |> Graylog.Facility
-            |> Graylog.Configuration.createDefault host
+            |> Graylog.Configuration.createDefaultForService (instance |> Instance.service) host
             |> Graylog.Logger.create
             |> Graylog.Logger.withArgs
 
