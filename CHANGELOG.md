@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 3.4.0 - 2019-06-13
 - Fix `Phone` number format for parsing, to allow int64 for big numbers
 - Catch runtime unhandled exceptions and treat them as Runtime Error
 
