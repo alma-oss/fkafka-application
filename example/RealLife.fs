@@ -43,6 +43,7 @@ module Program =
 
                 instance "INSTANCE"
                 ifSetDo "VERBOSITY" Log.setVerbosityLevel
+                logToGraylog "GRAYLOG"
 
                 connect {
                     BrokerList = "BROKER_LIST"
