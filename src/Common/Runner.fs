@@ -198,9 +198,9 @@ module ApplicationRunner =
 
     let internal runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
         fun beforeRun (KafkaApplication application) ->
-            try
-                match application with
-                | Ok app ->
+            match application with
+            | Ok app ->
+                try
                     let consume configuration =
                         Consumer.consume configuration app.ParseEvent
 
@@ -217,12 +217,16 @@ module ApplicationRunner =
                         Producer.TopicProducer.flush
                         Producer.TopicProducer.close
                     Successfully
-                | Error error ->
+                with
+                | error ->
                     error
-                    |> logApplicationError "Application"
-                    |> WithError
-            with
-            | error ->
+                    |> sprintf "Exception:\n%A"
+                    |> tee (app.Logger.Error "RuntimeError" >> fun _ ->
+                        app.Logger.Log "Application" "Shutting down with runtime error ..."
+                        System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(2.0)) // Main thread waits till logger logs error message
+                    )
+                    |> WithRuntimeError
+            | Error error ->
                 error
-                |> logApplicationError "Application"
-                |> WithRuntimeError
+                |> logApplicationError "Error"
+                |> WithError

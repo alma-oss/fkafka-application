@@ -47,7 +47,7 @@ Where `$NUGET_SERVER_PATH` is the URL of nuget server
                    └─> Return ApplicationShutdown   │                                                                              │  │
                          └─> One of Following:      │                                                                              │  │
                              └─> Successfully <─────┘                                                                              │  │
-                             └─> WithRuntimeError <────────────────────────────────────────────────────────────────────────────────┘  │
+                             └─> WithRuntimeError <────────────────────<Application RuntimeError or Unhandled Exception>───────────┘  │
                              └─> WithError <──────────────────────────────────────────────────────────────────────────────────────────┘
         ┌────<ApplicationShutdown>────┘
         └─> ApplicationShutdown.withStatusCode ─┐

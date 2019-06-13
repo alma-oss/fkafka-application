@@ -3,6 +3,7 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 - Fix `Phone` number format for parsing, to allow int64 for big numbers
+- Catch runtime unhandled exceptions and treat them as Runtime Error
 
 ## 3.3.0 - 2019-06-12
 - Add `Service` (domain, context) to graylog logs, as additional fields
