@@ -63,7 +63,7 @@
     <PackageReference Include="Lmc.Logging" Version="1.5" />
     <PackageReference Include="Lmc.Metrics" Version="3.0" />
     <PackageReference Include="Lmc.ServiceIdentification" Version="2.3" />
-    <PackageReference Include="Lmc.ConsentEvents" Version="1.1" />
+    <PackageReference Include="Lmc.ConsentEvents" Version="1.1.1" />
   </ItemGroup>
 
 </Project>
