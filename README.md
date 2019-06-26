@@ -5,12 +5,18 @@ Framework for kafka application.
 It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc..
 
 ## Install
+
+Add following into `paket.dependencies`
 ```
-dotnet add package -s $NUGET_SERVER_PATH Lmc.KafkaApplication
+git ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
+# LMC Nuget dependencies:
+nuget Lmc.KafkaApplication
 ```
-Where `$NUGET_SERVER_PATH` is the URL of nuget server
-- it should be http://development-nugetserver-common-stable.service.devel1-services.consul:{PORT} (_make sure you have a correct port, since it changes with deployment_)
-- see http://consul-1.infra.pprod/ui/devel1-services/services/development-nugetServer-common-stable for detailed information (and port)
+
+Add following into `paket.references`
+```
+Lmc.KafkaApplication
+```
 
 ## Application life cycle
 
@@ -286,6 +292,7 @@ useGroupIdFor "connection" "groupId-for-connection"
 2. Update `CHANGELOG.md`
 3. Commit new version and tag it
 4. Run `$ fake build target release`
+5. Go to `nuget-server` repo, run `faket build target copyAll` and push new versions
 
 ## Development
 ### Requirements

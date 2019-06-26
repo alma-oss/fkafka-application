@@ -44,7 +44,7 @@ module ApplicationRunner =
             )
             |> List.iter Async.Start
 
-        let private wait (seconds: int<KafkaApplication.second>) =
+        let private wait (seconds: int<KafkaApplication.Second>) =
             Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
 
         let rec private connectProducersWithErrorHandling connectProducer application =

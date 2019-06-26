@@ -63,7 +63,7 @@ module ApplicationBuilder =
 
                 let resource = {
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogHost graylogHost Audience.Sys
-                    Interval = 30<KafkaApplication.second>
+                    Interval = 30<KafkaApplication.Second>
                     Checker = fun () ->
                         if host |> Graylog.Diagnostics.isAlive |> Async.RunSynchronously
                         then Up
@@ -227,10 +227,10 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
-                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<KafkaApplication.second>)
+                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
-                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<KafkaApplication.second>)
+                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<KafkaApplication.Second>)
                 let getErrorHandler connection =
                     configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
                     <?=> defaultConsumeErrorHandler

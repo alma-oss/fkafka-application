@@ -1,0 +1,10 @@
+FSharp.Core
+FSharp.Data
+Newtonsoft.Json
+Lmc.Environment
+Lmc.ErrorHandling
+Lmc.Kafka
+Lmc.Logging
+Lmc.Metrics
+Lmc.ServiceIdentification
+Lmc.ConsentEvents

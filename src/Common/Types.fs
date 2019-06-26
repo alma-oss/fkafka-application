@@ -4,8 +4,8 @@ open Kafka
 open Metrics
 open ServiceIdentification
 
-[<Measure>] type second
-[<Measure>] type attempt
+[<Measure>] type Second
+[<Measure>] type Attempt
 
 //
 // Metrics
@@ -19,7 +19,7 @@ type CustomMetric = {
 
 type ResourceMetricInInterval = {
     Resource: ResourceAvailability
-    Interval: int<second>
+    Interval: int<Second>
     Checker: unit -> ResourceStatus
 }
 
@@ -110,17 +110,17 @@ type ErrorMessage = string
 
 type ProducerErrorPolicy =
     | Shutdown
-    | ShutdownIn of int<second>
+    | ShutdownIn of int<Second>
     | Retry
-    | RetryIn of int<second>
+    | RetryIn of int<Second>
 
 type ProducerErrorHandler = ApplicationLogger -> ErrorMessage -> ProducerErrorPolicy
 
 type ConsumeErrorPolicy =
     | Shutdown
-    | ShutdownIn of int<second>
+    | ShutdownIn of int<Second>
     | Retry
-    | RetryIn of int<second>
+    | RetryIn of int<Second>
     | Continue
 
 type ConsumeErrorHandler = ApplicationLogger -> ErrorMessage -> ConsumeErrorPolicy

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -51,19 +52,5 @@
     <Compile Include="src/Application.fs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FSharp.Data" Version="3.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Lmc.Environment" Version="3.0" />
-    <PackageReference Include="Lmc.ErrorHandling" Version="1.0" />
-    <PackageReference Include="Lmc.Kafka" Version="7.1" />
-    <PackageReference Include="Lmc.Logging" Version="1.5" />
-    <PackageReference Include="Lmc.Metrics" Version="3.0" />
-    <PackageReference Include="Lmc.ServiceIdentification" Version="2.3" />
-    <PackageReference Include="Lmc.ConsentEvents" Version="1.1.1" />
-  </ItemGroup>
-
+  <Import Project=".paket\Paket.Restore.targets" />
 </Project>
