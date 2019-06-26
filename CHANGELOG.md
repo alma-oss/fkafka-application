@@ -2,6 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Use lint
+    - Rename types `second` and `attempt` to _PascalCase_
+- Update dependencies
 
 ## 3.4.0 - 2019-06-13
 - Fix `Phone` number format for parsing, to allow int64 for big numbers
