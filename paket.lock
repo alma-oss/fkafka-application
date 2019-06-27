@@ -1,3 +1,4 @@
+STORAGE: NONE
 RESTRICTION: == netcoreapp2.2
 NUGET
   remote: https://api.nuget.org/v3/index.json
@@ -242,7 +243,7 @@ NUGET
     System.Threading.Tasks.Dataflow (4.9)
     System.ValueTuple (4.5)
   remote: paket-files/git_stash.int.lmc.cz7999/archi/nuget-server/nuget
-    Lmc.ConsentEvents (1.2.0)
+    Lmc.ConsentEvents (1.3.0)
       FSharp.Core (>= 4.6.2)
       FSharp.Data (>= 3.1.1)
       Lmc.ErrorHandling (>= 1.1)
@@ -276,7 +277,7 @@ NUGET
       FSharp.Core (>= 4.6.2)
 GIT
   remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (8ca07250e1cd9f5b5c7df63903a89a1cceb2cc28)
+     (87d6c33327c46a9ab1cb5a434a23796db8983e0b)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
