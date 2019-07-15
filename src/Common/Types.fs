@@ -169,7 +169,9 @@ type MetricsError =
 
 [<RequireQualifiedAccess>]
 type LoggingError =
+    | InvalidGraylogConnectionString of string
     | InvalidGraylogHost of Logging.Graylog.HostError
+    | InvalidPort of string
     | VariableNotFoundError of string
 
 type KafkaApplicationError =
@@ -303,6 +305,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
     GraylogHost: Logging.Graylog.Host option
+    GraylogPort: Logging.Graylog.Port option
 }
 
 [<AutoOpen>]
@@ -329,6 +332,7 @@ module internal ConfigurationParts =
             CreateOutputEventKeys = None
             KafkaChecker = None
             GraylogHost = None
+            GraylogPort = None
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =

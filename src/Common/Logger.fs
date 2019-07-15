@@ -38,12 +38,12 @@ module ApplicationLogger =
             Error = Log.error
         }
 
-    let graylogLogger instance host =
+    let graylogLogger instance host port =
         let logger =
             instance
             |> Instance.concat "-"
             |> Graylog.Facility
-            |> Graylog.Configuration.createDefaultForService (instance |> Instance.service) host
+            |> Graylog.Configuration.createForService (instance |> Instance.service) host port
             |> Graylog.Logger.create
             |> Graylog.Logger.withArgs
 
