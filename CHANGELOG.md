@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 5.0.0 - 2019-07-15
 - Parse `graylog` string not just as a host, but as a `host[:port]`
 - Use `graylog` consul service as identification for resource health check
 - [**BC**] Change `logToGraylog` function - now it requires both `graylog` (`host[:port]`) and `graylogService` (_service name in consul_)
