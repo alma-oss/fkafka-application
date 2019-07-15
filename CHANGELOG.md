@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix graylog resource identification from host to graylog service
 
 ## 5.0.0 - 2019-07-15
 - Parse `graylog` string not just as a host, but as a `host[:port]`

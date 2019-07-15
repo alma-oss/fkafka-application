@@ -78,7 +78,7 @@ module ApplicationBuilder =
                     | _ -> Ok None
 
                 let resource = {
-                    Resource = ResourceAvailability.createFromStrings "graylog" graylogHost graylogHost Audience.Sys
+                    Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
                     Interval = 30<KafkaApplication.Second>
                     Checker = fun () ->
                         if graylogService |> Graylog.Diagnostics.isAlive |> Async.RunSynchronously
