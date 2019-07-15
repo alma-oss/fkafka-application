@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 5.1.0 - 2019-07-15
 - Fix graylog resource identification from host to graylog service
 - Log error on graylog resource check fail
 
