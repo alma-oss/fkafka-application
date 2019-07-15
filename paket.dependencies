@@ -11,7 +11,7 @@ git ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git master Packages: /nug
 nuget Lmc.Environment >= 3.1
 nuget Lmc.ErrorHandling >= 1.1
 nuget Lmc.Kafka >= 8.0
-nuget Lmc.Logging >= 2.0
+nuget Lmc.Logging >= 2.1
 nuget Lmc.Metrics >= 3.1
 nuget Lmc.ServiceIdentification >= 2.5
 nuget Lmc.ConsentEvents >= 1.3
