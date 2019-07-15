@@ -1,6 +1,7 @@
 namespace KafkaApplication
 
 module ApplicationBuilder =
+    open System
     open Kafka
     open KafkaApplication
     open Metrics
@@ -51,21 +52,36 @@ module ApplicationBuilder =
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         GraylogHost = currentParts.GraylogHost <??> newParts.GraylogHost
+                        GraylogPort = currentParts.GraylogPort <??> newParts.GraylogPort
                     }
                 |> Configuration.result
 
-        let addGraylogHostToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) graylogHost =
+        let addGraylogToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) (graylog: string, graylogService: string) =
             result {
+                let! (graylogHost, graylogPort) =
+                    match graylog.Split(":") with
+                    | [| host |] -> Ok (host, None)
+                    | [| host; port |] -> Ok (host, Some port)
+                    | _ -> Error (LoggingError.InvalidGraylogConnectionString graylog)
+
                 let! host =
                     graylogHost
                     |> Graylog.Host.create
                     |> Result.mapError LoggingError.InvalidGraylogHost
 
+                let! port =
+                    match graylogPort with
+                    | Some port ->
+                        match Int32.TryParse port with
+                        | true, port -> Ok <| Some (Graylog.Port port)
+                        | _ -> Error (LoggingError.InvalidPort port)
+                    | _ -> Ok None
+
                 let resource = {
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogHost graylogHost Audience.Sys
                     Interval = 30<KafkaApplication.Second>
                     Checker = fun () ->
-                        if host |> Graylog.Diagnostics.isAlive |> Async.RunSynchronously
+                        if graylogService |> Graylog.Diagnostics.isAlive |> Async.RunSynchronously
                         then Up
                         else Down
                 }
@@ -73,6 +89,7 @@ module ApplicationBuilder =
                 return { parts
                     with
                         GraylogHost = Some host
+                        GraylogPort = port
                         IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers
                 }
             }
@@ -253,8 +270,8 @@ module ApplicationBuilder =
                 let logger =
                     match configurationParts.GraylogHost with
                     | Some host ->
-                        host
-                        |> ApplicationLogger.graylogLogger instance
+                        configurationParts.GraylogPort <?=> (Graylog.Port Graylog.DefaultPort)
+                        |> ApplicationLogger.graylogLogger instance host
                         |> ApplicationLogger.combine logger
                     | _ -> logger
 
@@ -389,12 +406,12 @@ module ApplicationBuilder =
             state <!> fun parts -> { parts with Logger = logger }
 
         [<CustomOperation("logToGraylog")>]
-        member __.LogToGraylog(state, graylogHost): Configuration<'InputEvent, 'OutputEvent> =
+        member __.LogToGraylog(state, graylog, graylogService): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     return!
-                        graylogHost
-                        |> addGraylogHostToParts parts
+                        (graylog, graylogService)
+                        |> addGraylogToParts parts
                 }
                 |> Result.mapError LoggingError
 

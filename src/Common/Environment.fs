@@ -220,16 +220,20 @@ module EnvironmentBuilder =
                 parts
 
         [<CustomOperation("logToGraylog")>]
-        member __.LogToGraylog(state, graylogHostVariableName): Configuration<'InputEvent, 'OutputEvent> =
+        member __.LogToGraylog(state, graylogVariableName, graylogServiceVariableName): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
-                    let! graylogHostValue =
-                        graylogHostVariableName
+                    let! graylog =
+                        graylogVariableName
+                        |> getEnvironmentValue parts id LoggingError.VariableNotFoundError
+
+                    let! graylogService =
+                        graylogServiceVariableName
                         |> getEnvironmentValue parts id LoggingError.VariableNotFoundError
 
                     return!
-                        graylogHostValue
-                        |> addGraylogHostToParts parts
+                        (graylog, graylogService)
+                        |> addGraylogToParts parts
                 }
                 |> Result.mapError LoggingError
 
