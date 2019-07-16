@@ -261,7 +261,7 @@ NUGET
       FSharp.Data (>= 3.1.1)
       Lmc.Metrics (>= 3.1)
       Lmc.ServiceIdentification (>= 2.5)
-    Lmc.Logging (2.1.0)
+    Lmc.Logging (2.1.1)
       ConsoleStyle (>= 1.2)
       FSharp.Core (>= 4.6.2)
       FSharp.Data (>= 3.1.1)
@@ -277,7 +277,7 @@ NUGET
       FSharp.Core (>= 4.6.2)
 GIT
   remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (a605676eb864305bef6554037aecdc7df2239d09)
+     (0905c605e8dbbdd65e8bffbfb5c5bd3af6cdfe39)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
