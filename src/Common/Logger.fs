@@ -38,12 +38,17 @@ module ApplicationLogger =
             Error = Log.error
         }
 
-    let graylogLogger instance host port =
+    let graylogLogger instance connections =
+        let configureForService service facility =
+            match connections with
+            | [ (host, port) ] -> Graylog.Configuration.createForService service host port facility
+            | cluster -> Graylog.Configuration.createClusterForService service cluster facility
+
         let logger =
             instance
             |> Instance.concat "-"
             |> Graylog.Facility
-            |> Graylog.Configuration.createForService (instance |> Instance.service) host port
+            |> configureForService (instance |> Instance.service)
             |> Graylog.Logger.create
             |> Graylog.Logger.withArgs
 
