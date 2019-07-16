@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 5.2.1 - 2019-07-16
 - Fix parsing graylog connection, to ignore empty hosts (_after trailing commas_)
 
 ## 5.2.0 - 2019-07-16
