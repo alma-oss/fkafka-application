@@ -59,6 +59,7 @@ module ApplicationBuilder =
             result {
                 let! hostsPorts =
                     graylog.Split ","
+                    |> Array.filter (String.IsNullOrEmpty >> not)
                     |> Array.map (fun graylog ->
                         match graylog.Split ":" with
                         | [| host |] -> Ok (host, None)

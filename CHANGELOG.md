@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix parsing graylog connection, to ignore empty hosts (_after trailing commas_)
 
 ## 5.2.0 - 2019-07-16
 - Allow graylog connection to be single `host[:port]` or a list of them (_cluster_) separated by `,` (_one random node will be used for cluster_)
