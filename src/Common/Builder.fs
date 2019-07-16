@@ -51,31 +51,47 @@ module ApplicationBuilder =
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
-                        GraylogHost = currentParts.GraylogHost <??> newParts.GraylogHost
-                        GraylogPort = currentParts.GraylogPort <??> newParts.GraylogPort
+                        GraylogConnections = currentParts.GraylogConnections @ newParts.GraylogConnections
                     }
                 |> Configuration.result
 
         let addGraylogToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) (graylog: string, graylogService: string) =
             result {
-                let! (graylogHost, graylogPort) =
-                    match graylog.Split(":") with
-                    | [| host |] -> Ok (host, None)
-                    | [| host; port |] -> Ok (host, Some port)
-                    | _ -> Error (LoggingError.InvalidGraylogConnectionString graylog)
+                let! hostsPorts =
+                    graylog.Split ","
+                    |> Array.map (fun graylog ->
+                        match graylog.Split ":" with
+                        | [| host |] -> Ok (host, None)
+                        | [| host; port |] -> Ok (host, Some port)
+                        | _ -> Error (LoggingError.InvalidGraylogConnectionString graylog)
+                    )
+                    |> Array.toList
+                    |> Result.sequence
 
-                let! host =
-                    graylogHost
-                    |> Graylog.Host.create
-                    |> Result.mapError LoggingError.InvalidGraylogHost
+                let! graylogHostsPorts =
+                    hostsPorts
+                    |> List.map (fun (host, port) ->
+                        result {
+                            let! host =
+                                host
+                                |> Graylog.Host.create
+                                |> Result.mapError LoggingError.InvalidGraylogHost
 
-                let! port =
-                    match graylogPort with
-                    | Some port ->
-                        match Int32.TryParse port with
-                        | true, port -> Ok <| Some (Graylog.Port port)
-                        | _ -> Error (LoggingError.InvalidPort port)
-                    | _ -> Ok None
+                            let! port =
+                                match port with
+                                | Some port ->
+                                    match Int32.TryParse port with
+                                    | true, port -> Ok <| Some (Graylog.Port port)
+                                    | _ -> Error (LoggingError.InvalidPort port)
+                                | _ -> Ok None
+
+                            return (host, port)
+                        }
+                    )
+                    |> Result.sequence
+
+                if graylogHostsPorts |> List.isEmpty then
+                    return! Error (LoggingError.InvalidGraylogConnectionString graylog)
 
                 let resource = {
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
@@ -94,8 +110,7 @@ module ApplicationBuilder =
 
                 return { parts
                     with
-                        GraylogHost = Some host
-                        GraylogPort = port
+                        GraylogConnections = parts.GraylogConnections @ graylogHostsPorts
                         IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers
                 }
             }
@@ -274,12 +289,15 @@ module ApplicationBuilder =
 
                 // logging
                 let logger =
-                    match configurationParts.GraylogHost with
-                    | Some host ->
-                        configurationParts.GraylogPort <?=> (Graylog.Port Graylog.DefaultPort)
-                        |> ApplicationLogger.graylogLogger instance host
+                    match configurationParts.GraylogConnections with
+                    | [] -> logger
+                    | connections ->
+                        connections
+                        |> List.map (fun (host, port) ->
+                            (host, port <?=> Graylog.Port Graylog.DefaultPort)
+                        )
+                        |> ApplicationLogger.graylogLogger instance
                         |> ApplicationLogger.combine logger
-                    | _ -> logger
 
                 // kafka parts
                 let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }

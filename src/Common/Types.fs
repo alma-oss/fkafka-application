@@ -304,8 +304,7 @@ type ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
-    GraylogHost: Logging.Graylog.Host option
-    GraylogPort: Logging.Graylog.Port option
+    GraylogConnections: (Logging.Graylog.Host * Logging.Graylog.Port option) list
 }
 
 [<AutoOpen>]
@@ -331,8 +330,7 @@ module internal ConfigurationParts =
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
-            GraylogHost = None
-            GraylogPort = None
+            GraylogConnections = []
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =

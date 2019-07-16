@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Allow graylog connection to be single `host[:port]` or a list of them (_cluster_) separated by `,` (_one random node will be used for cluster_)
 
 ## 5.1.1 - 2019-07-16
 - Fix consul host in graylog diagnostics
