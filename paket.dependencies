@@ -14,7 +14,7 @@ nuget Lmc.Kafka >= 8.0
 nuget Lmc.Logging >= 2.2
 nuget Lmc.Metrics >= 3.1
 nuget Lmc.ServiceIdentification >= 2.5
-nuget Lmc.ConsentEvents >= 1.3
+nuget Lmc.ConsentEvents >= 1.4
 
 // [ FAKE GROUP ]
 group Build
