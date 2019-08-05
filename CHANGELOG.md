@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `deriveToWithLog` function in `Deriver` pattern, to allow logging while deriving.
 
 ## 5.3.0 - 2019-08-05
 - Add `ConsentExpireSet` event

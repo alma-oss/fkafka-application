@@ -109,6 +109,31 @@ module DeriverBuilder =
                     }
                 }
 
+        [<CustomOperation("deriveToWithLog")>]
+        member __.DeriveToWithLog(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! configuration =
+                        parts.Configuration
+                        |> Result.ofOption ConfigurationNotSet
+                        |> Result.mapError ApplicationConfigurationError
+
+                    let! logger =
+                        configuration
+                        |> KafkaApplicationBuilder.logger
+                        |> Result.mapError DeriverApplicationError.KafkaApplicationError
+
+                    let deriveEvent =
+                        deriveEvent logger
+
+                    return {
+                        parts with
+                            Configuration = Some (configuration |> addProduceTo name fromDomain)
+                            DeriveTo = Some (ConnectionName name)
+                            DeriveEvent = Some deriveEvent
+                    }
+                }
+
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }

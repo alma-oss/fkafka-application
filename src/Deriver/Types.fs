@@ -13,6 +13,7 @@ type DeriverConfigurationError =
 
 type DeriverApplicationError =
     | ApplicationConfigurationError of ApplicationConfigurationError
+    | KafkaApplicationError of KafkaApplicationError
     | DeriverConfigurationError of DeriverConfigurationError
 
 // Deriver configuration
