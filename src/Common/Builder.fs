@@ -25,6 +25,10 @@ module ApplicationBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
+        let logger (Configuration configuration) =
+            configuration
+            |> Result.map (fun parts -> parts.Logger)
+
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
