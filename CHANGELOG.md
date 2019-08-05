@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 5.3.0 - 2019-08-05
 - Add `ConsentExpireSet` event
 
 ## 5.2.1 - 2019-07-16
