@@ -9,12 +9,13 @@ nuget Newtonsoft.Json >= 12.0
 git ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
 nuget Lmc.Environment >= 3.1
-nuget Lmc.ErrorHandling >= 1.1
+nuget Lmc.ErrorHandling >= 1.4.2
 nuget Lmc.Kafka >= 8.0
 nuget Lmc.Logging >= 2.2
 nuget Lmc.Metrics >= 3.1
 nuget Lmc.ServiceIdentification >= 2.5
-nuget Lmc.ConsentEvents >= 1.4
+nuget Lmc.ConsentEvents >= 2.0
+nuget Lmc.ContractAggregate >= 1.0
 
 // [ FAKE GROUP ]
 group Build

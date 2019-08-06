@@ -243,17 +243,24 @@ NUGET
     System.Threading.Tasks.Dataflow (4.9)
     System.ValueTuple (4.5)
   remote: paket-files/git_stash.int.lmc.cz7999/archi/nuget-server/nuget
-    Lmc.ConsentEvents (1.4.0)
-      FSharp.Core (>= 4.6.2)
+    Lmc.ConsentEvents (2.0.0)
+      FSharp.Core (>= 4.7)
       FSharp.Data (>= 3.1.1)
-      Lmc.ErrorHandling (>= 1.1)
+      Lmc.ContractAggregate (>= 1.0)
+      Lmc.ErrorHandling (>= 1.4.2)
       Lmc.Kafka (>= 8.0)
       Lmc.ServiceIdentification (>= 2.5)
+    Lmc.ContractAggregate (1.0.0)
+      FSharp.Core (>= 4.7)
+      FSharp.Data (>= 3.1.1)
+      Lmc.ErrorHandling (>= 1.4.2)
+      Lmc.ServiceIdentification (>= 2.5)
+      Lmc.State (>= 1.2)
     Lmc.Environment (3.1.0)
       FSharp.Core (>= 4.6.2)
       Lmc.ErrorHandling (>= 1.1)
-    Lmc.ErrorHandling (1.1.0)
-      FSharp.Core (>= 4.5.2)
+    Lmc.ErrorHandling (1.4.2)
+      FSharp.Core (>= 4.6.2)
     Lmc.Kafka (8.0.0)
       Confluent.Kafka (>= 1.0.1.1)
       FSharp.Control.AsyncSeq (>= 2.0.21)
@@ -275,9 +282,11 @@ NUGET
       Suave (>= 2.5.5)
     Lmc.ServiceIdentification (2.5.0)
       FSharp.Core (>= 4.6.2)
+    Lmc.State (1.2.0)
+      FSharp.Core (>= 4.6.2)
 GIT
   remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (243f52d3679a11d2424fb3ff69d5386ad432137e)
+     (53c5a65418710038a6b394e9590de61b28002374)
       path: /nuget/
 GROUP Build
 STORAGE: NONE

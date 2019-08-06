@@ -4,7 +4,7 @@ module internal Filter =
     open System.IO
     open FSharp.Data
     open ServiceIdentification
-    open ConsentEvents.Intent
+    open ContractAggregate.Intent
     open Kafka
     open KafkaApplication
 
