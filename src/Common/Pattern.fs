@@ -2,7 +2,7 @@ namespace KafkaApplication
 
 open Kafka
 open KafkaApplication
-open ConsentEvents.Intent
+open ContractAggregate.Intent
 
 // Errors
 

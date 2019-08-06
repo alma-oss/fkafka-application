@@ -2,7 +2,7 @@ namespace KafkaApplication.Filter
 
 open ServiceIdentification
 open KafkaApplication
-open ConsentEvents.Intent
+open ContractAggregate.Intent
 
 // Errors
 

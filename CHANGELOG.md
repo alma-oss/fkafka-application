@@ -3,7 +3,7 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 - Update `ErrorHandling` to unify operators
-- Use `Contract` and `Intent` from `ContractAggregate` library
+- [**BC**] Use `Contract` and `Intent` from `ContractAggregate` library
 
 ## 5.4.0 - 2019-08-05
 - Add `deriveToWithLog` function in `Deriver` pattern, to allow logging while deriving.
