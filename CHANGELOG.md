@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 6.0.0 - 2019-08-06
 - Update `ErrorHandling` to unify operators
 - [**BC**] Use `Contract` and `Intent` from `ContractAggregate` library
 
