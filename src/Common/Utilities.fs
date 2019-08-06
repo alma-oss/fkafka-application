@@ -1,23 +1,19 @@
 namespace KafkaApplication
 
 module internal OptionOperators =
+    open Option.Operators
+
     /// Default value - if value is None, default value will be used
-    let (<?=>) defaultValue opt = Option.defaultValue opt defaultValue
+    let inline (<?=>) o defaultValue = o <?=> defaultValue
 
     /// Or else - if value is None, other option will be used
-    let (<??>) other opt = Option.orElse opt other
+    let inline (<??>) o other = o <??> other
 
     /// Mandatory - if value is None, error will be returned
-    let (<?!>) (opt: 'a option) (errorMessage: string): Result<'a, KafkaApplicationError> =
-        match opt with
-        | Some value -> Ok value
-        | None -> sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError |> Result.Error
+    let inline (<?!>) o errorMessage = o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError)
 
-    /// Map action with side-effect and ignore the unit option result
-    let (|>!) (opt: 'a option) (action: 'a -> unit) =
-        opt
-        |> Option.map action
-        |> ignore
+    /// Option.iter
+    let inline (|>!) o f = o |>! f
 
 module internal Map =
     /// Merge new values with the current values (replacing already defined values).

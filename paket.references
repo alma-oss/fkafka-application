@@ -8,3 +8,4 @@ Lmc.Logging
 Lmc.Metrics
 Lmc.ServiceIdentification
 Lmc.ConsentEvents
+Lmc.ContractAggregate
