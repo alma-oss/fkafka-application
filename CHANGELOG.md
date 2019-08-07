@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 7.0.0 - 2019-08-07
 - [**BC**] Replace `deriveToWithLog` with `deriveToWithApplication`, to allow more actions then just a logging.
 - [**BC**] Make some internal types `internal`
 - [**BC**] Remove `Bind` of the builders, since it is not possible to use it anyway.
