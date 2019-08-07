@@ -563,6 +563,10 @@ module ApplicationBuilder =
                 }
                 |> Result.mapError MetricsError
 
+        [<CustomOperation("registerCustomMetric")>]
+        member __.RegisterCustomMetric(state, customMetric): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+
         [<CustomOperation("checkResourceInInterval")>]
         member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts ->
