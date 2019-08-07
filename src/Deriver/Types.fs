@@ -20,17 +20,21 @@ type DeriverApplicationError =
 
 type DeriveEvent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
 
+type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
+    | Simple of DeriveEvent<'InputEvent, 'OutputEvent>
+    | WithApplication of (PatternRuntimeParts -> DeriveEvent<'InputEvent, 'OutputEvent>)
+
 // Deriver Application Configuration
 
-type DeriverParts<'InputEvent, 'OutputEvent> = {
+type internal DeriverParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     DeriveTo: ConnectionName option
-    DeriveEvent: DeriveEvent<'InputEvent, 'OutputEvent> option
+    DeriveEvent: DeriveEventHandler<'InputEvent, 'OutputEvent> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }
 
-module DeriverParts =
+module internal DeriverParts =
     let defaultDeriver = {
         Configuration = None
         DeriveTo = None
@@ -47,5 +51,6 @@ type DeriverApplicationParts<'InputEvent, 'OutputEvent> = {
 
 type DeriverApplication<'InputEvent, 'OutputEvent> = internal DeriverApplication of Result<DeriverApplicationParts<'InputEvent, 'OutputEvent>, DeriverApplicationError>
 
-module DeriverApplication =
+[<RequireQualifiedAccess>]
+module internal DeriverApplication =
     let application { Application = application } = application

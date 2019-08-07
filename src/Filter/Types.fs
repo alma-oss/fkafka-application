@@ -28,7 +28,7 @@ type FilterContent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
 
 // Filter Application Configuration
 
-type FilterParts<'InputEvent, 'OutputEvent> = {
+type internal FilterParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     FilterConfiguration: FilterConfiguration option
     FilterTo: ConnectionName option
@@ -38,7 +38,8 @@ type FilterParts<'InputEvent, 'OutputEvent> = {
     GetIntent: GetIntent<'InputEvent> option
 }
 
-module FilterParts =
+[<RequireQualifiedAccess>]
+module internal FilterParts =
     let defaultFilter = {
         Configuration = None
         FilterConfiguration = None
@@ -51,12 +52,13 @@ module FilterParts =
 
 type FilterApplicationConfiguration<'InputEvent, 'OutputEvent> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent>, FilterApplicationError>
 
-type FilterApplicationParts<'InputEvent, 'OutputEvent> = {
+type internal FilterApplicationParts<'InputEvent, 'OutputEvent> = {
     Application: KafkaApplication<'InputEvent, 'OutputEvent>
     FilterConfiguration: FilterConfiguration
 }
 
 type FilterApplication<'InputEvent, 'OutputEvent> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent>, FilterApplicationError>
 
-module FilterApplication =
+[<RequireQualifiedAccess>]
+module internal FilterApplication =
     let application { Application = application } = application

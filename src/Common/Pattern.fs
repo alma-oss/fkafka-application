@@ -2,6 +2,8 @@ namespace KafkaApplication
 
 open Kafka
 open KafkaApplication
+open ServiceIdentification
+open Metrics
 open ContractAggregate.Intent
 
 // Errors
@@ -13,12 +15,36 @@ type ApplicationConfigurationError =
 
 // Common
 
-type PatternName = PatternName of string
+type internal PatternName = PatternName of string
 
 // Run Patterns
 
-type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
+type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
+type PatternRuntimeParts = {
+    Logger: ApplicationLogger
+    Box: Box
+    Environment: Map<string, string>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
+}
+
+[<RequireQualifiedAccess>]
+module internal PatternRuntimeParts =
+    let fromConsumeParts<'OutputEvent> (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
+        {
+            Logger = consumeRuntimeParts.Logger
+            Box = consumeRuntimeParts.Box
+            Environment = consumeRuntimeParts.Environment
+            IncrementMetric = consumeRuntimeParts.IncrementMetric
+            SetMetric = consumeRuntimeParts.SetMetric
+            EnableResource = consumeRuntimeParts.EnableResource
+            DisableResource = consumeRuntimeParts.DisableResource
+        }
+
+[<RequireQualifiedAccess>]
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
         (PatternName pattern)
@@ -39,8 +65,8 @@ module internal PatternRunner =
 
 // Build Patterns
 
-type GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
-type DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
+type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
+type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
     open ApplicationBuilder

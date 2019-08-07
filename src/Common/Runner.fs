@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module ApplicationRunner =
+module internal ApplicationRunner =
     open Kafka
     open ServiceIdentification
     open OptionOperators
@@ -196,7 +196,7 @@ module ApplicationRunner =
                 application.Logger.Verbose "Application" "Close producers ..."
                 closeProducer |> doWithAllProducers
 
-    let internal runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
+    let runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
         fun beforeRun (KafkaApplication application) ->
             match application with
             | Ok app ->

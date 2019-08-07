@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module ApplicationEvents =
+module internal ApplicationEvents =
     open System
     open Kafka
     open ServiceIdentification

@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module ApplicationMetrics =
+module internal ApplicationMetrics =
     open Metrics
     open ServiceIdentification
 
@@ -137,6 +137,11 @@ module ApplicationMetrics =
         |> CustomMetricWithDataSetKey
         |> incrementState createNoInputKeys createNoOutputKeys
         |> ignore
+
+    let setCustomMetricValue instance metricName (SimpleDataSetKeys labels) value =
+        labels
+        |> createKey instance
+        |> State.setMetricSetValue value metricName
 
     // Showing state
 

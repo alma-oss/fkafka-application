@@ -14,7 +14,8 @@ type EventToRoute = {
     Raw: RawEvent
 }
 
-module EventToRoute =
+[<RequireQualifiedAccess>]
+module internal EventToRoute =
     let raw { Raw = raw } = raw
     let serialized { Serialized = (SerializedEvent serialized) } = serialized
 
@@ -33,7 +34,7 @@ type RouterError =
 
 type Router = private Router of Map<EventName, StreamName>
 
-module Router =
+module internal Router =
     open FSharp.Data
     open System.IO
     open ServiceIdentification
@@ -92,13 +93,14 @@ type ContentBasedRouterApplicationError =
 
 // Content-Based Router Application Configuration
 
-type RouterParts<'InputEvent, 'OutputEvent> = {
+type internal RouterParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     RouterConfiguration: Router option
     RouteToBrokerList: BrokerList option
 }
 
-module RouterParts =
+[<RequireQualifiedAccess>]
+module internal RouterParts =
     let defaultRouter = {
         Configuration = None
         RouterConfiguration = None
@@ -107,12 +109,13 @@ module RouterParts =
 
 type ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> = private ContentBasedRouterApplicationConfiguration of Result<RouterParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
 
-type ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent> = {
+type internal ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent> = {
     Application: KafkaApplication<'InputEvent, 'OutputEvent>
     RouterConfiguration: Router
 }
 
 type ContentBasedRouterApplication<'InputEvent, 'OutputEvent> = internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
 
-module ContentBasedRouterApplication =
+[<RequireQualifiedAccess>]
+module internal ContentBasedRouterApplication =
     let application { Application = application } = application

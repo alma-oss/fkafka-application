@@ -381,6 +381,7 @@ module ApplicationBuilder =
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
                     IncrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
+                    SetMetric = ApplicationMetrics.setCustomMetricValue instance
                     Box = box
                     Environment = environment
                     Connections = connections
@@ -424,9 +425,6 @@ module ApplicationBuilder =
             |> Ok
             |> Configuration
 
-        member __.Bind(state, f): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= f
-
         member __.Run(state: Configuration<'InputEvent, 'OutputEvent>) =
             buildApplication state
 
@@ -437,11 +435,8 @@ module ApplicationBuilder =
         [<CustomOperation("logToGraylog")>]
         member __.LogToGraylog(state, graylog, graylogService): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
-                result {
-                    return!
-                        (graylog, graylogService)
-                        |> addGraylogToParts parts
-                }
+                (graylog, graylogService)
+                |> addGraylogToParts parts
                 |> Result.mapError LoggingError
 
         [<CustomOperation("useInstance")>]
