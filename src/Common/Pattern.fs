@@ -26,6 +26,7 @@ type PatternRuntimeParts = {
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }
@@ -38,6 +39,7 @@ module internal PatternRuntimeParts =
             Box = consumeRuntimeParts.Box
             Environment = consumeRuntimeParts.Environment
             IncrementMetric = consumeRuntimeParts.IncrementMetric
+            SetMetric = consumeRuntimeParts.SetMetric
             EnableResource = consumeRuntimeParts.EnableResource
             DisableResource = consumeRuntimeParts.DisableResource
         }

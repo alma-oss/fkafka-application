@@ -226,6 +226,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
@@ -236,6 +237,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }
@@ -255,6 +257,7 @@ module internal PreparedConsumeRuntimeParts =
                 preparedRuntimeParts.ProduceTo
                 |> Map.map (fun connection produce -> produce producers.[connection])
             IncrementMetric = preparedRuntimeParts.IncrementMetric
+            SetMetric = preparedRuntimeParts.SetMetric
             EnableResource = ResourceAvailability.enable instance >> ignore
             DisableResource = ResourceAvailability.disable instance >> ignore
         }

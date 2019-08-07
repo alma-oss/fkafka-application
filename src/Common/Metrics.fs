@@ -138,6 +138,11 @@ module internal ApplicationMetrics =
         |> incrementState createNoInputKeys createNoOutputKeys
         |> ignore
 
+    let setCustomMetricValue instance metricName (SimpleDataSetKeys labels) value =
+        labels
+        |> createKey instance
+        |> State.setMetricSetValue value metricName
+
     // Showing state
 
     let showStateOnWebServerAsync instance customMetrics route =

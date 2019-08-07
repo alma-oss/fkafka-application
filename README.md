@@ -125,6 +125,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
     IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }

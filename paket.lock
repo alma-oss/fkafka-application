@@ -275,9 +275,9 @@ NUGET
       Gelf.Extensions.Logging (>= 1.5.1)
       Lmc.ErrorHandling (>= 1.1)
       Lmc.ServiceIdentification (>= 2.5)
-    Lmc.Metrics (3.1.0)
-      FSharp.Core (>= 4.6.2)
-      Lmc.ErrorHandling (>= 1.1)
+    Lmc.Metrics (3.2.0)
+      FSharp.Core (>= 4.7)
+      Lmc.ErrorHandling (>= 1.4.2)
       Lmc.ServiceIdentification (>= 2.5)
       Suave (>= 2.5.5)
     Lmc.ServiceIdentification (2.5.0)
@@ -286,7 +286,7 @@ NUGET
       FSharp.Core (>= 4.6.2)
 GIT
   remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (53c5a65418710038a6b394e9590de61b28002374)
+     (79996f809ed44e81b8cb4c586c6068952de29a39)
       path: /nuget/
 GROUP Build
 STORAGE: NONE

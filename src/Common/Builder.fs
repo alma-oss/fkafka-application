@@ -381,6 +381,7 @@ module ApplicationBuilder =
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
                     IncrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
+                    SetMetric = ApplicationMetrics.setCustomMetricValue instance
                     Box = box
                     Environment = environment
                     Connections = connections
