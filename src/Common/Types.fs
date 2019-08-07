@@ -17,6 +17,15 @@ type CustomMetric = {
     Description: string
 }
 
+[<RequireQualifiedAccess>]
+module CustomMetric =
+    let fromMetric metric metricType description =
+        {
+            Name = metric
+            Type = metricType
+            Description = description
+        }
+
 type ResourceMetricInInterval = {
     Resource: ResourceAvailability
     Interval: int<Second>
