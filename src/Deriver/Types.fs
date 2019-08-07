@@ -20,12 +20,16 @@ type DeriverApplicationError =
 
 type DeriveEvent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
 
+type DeriveEventHandler<'InputEvent, 'OutputEvent> =
+    | Simple of DeriveEvent<'InputEvent, 'OutputEvent>
+    | WithApplication of (PatternRuntimeParts -> DeriveEvent<'InputEvent, 'OutputEvent>)
+
 // Deriver Application Configuration
 
 type DeriverParts<'InputEvent, 'OutputEvent> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
     DeriveTo: ConnectionName option
-    DeriveEvent: DeriveEvent<'InputEvent, 'OutputEvent> option
+    DeriveEvent: DeriveEventHandler<'InputEvent, 'OutputEvent> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }

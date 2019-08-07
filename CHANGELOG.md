@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Replace `deriveToWithLog` with `deriveToWithApplication`, to allow more actions then just a logging.
 
 ## 6.0.0 - 2019-08-06
 - Update `ErrorHandling` to unify operators

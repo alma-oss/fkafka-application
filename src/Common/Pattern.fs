@@ -2,6 +2,8 @@ namespace KafkaApplication
 
 open Kafka
 open KafkaApplication
+open ServiceIdentification
+open Metrics
 open ContractAggregate.Intent
 
 // Errors
@@ -18,6 +20,27 @@ type PatternName = PatternName of string
 // Run Patterns
 
 type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
+
+type PatternRuntimeParts = {
+    Logger: ApplicationLogger
+    Box: Box
+    Environment: Map<string, string>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
+}
+
+[<RequireQualifiedAccess>]
+module internal PatternRuntimeParts =
+    let fromConsumeParts<'OutputEvent> (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
+        {
+            Logger = consumeRuntimeParts.Logger
+            Box = consumeRuntimeParts.Box
+            Environment = consumeRuntimeParts.Environment
+            IncrementMetric = consumeRuntimeParts.IncrementMetric
+            EnableResource = consumeRuntimeParts.EnableResource
+            DisableResource = consumeRuntimeParts.DisableResource
+        }
 
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>

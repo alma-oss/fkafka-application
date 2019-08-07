@@ -10,12 +10,17 @@ module DeriverBuilder =
     module DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
             (ConnectionName deriverOutputStream)
-            (deriveEvent: DeriveEvent<'InputEvent, 'OutputEvent>)
+            (deriveEventHandler: DeriveEventHandler<'InputEvent, 'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
+                let deriveEvent =
+                    match deriveEventHandler with
+                    | Simple deriveEvent -> deriveEvent
+                    | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts)
+
                 events
                 |> Seq.collect deriveEvent
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
@@ -105,12 +110,12 @@ module DeriverBuilder =
                         parts with
                             Configuration = Some (configuration |> addProduceTo name fromDomain)
                             DeriveTo = Some (ConnectionName name)
-                            DeriveEvent = Some deriveEvent
+                            DeriveEvent = Some (Simple deriveEvent)
                     }
                 }
 
-        [<CustomOperation("deriveToWithLog")>]
-        member __.DeriveToWithLog(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        [<CustomOperation("deriveToWithApplication")>]
+        member __.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->
                 result {
                     let! configuration =
@@ -118,19 +123,11 @@ module DeriverBuilder =
                         |> Result.ofOption ConfigurationNotSet
                         |> Result.mapError ApplicationConfigurationError
 
-                    let! logger =
-                        configuration
-                        |> KafkaApplicationBuilder.logger
-                        |> Result.mapError DeriverApplicationError.KafkaApplicationError
-
-                    let deriveEvent =
-                        deriveEvent logger
-
                     return {
                         parts with
                             Configuration = Some (configuration |> addProduceTo name fromDomain)
                             DeriveTo = Some (ConnectionName name)
-                            DeriveEvent = Some deriveEvent
+                            DeriveEvent = Some (WithApplication deriveEvent)
                     }
                 }
 
