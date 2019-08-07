@@ -1,6 +1,6 @@
 namespace KafkaApplication.Deriver
 
-module DeriverRunner =
+module internal DeriverRunner =
     open KafkaApplication
 
     let runDeriver: RunPattern<DeriverApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =

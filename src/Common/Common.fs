@@ -1,7 +1,7 @@
 namespace KafkaApplication
 
 [<AutoOpen>]
-module Common =
+module internal Common =
     let tee f a =
         f a
         a

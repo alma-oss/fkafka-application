@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module ResourceChecker =
+module internal ResourceChecker =
     open Kafka
     open Metrics
     open ServiceIdentification

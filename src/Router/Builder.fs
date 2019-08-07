@@ -7,7 +7,7 @@ module ContentBasedRouterBuilder =
     open ApplicationBuilder
     open Router
 
-    module ContentBasedRouterApplicationBuilder =
+    module internal ContentBasedRouterApplicationBuilder =
         let private addRouterConfiguration
             router
             routeToBrokerList
@@ -102,9 +102,6 @@ module ContentBasedRouterBuilder =
             RouterParts.defaultRouter
             |> Ok
             |> ContentBasedRouterApplicationConfiguration
-
-        member __.Bind(state, f): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= f
 
         member __.Run(state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent>) =
             buildApplication state

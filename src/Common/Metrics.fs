@@ -1,6 +1,6 @@
 namespace KafkaApplication
 
-module ApplicationMetrics =
+module internal ApplicationMetrics =
     open Metrics
     open ServiceIdentification
 

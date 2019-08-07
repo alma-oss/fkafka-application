@@ -8,7 +8,7 @@ module FilterBuilder =
     open OptionOperators
     open Filter
 
-    module FilterApplicationBuilder =
+    module internal FilterApplicationBuilder =
         let addFilterConfiguration<'InputEvent, 'OutputEvent>
             filterConfiguration
             (ConnectionName filterOutputStream)
@@ -89,9 +89,6 @@ module FilterBuilder =
             FilterParts.defaultFilter
             |> Ok
             |> FilterApplicationConfiguration
-
-        member __.Bind(state, f): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= f
 
         member __.Run(state: FilterApplicationConfiguration<'InputEvent, 'OutputEvent>) =
             buildApplication state

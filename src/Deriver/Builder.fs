@@ -7,7 +7,8 @@ module DeriverBuilder =
     open ApplicationBuilder
     open OptionOperators
 
-    module DeriverApplicationBuilder =
+    [<AutoOpen>]
+    module internal DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
             (ConnectionName deriverOutputStream)
             (deriveEventHandler: DeriveEventHandler<'InputEvent, 'OutputEvent>)
@@ -29,6 +30,21 @@ module DeriverBuilder =
             |> addDefaultConsumeHandler deriveEventHandler
             |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
             |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
+
+        let addDeriveTo<'InputEvent, 'OutputEvent> name deriveEventHandler fromDomain (parts: DeriverParts<'InputEvent, 'OutputEvent>) =
+            result {
+                let! configuration =
+                    parts.Configuration
+                    |> Result.ofOption ConfigurationNotSet
+                    |> Result.mapError ApplicationConfigurationError
+
+                return {
+                    parts with
+                        Configuration = Some (configuration |> addProduceTo name fromDomain)
+                        DeriveTo = Some (ConnectionName name)
+                        DeriveEvent = Some deriveEventHandler
+                }
+            }
 
         let buildDeriver<'InputEvent, 'OutputEvent>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
@@ -84,9 +100,6 @@ module DeriverBuilder =
             |> Ok
             |> DeriverApplicationConfiguration
 
-        member __.Bind(state, f): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= f
-
         member __.Run(state: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent>) =
             buildApplication state
 
@@ -99,37 +112,11 @@ module DeriverBuilder =
 
         [<CustomOperation("deriveTo")>]
         member __.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                result {
-                    let! configuration =
-                        parts.Configuration
-                        |> Result.ofOption ConfigurationNotSet
-                        |> Result.mapError ApplicationConfigurationError
-
-                    return {
-                        parts with
-                            Configuration = Some (configuration |> addProduceTo name fromDomain)
-                            DeriveTo = Some (ConnectionName name)
-                            DeriveEvent = Some (Simple deriveEvent)
-                    }
-                }
+            state >>= addDeriveTo name (Simple deriveEvent) fromDomain
 
         [<CustomOperation("deriveToWithApplication")>]
         member __.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                result {
-                    let! configuration =
-                        parts.Configuration
-                        |> Result.ofOption ConfigurationNotSet
-                        |> Result.mapError ApplicationConfigurationError
-
-                    return {
-                        parts with
-                            Configuration = Some (configuration |> addProduceTo name fromDomain)
-                            DeriveTo = Some (ConnectionName name)
-                            DeriveEvent = Some (WithApplication deriveEvent)
-                    }
-                }
+            state >>= addDeriveTo name (WithApplication deriveEvent) fromDomain
 
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =

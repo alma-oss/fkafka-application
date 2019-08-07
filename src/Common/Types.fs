@@ -27,7 +27,8 @@ type MetricsRoute = private MetricsRoute of string
 
 type InvalidMetricsRouteError = InvalidMetricsRouteError of string
 
-module MetricsRoute =
+[<RequireQualifiedAccess>]
+module internal MetricsRoute =
     let create (route: string) =
         if route.StartsWith "/" then MetricsRoute route |> Ok
         else route |> InvalidMetricsRouteError |> Error
@@ -75,7 +76,8 @@ type ManyTopicsConnectionConfiguration = {
 type ConnectionName = ConnectionName of string
 type RuntimeConnectionName = string
 
-module ConnectionName =
+[<RequireQualifiedAccess>]
+module internal ConnectionName =
     let value (ConnectionName name) = name
     let runtimeName (ConnectionName name): RuntimeConnectionName = name
 
@@ -84,6 +86,7 @@ type ConnectionConfiguration = {
     Topic: Instance
 }
 
+[<RequireQualifiedAccess>]
 module internal ConnectionConfiguration =
     let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Kafka.ConnectionConfiguration =
         {
@@ -93,11 +96,12 @@ module internal ConnectionConfiguration =
 
 type Connections = Map<ConnectionName, ConnectionConfiguration>
 
+[<RequireQualifiedAccess>]
 module Connections =
     let Default = ConnectionName "__default"
     let Supervision = ConnectionName "__supervision"
 
-    let empty: Connections =
+    let internal empty: Connections =
         Map.empty
 
 //
@@ -236,6 +240,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     DisableResource: ResourceAvailability -> unit
 }
 
+[<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
         let instance = preparedRuntimeParts.Box |> Box.instance
@@ -262,7 +267,8 @@ type RuntimeConsumeHandler<'InputEvent> =
     | Events of ('InputEvent seq -> unit)
     | LastEvent of ('InputEvent -> unit)
 
-module ConsumeHandler =
+[<RequireQualifiedAccess>]
+module internal ConsumeHandler =
     let toRuntime runtimeParts = function
         | ConsumeHandler.Events eventsHandler -> eventsHandler runtimeParts |> RuntimeConsumeHandler.Events
         | ConsumeHandler.LastEvent lastEventHandler -> lastEventHandler runtimeParts |> RuntimeConsumeHandler.LastEvent
@@ -284,7 +290,7 @@ type RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
 // Configuration / Application
 //
 
-type ConfigurationParts<'InputEvent, 'OutputEvent> = {
+type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Instance: Instance option
@@ -342,10 +348,11 @@ module internal ConfigurationParts =
 
 type Configuration<'InputEvent, 'OutputEvent> = private Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
 
+[<RequireQualifiedAccess>]
 module private Configuration =
     let result (Configuration result) = result
 
-type KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
+type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Box: Box
@@ -372,12 +379,13 @@ type ApplicationShutdown =
     | WithError of ErrorMessage
     | WithRuntimeError of ErrorMessage
 
+[<RequireQualifiedAccess>]
 module ApplicationShutdown =
     let withStatusCode = function
         | Successfully -> 0
         | _ -> 1
 
-type BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
-type Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown
+type internal BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
+type internal Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown
 
-type RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>
+type internal RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>

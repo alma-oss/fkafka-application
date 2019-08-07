@@ -15,11 +15,11 @@ type ApplicationConfigurationError =
 
 // Common
 
-type PatternName = PatternName of string
+type internal PatternName = PatternName of string
 
 // Run Patterns
 
-type RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
+type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
 type PatternRuntimeParts = {
     Logger: ApplicationLogger
@@ -42,6 +42,7 @@ module internal PatternRuntimeParts =
             DisableResource = consumeRuntimeParts.DisableResource
         }
 
+[<RequireQualifiedAccess>]
 module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
         (PatternName pattern)
@@ -62,8 +63,8 @@ module internal PatternRunner =
 
 // Build Patterns
 
-type GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
-type DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
+type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
+type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
     open ApplicationBuilder

@@ -1,6 +1,6 @@
 namespace KafkaApplication.Filter
 
-module FilterRunner =
+module internal FilterRunner =
     open KafkaApplication
 
     let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =

@@ -1,6 +1,6 @@
 namespace KafkaApplication.Router
 
-module ContentBasedRouterRunner =
+module internal ContentBasedRouterRunner =
     open KafkaApplication
 
     let runRouter: RunPattern<ContentBasedRouterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =
