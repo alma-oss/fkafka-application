@@ -15,7 +15,7 @@ nuget Lmc.Logging >= 2.2
 nuget Lmc.Metrics >= 3.2
 nuget Lmc.ServiceIdentification >= 2.5
 nuget Lmc.ConsentEvents >= 2.0
-nuget Lmc.ContractAggregate >= 1.0
+nuget Lmc.ContractAggregate >= 2.0
 
 // [ FAKE GROUP ]
 group Build

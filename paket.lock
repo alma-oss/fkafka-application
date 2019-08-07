@@ -250,7 +250,7 @@ NUGET
       Lmc.ErrorHandling (>= 1.4.2)
       Lmc.Kafka (>= 8.0)
       Lmc.ServiceIdentification (>= 2.5)
-    Lmc.ContractAggregate (1.0.0)
+    Lmc.ContractAggregate (2.0.0)
       FSharp.Core (>= 4.7)
       FSharp.Data (>= 3.1.1)
       Lmc.ErrorHandling (>= 1.4.2)
@@ -286,7 +286,7 @@ NUGET
       FSharp.Core (>= 4.6.2)
 GIT
   remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (79996f809ed44e81b8cb4c586c6068952de29a39)
+     (4b12589be0b95b2b486e1ec4b9645692c4679285)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
