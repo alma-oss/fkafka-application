@@ -236,6 +236,8 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     ProduceTo: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
@@ -254,8 +256,6 @@ type ConsumeRuntimeParts<'OutputEvent> = {
 [<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
-        let instance = preparedRuntimeParts.Box |> Box.instance
-
         {
             Logger = preparedRuntimeParts.Logger
             Box = preparedRuntimeParts.Box
@@ -267,8 +267,8 @@ module internal PreparedConsumeRuntimeParts =
                 |> Map.map (fun connection produce -> produce producers.[connection])
             IncrementMetric = preparedRuntimeParts.IncrementMetric
             SetMetric = preparedRuntimeParts.SetMetric
-            EnableResource = ResourceAvailability.enable instance >> ignore
-            DisableResource = ResourceAvailability.disable instance >> ignore
+            EnableResource = preparedRuntimeParts.EnableResource
+            DisableResource = preparedRuntimeParts.DisableResource
         }
 
 type ConsumeHandler<'InputEvent, 'OutputEvent> =
@@ -299,6 +299,39 @@ type RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
 }
 
 //
+// Custom tasks
+//
+
+[<RequireQualifiedAccess>]
+type TaskErrorPolicy =
+    | Restart
+    | Ignore
+
+type CustomTaskRuntimeParts = {
+    Logger: ApplicationLogger
+    Box: Box
+    Environment: Map<string, string>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
+}
+
+type internal PreparedCustomTask = PreparedCustomTask of TaskErrorPolicy * (CustomTaskRuntimeParts -> Async<unit>)
+type internal CustomTask = private CustomTask of TaskErrorPolicy * Async<unit>
+
+[<RequireQualifiedAccess>]
+module internal CustomTask =
+    let prepare runtimeParts (PreparedCustomTask (policy, prepareTask)) =
+        CustomTask (policy, prepareTask runtimeParts)
+
+[<RequireQualifiedAccess>]
+module internal CustomTasks =
+    let prepare runtimeParts preparedTasks =
+        preparedTasks
+        |> List.map (CustomTask.prepare runtimeParts)
+
+//
 // Configuration / Application
 //
 
@@ -323,6 +356,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
     GraylogConnections: (Logging.Graylog.Host * Logging.Graylog.Port option) list
+    CustomTasks: PreparedCustomTask list
 }
 
 [<AutoOpen>]
@@ -349,6 +383,7 @@ module internal ConfigurationParts =
             CreateOutputEventKeys = None
             KafkaChecker = None
             GraylogConnections = []
+            CustomTasks = []
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
@@ -378,6 +413,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
+    CustomTasks: CustomTask list
 }
 
 type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>

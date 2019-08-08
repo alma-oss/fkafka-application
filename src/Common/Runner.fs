@@ -196,6 +196,27 @@ module internal ApplicationRunner =
                 application.Logger.Verbose "Application" "Close producers ..."
                 closeProducer |> doWithAllProducers
 
+        let runCustomTasks (app: KafkaApplicationParts<_,_>) =
+            let logError =
+                sprintf "CustomTaskError: %A" >> (app.Logger.Error "CustomTask")
+
+            let rec runSafely (CustomTask (restartPolicy, task)) =
+                let onError error =
+                    error |> logError
+
+                    match restartPolicy with
+                    | TaskErrorPolicy.Ignore -> ()
+                    | TaskErrorPolicy.Restart -> CustomTask (restartPolicy, task) |> runSafely
+
+                task
+                |> Async.Catch
+                |> Async.map (Result.ofChoice >> Result.teeError onError)
+                |> Async.Ignore
+                |> Async.Start
+
+            app.CustomTasks
+            |> List.iter runSafely
+
     let runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
         fun beforeRun (KafkaApplication application) ->
             match application with
@@ -208,7 +229,8 @@ module internal ApplicationRunner =
                         Consumer.consumeLast configuration app.ParseEvent
 
                     app
-                    |> (tee beforeRun)
+                    |> tee beforeRun
+                    |> tee KafkaApplicationRunner.runCustomTasks
                     |> KafkaApplicationRunner.run
                         consume
                         consumeLast
