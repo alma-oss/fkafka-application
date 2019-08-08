@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 7.1.0 - 2019-08-08
 - Allow `registerCustomMetric` directly
 - Allow running custom tasks
 
