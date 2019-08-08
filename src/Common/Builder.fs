@@ -56,6 +56,7 @@ module ApplicationBuilder =
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         GraylogConnections = currentParts.GraylogConnections @ newParts.GraylogConnections
+                        CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
                     }
                 |> Configuration.result
 
@@ -378,15 +379,22 @@ module ApplicationBuilder =
                 //
                 // runtime parts
                 //
+                let enableResource = ResourceAvailability.enable instance >> ignore
+                let disableResource = ResourceAvailability.disable instance >> ignore
+                let incrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
+                let setMetric = ApplicationMetrics.setCustomMetricValue instance
+
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     Logger = logger
-                    IncrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
-                    SetMetric = ApplicationMetrics.setCustomMetricValue instance
+                    IncrementMetric = incrementMetric
+                    SetMetric = setMetric
                     Box = box
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ProduceTo = produces
+                    EnableResource = enableResource
+                    DisableResource = disableResource
                 }
 
                 let composeRuntimeHandler = composeRuntimeConsumeHandlersForConnections runtimeConsumerConfigurations getErrorHandler incrementInputCount
@@ -396,6 +404,18 @@ module ApplicationBuilder =
                     |> List.map composeRuntimeHandler
                     |> Result.sequence
                     |> Result.mapError ConsumeHandlerError
+
+                let customTasks =
+                    configurationParts.CustomTasks
+                    |> CustomTasks.prepare {
+                        Logger = logger
+                        Box = box
+                        Environment = environment
+                        IncrementMetric = incrementMetric
+                        SetMetric = setMetric
+                        EnableResource = enableResource
+                        DisableResource = disableResource
+                    }
 
                 return {
                     Logger = logger
@@ -411,6 +431,7 @@ module ApplicationBuilder =
                     CustomMetrics = configurationParts.CustomMetrics
                     IntervalResourceCheckers = configurationParts.IntervalResourceCheckers
                     PreparedRuntimeParts = preparedRuntimeParts
+                    CustomTasks = customTasks
                 }
             }
             |> KafkaApplication
@@ -577,3 +598,7 @@ module ApplicationBuilder =
                 }
 
                 { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
+
+        [<CustomOperation("runCustomTask")>]
+        member __.RunCustomTask(state, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (restartPolicy, task) :: parts.CustomTasks }

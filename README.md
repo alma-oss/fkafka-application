@@ -25,6 +25,7 @@ Lmc.KafkaApplication
     └─> Run Application, which might be either Ok or with the Error
               ┌────────────────────────────────┘               └──────────────────────────────────────────<Ends with the Error>───────┐
               ├─> Before Run (Debug pattern specific configuration)                                                                   │
+              ├─> Start Custom Tasks                                                                                                  │
               └─> Run Kafka Application                                                                                               │
                    ├─> Debug Configuration          (only with debug verbosity)                                                       │
                    ├─> Enable Context Metric                                                                                          │
@@ -90,6 +91,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | registerCustomMetric | `CustomMetric` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
+| runCustomTask | `TaskErrorPolicy`, `CustomTaskRuntimeParts -> Async<unit>` | Register a CustomTask, which will be start with the application. |
 | showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
@@ -127,6 +129,22 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
     IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
     SetMetric: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
+    EnableResource: ResourceAvailability -> unit
+    DisableResource: ResourceAvailability -> unit
+}
+```
+
+### Runtime parts for Custom task
+
+In every Custom task, the first parameter you will receive is the `CustomTaskRuntimeParts`. There all _parts_ of the application, you might need on runtime.
+
+```fs
+type CustomTaskRuntimeParts = {
+    Logger: ApplicationLogger
+    Box: Box
+    Environment: Map<string, string>
+    IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }
