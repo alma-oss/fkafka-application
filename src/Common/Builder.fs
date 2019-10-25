@@ -330,6 +330,7 @@ module ApplicationBuilder =
                             {
                                 Connection = connection |> ConnectionConfiguration.toKafkaConnectionConfiguration
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
+                                Configure = None
                                 Logger = kafkaLogger runtimeConnection |> Some
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
