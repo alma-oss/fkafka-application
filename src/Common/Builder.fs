@@ -57,6 +57,7 @@ module ApplicationBuilder =
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         GraylogConnections = currentParts.GraylogConnections @ newParts.GraylogConnections
                         CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
+                        WebServerSettings = currentParts.WebServerSettings @ newParts.WebServerSettings
                     }
                 |> Configuration.result
 
@@ -433,6 +434,7 @@ module ApplicationBuilder =
                     IntervalResourceCheckers = configurationParts.IntervalResourceCheckers
                     PreparedRuntimeParts = preparedRuntimeParts
                     CustomTasks = customTasks
+                    WebServerSettings = configurationParts.WebServerSettings
                 }
             }
             |> KafkaApplication
@@ -603,3 +605,7 @@ module ApplicationBuilder =
         [<CustomOperation("runCustomTask")>]
         member __.RunCustomTask(state, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (restartPolicy, task) :: parts.CustomTasks }
+
+        [<CustomOperation("addRoute")>]
+        member __.AddRoute(state, route): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with WebServerSettings = route :: parts.WebServerSettings }

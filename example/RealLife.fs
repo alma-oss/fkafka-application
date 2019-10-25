@@ -5,6 +5,11 @@ module Program =
     open KafkaApplication
     open Logging
 
+    open Suave
+    open Suave.Filters
+    open Suave.Operators
+    open Suave.Successful
+
     let createInputKeys (InputStreamName inputStream) (event: RawEvent) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
@@ -18,7 +23,6 @@ module Program =
         ]
 
     let run () =
-
         //
         // pattern
         //
@@ -90,6 +94,14 @@ module Program =
             )
 
             showMetricsOn "/metrics"
+
+            addRoute (
+                GET >=> choose [
+                    path "/my-new-route"
+                        >=> request ((fun _ -> "Hello world!") >> OK)
+                ]
+            )
+
             showInputEventsWith createInputKeys
             showOutputEventsWith createOutputKeys
         }

@@ -145,11 +145,14 @@ module internal ApplicationMetrics =
 
     // Showing state
 
-    let showStateOnWebServerAsync instance customMetrics route =
+    let showStateOnWebServerAsync instance customMetrics (settings: WebServerPart list) route =
         let route =
             route
             |> MetricsRoute.value
 
-        instance
-        |> getFormattedMetricsForPrometheus customMetrics
-        |> Metrics.WebServer.showStateAsync route
+        let getMetrics =
+            instance
+            |> getFormattedMetricsForPrometheus customMetrics
+
+        settings
+        |> WebServer.runStateAsync route getMetrics

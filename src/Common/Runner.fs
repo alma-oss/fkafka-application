@@ -167,7 +167,7 @@ module internal ApplicationRunner =
             application |> checkResources
 
             application.MetricsRoute
-            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics)
+            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics application.WebServerSettings)
             |>! Async.Start
 
             application.Logger.Verbose "Application" "Connect producers ..."
