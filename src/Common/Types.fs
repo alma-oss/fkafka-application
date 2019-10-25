@@ -331,6 +331,8 @@ module internal CustomTasks =
         preparedTasks
         |> List.map (CustomTask.prepare runtimeParts)
 
+type internal WebServerPart = Suave.Http.HttpContext -> Async<Suave.Http.HttpContext option>
+
 //
 // Configuration / Application
 //
@@ -357,6 +359,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     KafkaChecker: Checker option
     GraylogConnections: (Logging.Graylog.Host * Logging.Graylog.Port option) list
     CustomTasks: PreparedCustomTask list
+    WebServerSettings: WebServerPart list
 }
 
 [<AutoOpen>]
@@ -384,6 +387,7 @@ module internal ConfigurationParts =
             KafkaChecker = None
             GraylogConnections = []
             CustomTasks = []
+            WebServerSettings = []
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
@@ -414,6 +418,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     IntervalResourceCheckers: ResourceMetricInInterval list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
     CustomTasks: CustomTask list
+    WebServerSettings: WebServerPart list
 }
 
 type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>

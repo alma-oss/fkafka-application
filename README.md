@@ -73,6 +73,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 
 | Function | Arguments | Description |
 | --- | --- | --- |
+| addRoute | `route: Suave.Http.HttpContext -> Async<Suave.Http.HttpContext option>` | It will register additional route to the Metrics WebServer. See example below. (_you still have to run a server by `showMetricsOn`_) |
 | checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
 | checkResourceInInterval | `checker: unit -> Metrics.ResourceStatus`, `ResourceAvailability`, `interval: int<second>` | It will register a resource which will be checked in runtime of the application in given interval. |
 | connect | `Kafka.ConnectionConfiguration` | It will register a default connection for Kafka. |
@@ -114,6 +115,24 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 - Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
 - Default `Spot` is `Zone = "common"; Bucket = "all"`.
 - Default `Checker` for kafka is default checker defined in Kafka library.
+
+### Add Route example
+```fs
+open Suave
+open Suave.Filters
+open Suave.Operators
+open Suave.Successful
+
+kafkaApplication {
+    showMetricsOn "/metrics"
+    addRoute (
+        GET >=> choose [
+            path "/my-new-route"
+                >=> request ((fun _ -> "Hello world!") >> OK)
+        ]
+    )
+}
+```
 
 ### Runtime parts for Consume Handler
 

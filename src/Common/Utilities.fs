@@ -15,6 +15,7 @@ module internal OptionOperators =
     /// Option.iter
     let inline (|>!) o f = o |>! f
 
+[<RequireQualifiedAccess>]
 module internal Map =
     /// Merge new values with the current values (replacing already defined values).
     let merge currentValues newValues =
