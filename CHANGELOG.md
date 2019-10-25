@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 7.2.0 - 2019-10-25
 - Update dependencies
 - Allow to `addRoute` to the _metrics_ WebServer
 
