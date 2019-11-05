@@ -2,7 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
-- Update ConsentsEvents and other dependencies
+
+## 8.0.0 - 2019-11-05
+- [**BC**] Update ConsentsEvents and other dependencies
 
 ## 7.2.0 - 2019-10-25
 - Update dependencies
