@@ -23,7 +23,7 @@ module DeriverBuilder =
                     | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts)
 
                 events
-                |> Seq.collect deriveEvent
+                |> Seq.collect (deriveEvent app.ProcessedBy)
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
             configuration
