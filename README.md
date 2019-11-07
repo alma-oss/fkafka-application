@@ -97,6 +97,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
+| useDockerImageVersion | `DockerImageVersion` | |
+| useGitCommit | `GitCommit` | |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useGroupIdFor | `connectionName: string`, `GroupId` | Set group id for connection. |
 | useInstance | `Instance` | |
@@ -142,6 +144,7 @@ In every Consume Handler, the first parameter you will receive is the `ConsumeRu
 type ConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
     Box: Box
+    ProcessedBy: Events.ProcessedBy
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -180,7 +183,9 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | connect | `connection configuration: EnvironmentConnectionConfiguration` | It will register a default connection for Kafka. Environment Connection configuration looks the same as Connection Configuration for Kafka, but it just has the variable names of the BrokerList and Topic. |
 | connectManyToBroker | `EnvironmentManyTopicsConnectionConfiguration` | It will register a named connections for Kafka. Connection name will be the same as the topic name. |
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will register a named connection for Kafka. |
+| dockerImageVersion | `variable name: string` | It will parse DockerImageVersion from the environment variable. |
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
+| gitCommit | `variable name: string` | It will parse GitCommit from the environment variable. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
@@ -208,7 +213,9 @@ open KafkaApplication
 [<EntryPoint>]
 let main argv =
     kafkaApplication {
-        instance { Domain="my"; Context="simple"; Purpose="example"; Version="local" }
+        useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useGitCommit (GitCommit "abc123")
+        useDockerImageVersion (DockerImageVersion "42-2019")
 
         connect {
             BrokerList = BrokerList "127.0.0.1:9092"
@@ -237,7 +244,7 @@ let main argv =
     let brokerList = BrokerList "127.0.0.1:9092"
 
     kafkaApplication {
-        instance { Domain="my"; Context="simple"; Purpose="example"; Version="local" }
+        useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
 
         // this will create only default connection, which can be consumed by the default `consume` function only
         connect {
@@ -286,7 +293,7 @@ let main argv =
     let brokerList = BrokerList "127.0.0.1:9092"
 
     kafkaApplication {
-        instance { Domain="my"; Context="simple"; Purpose="example"; Version="local" }
+        useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
 
         connect { BrokerList = brokerList; Topic = StreamName "my-input-stream" }   // default connection
         connectTo "application" { BrokerList = brokerList; Topic = StreamName "my-application-stream" }

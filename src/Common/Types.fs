@@ -3,6 +3,7 @@ namespace KafkaApplication
 open Kafka
 open Metrics
 open ServiceIdentification
+open Events
 
 [<Measure>] type Second
 [<Measure>] type Attempt
@@ -230,6 +231,8 @@ type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> SerializedEvent
 type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
     Box: Box
+    GitCommit: GitCommit
+    DockerImageVersion: DockerImageVersion
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -243,6 +246,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
 type ConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
     Box: Box
+    ProcessedBy: ProcessedBy
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -259,6 +263,11 @@ module internal PreparedConsumeRuntimeParts =
         {
             Logger = preparedRuntimeParts.Logger
             Box = preparedRuntimeParts.Box
+            ProcessedBy = {
+                Instance = preparedRuntimeParts.Box |> Box.instance
+                Commit = GitCommit ""
+                ImageVersion = DockerImageVersion ""
+            }
             Environment = preparedRuntimeParts.Environment
             Connections = preparedRuntimeParts.Connections
             ConsumerConfigurations = preparedRuntimeParts.ConsumerConfigurations
@@ -341,6 +350,8 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Logger: ApplicationLogger
     Environment: Map<string, string>
     Instance: Instance option
+    GitCommit: GitCommit option
+    DockerImageVersion: DockerImageVersion option
     Spot: Spot option
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
@@ -369,6 +380,8 @@ module internal ConfigurationParts =
             Logger = ApplicationLogger.defaultLogger
             Environment = Map.empty
             Instance = None
+            GitCommit = None
+            DockerImageVersion = None
             Spot = None
             GroupId = None
             GroupIds = Map.empty

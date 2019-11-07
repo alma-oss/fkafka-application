@@ -7,6 +7,7 @@ module EnvironmentBuilder =
     open ServiceIdentification
     open Kafka
     open KafkaApplication
+    open Events
     open ApplicationBuilder.KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =
@@ -163,6 +164,30 @@ module EnvironmentBuilder =
                     return { parts with Instance = Some instance }
                 }
                 |> Result.mapError InstanceError
+
+        [<CustomOperation("gitCommit")>]
+        member __.GitCommit(state, gitCommitVariableName): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! gitCommitString =
+                        gitCommitVariableName
+                        |> getEnvironmentValue parts id EnvironmentError.VariableNotFoundError
+
+                    return { parts with GitCommit = Some (GitCommit gitCommitString) }
+                }
+                |> Result.mapError EnvironmentError
+
+        [<CustomOperation("dockerImageVersion")>]
+        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! dockerImageVersionString =
+                        dockerImageVersion
+                        |> getEnvironmentValue parts id EnvironmentError.VariableNotFoundError
+
+                    return { parts with DockerImageVersion = Some (DockerImageVersion dockerImageVersionString) }
+                }
+                |> Result.mapError EnvironmentError
 
         [<CustomOperation("spot")>]
         member __.Spot(state, spotVariableName): Configuration<'InputEvent, 'OutputEvent> =
