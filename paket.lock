@@ -232,8 +232,8 @@ NUGET
       System.Runtime (>= 4.3)
     System.Threading.Tasks.Dataflow (4.10)
     System.ValueTuple (4.5)
-  remote: paket-files/git_stash.int.lmc.cz7999/archi/nuget-server/nuget
-    Lmc.ConsentEvents (3.1.0)
+  remote: paket-files/git_bitbucket.lmc.cz7999/archi/nuget-server/nuget
+    Lmc.ConsentEvents (4.0.0)
       FSharp.Core (>= 4.7)
       FSharp.Data (>= 3.3.2)
       Lmc.ContractAggregate (>= 2.2)
@@ -270,13 +270,13 @@ NUGET
       Lmc.ErrorHandling (>= 1.4.2)
       Lmc.ServiceIdentification (>= 2.5)
       Suave (>= 2.5.5)
-    Lmc.ServiceIdentification (3.1.0)
+    Lmc.ServiceIdentification (3.2.0)
       FSharp.Core (>= 4.7)
     Lmc.State (2.0.0)
       FSharp.Core (>= 4.6.2)
 GIT
-  remote: ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git
-     (ccac5ff1035fcc08f8f41e835572f8920eef5f29)
+  remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
+     (5e45a8ad9e510cc34fe54b72573ca8cdc62cc0b0)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
@@ -434,7 +434,7 @@ NUGET
       System.Security.AccessControl (>= 4.6) - restriction: || (&& (>= monoandroid) (< netstandard2.0)) (>= monotouch) (&& (< net46) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.0) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
       System.Security.Principal.Windows (>= 4.6) - restriction: || (&& (>= monoandroid) (< netstandard2.0)) (>= monotouch) (&& (< net46) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.0) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
     Mono.Posix.NETStandard (1.0) - restriction: || (>= net462) (>= netstandard2.0)
-    MSBuild.StructuredLogger (2.0.110) - restriction: || (>= net462) (>= netstandard2.0)
+    MSBuild.StructuredLogger (2.0.152) - restriction: || (>= net462) (>= netstandard2.0)
       Microsoft.Build (>= 14.3) - restriction: >= net46
       Microsoft.Build (>= 15.8.166) - restriction: && (< net46) (>= netstandard2.0)
       Microsoft.Build.Framework (>= 14.3) - restriction: >= net46

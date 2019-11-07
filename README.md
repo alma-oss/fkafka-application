@@ -8,7 +8,7 @@ It contains computation expressions to help with building this kind of applicati
 
 Add following into `paket.dependencies`
 ```
-git ssh://git@stash.int.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
+git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
 nuget Lmc.KafkaApplication
 ```
@@ -64,9 +64,9 @@ Lmc.KafkaApplication
 Definitions for patterns could is in the [Confluence](https://confluence.int.lmc.cz/display/ARCH/Event+Driven+Architecture).
 You can simply use predefined patterns for application you want.
 
-- [FilterContentFilter](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Filter/README.md)
-- [ContentBasedRouter](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Router/README.md)
-- [Deriver](https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Deriver/README.md)
+- [FilterContentFilter](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Filter/README.md)
+- [ContentBasedRouter](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Router/README.md)
+- [Deriver](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Deriver/README.md)
 
 ## Custom Kafka Application functions
 _NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computation expression._

@@ -6,7 +6,7 @@
     <OutputType>Library</OutputType>
     <PackageId>Lmc.KafkaApplication</PackageId>
     <Version>8.0.0</Version>
-    <RepositoryUrl>https://stash.int.lmc.cz/projects/ARCHI/repos/fkafka-application/browse</RepositoryUrl>
+    <RepositoryUrl>https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

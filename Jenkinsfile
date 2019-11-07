@@ -13,7 +13,7 @@ pipeline {
     stages {
         stage('Library') {
             steps {
-                sh "docker build --no-cache -t ${libraryImage} ."
+                sh "docker build --pull --no-cache -t ${libraryImage} ."
             }
         }
 
