@@ -10,7 +10,7 @@ module internal Metrics =
             ("input_stream", inputStream |> StreamName.value)
         ]
 
-    let createKeysForOutputEvent (OutputStreamName outputStream) { Raw = event } =
+    let createKeysForOutputEvent (OutputStreamName outputStream) (ProcessedEventToRoute ({ Raw = event }, _)) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
             ("output_stream", outputStream |> StreamName.value)

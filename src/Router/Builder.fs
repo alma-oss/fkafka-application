@@ -11,7 +11,7 @@ module ContentBasedRouterBuilder =
         let private addRouterConfiguration
             router
             routeToBrokerList
-            (configuration: Configuration<EventToRoute, EventToRoute>): Result<Configuration<EventToRoute, EventToRoute>, ContentBasedRouterApplicationError> =
+            (configuration: Configuration<EventToRoute, ProcessedEventToRoute>): Result<Configuration<EventToRoute, ProcessedEventToRoute>, ContentBasedRouterApplicationError> =
             result {
                 let outputStreams = router |> Router.getOutputStreams
 
@@ -28,24 +28,22 @@ module ContentBasedRouterBuilder =
                     outputStreams
                     |> List.map StreamName.value
 
-                let routerConsumeHandler (app: ConsumeRuntimeParts<EventToRoute>) (events: EventToRoute seq) =
+                let routerConsumeHandler (app: ConsumeRuntimeParts<ProcessedEventToRoute>) (events: EventToRoute seq) =
                     let routeEvent =
                         ContentBasedRouter.routeEvent
                             (app.Logger.VeryVerbose "Routing")
                             (fun topic -> app.ProduceTo.[topic |> StreamName.value])
+                            app.ProcessedBy
                             router
 
                     events
                     |> Seq.iter routeEvent
 
-                let fromDomain: FromDomain<EventToRoute> =
-                    fun _ -> EventToRoute.serialized
-
                 return
                     configuration
                     |> addParseEvent EventToRoute.parse
                     |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreamTopics }
-                    |> addProduceToMany outputStreamNames fromDomain
+                    |> addProduceToMany outputStreamNames (ProcessedEventToRoute.fromDomain)
                     |> addDefaultConsumeHandler routerConsumeHandler
                     |> addCreateInputEventKeys Metrics.createKeysForInputEvent
                     |> addCreateOutputEventKeys Metrics.createKeysForOutputEvent
@@ -53,8 +51,8 @@ module ContentBasedRouterBuilder =
             |> Result.mapError RouterConfigurationError
 
         let build
-            (buildApplication: Configuration<EventToRoute, EventToRoute> -> KafkaApplication<EventToRoute, EventToRoute>)
-            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<EventToRoute, EventToRoute>): ContentBasedRouterApplication<EventToRoute, EventToRoute> =
+            (buildApplication: Configuration<EventToRoute, ProcessedEventToRoute> -> KafkaApplication<EventToRoute, ProcessedEventToRoute>)
+            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<EventToRoute, ProcessedEventToRoute>): ContentBasedRouterApplication<EventToRoute, ProcessedEventToRoute> =
 
             result {
                 let! routerParts = state

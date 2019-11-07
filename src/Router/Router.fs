@@ -8,17 +8,20 @@ module internal ContentBasedRouter =
     let private formatLogMessage (EventName eventName) (streamName: StreamName) =
         (sprintf "Route event %s to %A ..." eventName streamName)
 
-    let private sendToStream log produceTo eventToRoute (stream: StreamName) =
+    let private sendToStream log produceTo eventToRoute processedBy (stream: StreamName) =
         log <| sprintf "-> Sending to stream %A ..." stream
-        eventToRoute |> produceTo stream
 
-    let routeEvent log produce router eventToRoute =
+        eventToRoute
+        |> EventToRoute.route processedBy
+        |> produceTo stream
+
+    let routeEvent log produce processedBy router eventToRoute =
         let eventType = eventToRoute.Raw.Event
 
         router
         |> Router.getStreamFor eventType
         |>! (
             tee (formatLogMessage eventType >> log)
-            >> tee (sendToStream log produce eventToRoute)
+            >> tee (sendToStream log produce eventToRoute processedBy)
             >> ignore
         )

@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Common kafka application -->
     <Compile Include="src/Common/Common.fs" />
     <Compile Include="src/Common/Logger.fs" />

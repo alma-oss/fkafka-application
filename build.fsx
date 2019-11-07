@@ -6,6 +6,15 @@ open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
 
+// --------------------------------------------------------------------------------------
+// Information about the project to be used at NuGet and in AssemblyInfo files
+// --------------------------------------------------------------------------------------
+
+let project = "KafkaApplication"
+let summary = "Framework for kafka application. It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc.."
+
+let release = ReleaseNotes.parse (System.IO.File.ReadAllLines "CHANGELOG.md" |> Seq.filter ((<>) "## Unreleased"))
+
 // ===============================
 // === F# / Library fake build ===
 // ===============================
@@ -52,6 +61,36 @@ Target.create "Clean" (fun p ->
         |> Shell.cleanDirs
 )
 
+Target.create "AssemblyInfo" (fun _ ->
+    let getAssemblyInfoAttributes projectName =
+        [
+            AssemblyInfo.Title projectName
+            AssemblyInfo.Product project
+            AssemblyInfo.Description summary
+            AssemblyInfo.Version release.AssemblyVersion
+            AssemblyInfo.FileVersion release.AssemblyVersion
+            AssemblyInfo.InternalsVisibleTo "tests"
+        ]
+
+    let getProjectDetails projectPath =
+        let projectName = System.IO.Path.GetFileNameWithoutExtension(projectPath)
+        (
+            projectPath,
+            projectName,
+            System.IO.Path.GetDirectoryName(projectPath),
+            (getAssemblyInfoAttributes projectName)
+        )
+
+    !! "**/*.*proj"
+    -- "example/**/*.*proj"
+    |> Seq.map getProjectDetails
+    |> Seq.iter (fun (projFileName, _, folderName, attributes) ->
+        match projFileName with
+        | proj when proj.EndsWith("fsproj") -> AssemblyInfoFile.createFSharp (folderName </> "AssemblyInfo.fs") attributes
+        | _ -> ()
+    )
+)
+
 Target.create "Build" (fun _ ->
     !! "**/*.*proj"
     -- "example/**/*.*proj"
@@ -90,7 +129,7 @@ Target.create "Release" (fun _ ->
 )
 
 Target.create "Tests" (fun _ ->
-    Trace.tracefn "There are no tests yet."
+    DotnetCore.runOrFail "run" "tests"
 )
 
 Target.create "Watch" (fun _ ->
@@ -98,6 +137,7 @@ Target.create "Watch" (fun _ ->
 )
 
 "Clean"
+    ==> "AssemblyInfo"
     ==> "Build"
     ==> "Lint"
     ==> "Tests"

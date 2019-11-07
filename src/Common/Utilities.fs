@@ -45,4 +45,36 @@ module internal Serializer =
         let serialize obj =
             JsonConvert.SerializeObject obj
 
+        let fixSerializedInnerData serialized =
+            serialized
+            |> String.replace "\"{" "{"
+            |> String.replace "}\"" "}"
+            |> String.replace "\\\"" "\""
+
+        let removeNullFields nullableFields serialized =
+            nullableFields
+            |> List.fold (fun serialized field ->
+                serialized
+                |> Regex.replace (sprintf "(\"%s\":null,?)" field) ""
+            ) serialized
+
+        let serializeWithSerializedData obj =
+            obj
+            |> serialize
+            |> fixSerializedInnerData
+
     let toJson = Serialize Json.serialize
+    let toJsonWithSerializedData = Serialize Json.serializeWithSerializedData
+
+    /// When serialized json is added to the Record and then the Record is serialized again, inner json will be in wrong format
+    /// <summary>
+    /// Example:
+    /// let inner = { Foo = "Bar" } |> serialize    ---> "{"Foo":"Bar"}"
+    /// let outer =
+    ///     { Serialized = inner }
+    ///     |> serialize                            ---> "{"Serialized":"{\"Foo\":\"Bar\"}"}"
+    ///     |> fixJsonSerializedInnerData           ---> "{"Serialized":{"Foo":"Bar"}}"
+    /// </summary>
+    let fixJsonSerializedInnerData = Json.fixSerializedInnerData
+
+    let removeNullFields = Json.removeNullFields

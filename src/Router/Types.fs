@@ -2,6 +2,7 @@ namespace KafkaApplication.Router
 
 open Kafka
 open KafkaApplication
+open Events
 
 //
 // Event data
@@ -10,9 +11,11 @@ open KafkaApplication
 type SerializedEvent = SerializedEvent of string
 
 type EventToRoute = {
-    Serialized: SerializedEvent
+    Serialized: SerializedEvent // todo - deprecated? to remove?
     Raw: RawEvent
 }
+
+type ProcessedEventToRoute = ProcessedEventToRoute of EventToRoute * ProcessedBy
 
 [<RequireQualifiedAccess>]
 module internal EventToRoute =
@@ -24,6 +27,111 @@ module internal EventToRoute =
             Serialized = SerializedEvent message
             Raw = message |> RawEvent.parse
         }
+
+    let route processedBy event =
+        ProcessedEventToRoute (event, processedBy)
+
+
+open System
+type RawEventDto = {
+    schema: int
+    id: Guid
+    correlation_id: Guid
+    causation_id: Guid
+    timestamp: string
+    event: string
+    domain: string
+    context: string
+    purpose: string
+    version: string
+    zone: string
+    bucket: string
+    meta_data: string
+    resource: string
+    key_data: string
+    domain_data: string
+}
+
+module Resource =
+    let toDto (resource: Resource) =
+        {
+            name = resource.Name
+            href = resource.Href
+        }
+
+module RawData =
+    open FSharp.Data
+
+    let toJson (RawData data) =
+        data.ToString(JsonSaveOptions.DisableFormatting)
+
+[<RequireQualifiedAccess>]
+module internal ProcessedEventToRoute =
+    open System
+    open FSharp.Data
+
+    open Kafka
+    open ServiceIdentification
+
+    let private toDto (Serialize serialize) (ProcessedEventToRoute (event, processedBy)) =
+        let serializeMetaData serialize metaData =
+            match metaData with
+            | Some rawMetaData ->
+                let meta =
+                    rawMetaData
+                    |> MetaData.parse
+                    |> Result.orFail
+
+                match meta with
+                | OnlyCreatedAt createdAt
+                | CreatedAndProcessed (createdAt, _) ->
+                    (
+                        createdAt,
+                        {
+                            ProcessedAt = DateTime.Now
+                            ProcessedBy = processedBy
+                        }
+                    )
+                    |> MetaDataDto.fromProcessed
+                |> serialize
+            | _ -> null
+
+        let event = event.Raw
+
+        ["meta_data"; "resource"; "domain_data"],
+        {
+            schema = event.Schema
+            id = event.Id |> EventId.value
+            correlation_id = event.CorrelationId |> CorrelationId.value
+            causation_id = event.CausationId |> CausationId.value
+            timestamp = event.Timestamp
+            event = event.Event |> EventName.value
+            domain = event.Domain |> Domain.value
+            context = event.Context |> Context.value
+            purpose = event.Purpose |> Purpose.value
+            version = event.Version |> Version.value
+            zone = event.Zone |> Zone.value
+            bucket = event.Bucket |> Bucket.value
+            meta_data = event.MetaData |> serializeMetaData serialize
+            resource =
+                match event.Resource with
+                | Some resource -> resource |> Resource.toDto |> serialize
+                | _ -> null
+            key_data = event.KeyData |> RawData.toJson
+            domain_data =
+                match event.DomainData with
+                | Some domainData -> domainData |> RawData.toJson
+                | _ -> null
+        }
+
+    let fromDomain: FromDomain<ProcessedEventToRoute> =
+        fun (Serialize serialize) event ->
+            let (nullableFields, dto) = event |> toDto (Serialize serialize)
+
+            dto
+            |> serialize
+            |> Serializer.fixJsonSerializedInnerData
+            |> Serializer.removeNullFields nullableFields
 
 //
 // Router

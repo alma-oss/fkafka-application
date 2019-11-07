@@ -40,8 +40,8 @@ module KafkaApplication =
         FilterBuilder(buildFilter >> FilterContentFilter)
 
     let contentBasedRouter =
-        let buildApplication: Configuration<EventToRoute, EventToRoute> -> KafkaApplication<EventToRoute, EventToRoute> = KafkaApplicationBuilder.buildApplication Producer.prepareProducer Producer.produce
-        let buildRouter: ContentBasedRouterApplicationConfiguration<EventToRoute, EventToRoute> -> ContentBasedRouterApplication<EventToRoute, EventToRoute> = ContentBasedRouterApplicationBuilder.build buildApplication
+        let buildApplication: Configuration<EventToRoute, ProcessedEventToRoute> -> KafkaApplication<EventToRoute, ProcessedEventToRoute> = KafkaApplicationBuilder.buildApplication Producer.prepareProducer Producer.produce
+        let buildRouter: ContentBasedRouterApplicationConfiguration<EventToRoute, ProcessedEventToRoute> -> ContentBasedRouterApplication<EventToRoute, ProcessedEventToRoute> = ContentBasedRouterApplicationBuilder.build buildApplication
         ContentBasedRouterBuilder(buildRouter >> ContentBasedRouter)
 
     let deriver<'InputEvent, 'OutputEvent> =
