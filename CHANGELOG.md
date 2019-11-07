@@ -4,6 +4,7 @@
 ## Unreleased
 - Add `GitCommit` to the configuration
 - Add `DockerImageVersion` to the configuration
+- [**BC**] Change patterns to add `processedBy` information to the processed events
 
 ## 8.0.0 - 2019-11-05
 - [**BC**] Update ConsentsEvents and other dependencies

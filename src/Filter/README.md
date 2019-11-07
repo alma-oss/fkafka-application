@@ -21,6 +21,12 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 | getIntentBy | `GetIntent: 'InputEvent -> Intent option` | It will _register_ a function to get an Intent from the Input Event - to be used in Filter. Otherwise Intent is ignored. |
 | parseConfiguration | `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
+### FilterContent
+It is a function, which is responsible for filtering events.
+```fs
+type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+```
+
 ## Filter Configuration
 
 Filter will use configuration to filter input events. Values in configuration determines, what is allowed. If section is empty, all values are allowed.

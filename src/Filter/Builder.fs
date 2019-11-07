@@ -21,7 +21,7 @@ module FilterBuilder =
             let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
                 events
                 |> Seq.choose (filterByConfiguration getCommonEvent getIntent filterConfiguration)
-                |> Seq.collect filterContentFromInputEvent
+                |> Seq.collect (filterContentFromInputEvent app.ProcessedBy)
                 |> Seq.iter app.ProduceTo.[filterOutputStream]
 
             configuration
