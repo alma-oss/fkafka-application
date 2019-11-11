@@ -5,25 +5,55 @@ open Fake.IO
 open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
+open Fake.Tools.Git
 
-// --------------------------------------------------------------------------------------
-// Information about the project to be used at NuGet and in AssemblyInfo files
-// --------------------------------------------------------------------------------------
+type ToolDir =
+    /// Global tool dir must be in PATH - ${PATH}:/root/.dotnet/tools
+    | Global
+    /// Just a dir name, the location will be used as: ./{LocalDirName}
+    | Local of string
+
+// ========================================================================================================
+// === F# / Library fake build =============================================================== 2019-11-11 =
+// --------------------------------------------------------------------------------------------------------
+// Options:
+//  - no-clean   - disables clean of dirs in the first step (required on CI)
+//  - no-lint    - lint will be executed, but the result is not validated
+// --------------------------------------------------------------------------------------------------------
+// Table of contents:
+//      1. Information about project, configuration
+//      2. Utilities, DotnetCore functions
+//      3. FAKE targets
+//      4. FAKE targets hierarchy
+// ========================================================================================================
+
+// --------------------------------------------------------------------------------------------------------
+// 1. Information about the project to be used at NuGet and in AssemblyInfo files and other FAKE configuration
+// --------------------------------------------------------------------------------------------------------
 
 let project = "KafkaApplication"
 let summary = "Framework for kafka application. It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc.."
 
 let release = ReleaseNotes.parse (System.IO.File.ReadAllLines "CHANGELOG.md" |> Seq.filter ((<>) "## Unreleased"))
+let gitCommit = Information.getCurrentSHA1(".")
+let gitBranch = Information.getBranchName(".")
 
-// ===============================
-// === F# / Library fake build ===
-// ===============================
+let toolsDir = Global
 
-let sourceDir = "."
+// --------------------------------------------------------------------------------------------------------
+// 2. Utilities, DotnetCore functions, etc.
+// --------------------------------------------------------------------------------------------------------
 
-let tee f a =
-    f a
-    a
+[<AutoOpen>]
+module private Utils =
+    let tee f a =
+        f a
+        a
+
+    let skipOn option action p =
+        if p.Context.Arguments |> Seq.contains option
+        then Trace.tracefn "Skipped ..."
+        else action p
 
 module private DotnetCore =
     let run cmd workingDir =
@@ -40,25 +70,51 @@ module private DotnetCore =
         )
         |> ignore
 
-    let runInSrc cmd = run cmd sourceDir
-    let runInSrcOrFail cmd = runOrFail cmd sourceDir
+    let runInRoot cmd = run cmd "."
+    let runInRootOrFail cmd = runOrFail cmd "."
 
-    let installOrUpdateTool tool =
-        // Global tool dir must be in PATH - ${PATH}:/root/.dotnet/tools
+    let installOrUpdateTool toolDir tool =
         let toolCommand action =
-            sprintf "tool %s --global %s" action tool
+            match toolDir with
+            | Global -> sprintf "tool %s --global %s" action tool
+            | Local dir -> sprintf "tool %s --tool-path ./%s %s" action dir tool
 
-        match runInSrc (toolCommand "install") with
-        | { ExitCode = code } when code <> 0 -> runInSrcOrFail (toolCommand "update")
+        match runInRoot (toolCommand "install") with
+        | { ExitCode = code } when code <> 0 -> runInRootOrFail (toolCommand "update")
         | _ -> ()
 
-Target.create "Clean" (fun p ->
-    if p.Context.Arguments |> Seq.contains "no-clean"
-    then Trace.tracefn "Clean is skipped"
-    else
-        !! "**/bin"
-        ++ "**/obj"
-        |> Shell.cleanDirs
+    let execute command args (dir: string) =
+        let cmd =
+            sprintf "%s/%s"
+                (dir.TrimEnd('/'))
+                command
+
+        let processInfo = System.Diagnostics.ProcessStartInfo(cmd)
+        processInfo.RedirectStandardOutput <- true
+        processInfo.RedirectStandardError <- true
+        processInfo.UseShellExecute <- false
+        processInfo.CreateNoWindow <- true
+        processInfo.Arguments <- args |> String.concat " "
+
+        use proc =
+            new System.Diagnostics.Process(
+                StartInfo = processInfo
+            )
+        if proc.Start() |> not then failwith "Process was not started."
+        proc.WaitForExit()
+
+        if proc.ExitCode <> 0 then failwithf "Command '%s' failed in %s." command dir
+        (proc.StandardOutput.ReadToEnd(), proc.StandardError.ReadToEnd())
+
+// --------------------------------------------------------------------------------------------------------
+// 3. Targets for FAKE
+// --------------------------------------------------------------------------------------------------------
+
+Target.create "Clean" <| skipOn "no-clean" (fun _ ->
+    !! "./**/bin/Release"
+    ++ "./**/bin/Debug"
+    ++ "./**/obj"
+    |> Shell.cleanDirs
 )
 
 Target.create "AssemblyInfo" (fun _ ->
@@ -70,6 +126,8 @@ Target.create "AssemblyInfo" (fun _ ->
             AssemblyInfo.Version release.AssemblyVersion
             AssemblyInfo.FileVersion release.AssemblyVersion
             AssemblyInfo.InternalsVisibleTo "tests"
+            AssemblyInfo.Metadata("gitbranch", gitBranch)
+            AssemblyInfo.Metadata("gitcommit", gitCommit)
         ]
 
     let getProjectDetails projectPath =
@@ -98,49 +156,62 @@ Target.create "Build" (fun _ ->
 )
 
 Target.create "Lint" (fun p ->
-    DotnetCore.installOrUpdateTool "dotnet-fsharplint"
+    DotnetCore.installOrUpdateTool toolsDir "dotnet-fsharplint"
 
-    let checkResult (result: ProcessResult) =
+    let checkResult (messages: string list) =
         let rec check: string list -> unit = function
             | [] -> failwithf "Lint does not yield a summary."
-            | head::rest ->
-                if head.Contains("Summary") then
+            | head :: rest ->
+                if head.Contains "Summary" then
                     match head.Replace("= ", "").Replace(" =", "").Replace("=", "").Replace("Summary: ", "") with
-                    | "0 warnings" -> ()
+                    | "0 warnings" -> Trace.tracefn "Lint: OK"
                     | warnings ->
                         if p.Context.Arguments |> List.contains "no-lint"
                         then Trace.traceErrorfn "Lint ends up with %s." warnings
                         else failwithf "Lint ends up with %s." warnings
                 else check rest
-        result.Messages
+        messages
         |> List.rev
         |> check
 
     !! "**/*.fsproj"
-    |> Seq.map (sprintf "fsharplint -f %s" >> DotnetCore.runInSrc)
+    |> Seq.map (fun fsproj ->
+        match toolsDir with
+        | Global ->
+            DotnetCore.runInRoot (sprintf "fsharplint -f %s" fsproj)
+            |> fun (result: ProcessResult) -> result.Messages
+        | Local dir ->
+            DotnetCore.execute "dotnet-fsharplint" ["-f"; fsproj] dir
+            |> fst
+            |> tee (Trace.tracefn "%s")
+            |> String.split '\n'
+            |> Seq.toList
+    )
     |> Seq.iter checkResult
 )
 
+Target.create "Tests" (fun _ ->
+    if !! "tests/*.fsproj" |> Seq.isEmpty
+    then Trace.tracefn "There are no tests yet."
+    else DotnetCore.runOrFail "run" "tests"
+)
+
 Target.create "Release" (fun _ ->
-    DotnetCore.runInSrcOrFail "pack"
+    DotnetCore.runInRootOrFail "pack"
 
     !! "**/bin/**/*.nupkg"
     |> Seq.iter (Shell.moveFile "release")
 )
 
-Target.create "Tests" (fun _ ->
-    DotnetCore.runOrFail "run" "tests"
-)
-
-Target.create "Watch" (fun _ ->
-    DotnetCore.runInSrcOrFail "watch run"
-)
+// --------------------------------------------------------------------------------------------------------
+// 4. FAKE targets hierarchy
+// --------------------------------------------------------------------------------------------------------
 
 "Clean"
     ==> "AssemblyInfo"
     ==> "Build"
     ==> "Lint"
     ==> "Tests"
-    ==> "Release" <=> "Watch"
+    ==> "Release"
 
 Target.runOrDefaultWithArguments "Build"

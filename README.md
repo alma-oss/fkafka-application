@@ -349,8 +349,3 @@ useGroupIdFor "connection" "groupId-for-connection"
 ```bash
 fake build
 ```
-
-### Watch
-```bash
-fake build target watch
-```
