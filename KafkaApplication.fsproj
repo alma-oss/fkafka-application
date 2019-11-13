@@ -40,7 +40,6 @@
     <!-- Content-Based Router pattern application -->
     <Compile Include="src/Router/Types.fs" />
     <Compile Include="src/Router/Router.fs" />
-    <Compile Include="src/Router/Metrics.fs" />
     <Compile Include="src/Router/Builder.fs" />
     <Compile Include="src/Router/Runner.fs" />
   </ItemGroup>

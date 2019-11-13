@@ -4,77 +4,81 @@ module ContentBasedRouterBuilder =
     open Kafka
     open KafkaApplication
     open KafkaApplication.PatternBuilder
+    open KafkaApplication.PatternMetrics
     open ApplicationBuilder
-    open Router
+    open global.Option.Operators
+    open global.Result.Operators
 
     module internal ContentBasedRouterApplicationBuilder =
-        let private addRouterConfiguration
+        let private addRouterConfiguration<'InputEvent, 'OutputEvent>
             router
             routeToBrokerList
-            (configuration: Configuration<EventToRoute, ProcessedEventToRoute>): Result<Configuration<EventToRoute, ProcessedEventToRoute>, ContentBasedRouterApplicationError> =
+            (routeEventHandler: RouteEventHandler<'InputEvent, 'OutputEvent>)
+            (fromDomain: FromDomain<'OutputEvent>)
+            (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
+            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
+            (configuration: Configuration<'InputEvent, 'OutputEvent>): Result<Configuration<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError> =
             result {
-                let outputStreams = router |> Router.getOutputStreams
+                let outputStreams = router |> Router.Configuration.getOutputStreams
 
                 let! outputStreamTopics =
                     outputStreams
                     |> List.map (function
-                        | (StreamName streamName) -> Error (RouterError.StreamNameIsNotInstance streamName)
+                        | StreamName streamName -> Error (RouterError.StreamNameIsNotInstance streamName)
                         | Instance instance -> Ok instance
                     )
-                    |> Result.sequence
-                    |> Result.mapError RouterError
+                    |> Result.sequence <@> RouterError
 
                 let outputStreamNames =
                     outputStreams
                     |> List.map StreamName.value
 
-                let routerConsumeHandler (app: ConsumeRuntimeParts<ProcessedEventToRoute>) (events: EventToRoute seq) =
+                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
                     let routeEvent =
-                        ContentBasedRouter.routeEvent
+                        match routeEventHandler with
+                        | Simple routeEvent -> routeEvent
+                        | WithApplication routeEvent -> routeEvent (app |> PatternRuntimeParts.fromConsumeParts)
+
+                    let produceRoutedEvent =
+                        Router.Routing.routeEvent
                             (app.Logger.VeryVerbose "Routing")
-                            (fun topic -> app.ProduceTo.[topic |> StreamName.value])
-                            app.ProcessedBy
+                            (Output >> getCommonEvent >> CommonEvent.eventType)
+                            (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
 
                     events
-                    |> Seq.iter routeEvent
+                    |> Seq.iter (routeEvent app.ProcessedBy >> produceRoutedEvent)
 
                 return
                     configuration
-                    |> addParseEvent EventToRoute.parse
                     |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreamTopics }
-                    |> addProduceToMany outputStreamNames (ProcessedEventToRoute.fromDomain)
+                    |> addProduceToMany outputStreamNames fromDomain
                     |> addDefaultConsumeHandler routerConsumeHandler
-                    |> addCreateInputEventKeys Metrics.createKeysForInputEvent
-                    |> addCreateOutputEventKeys Metrics.createKeysForOutputEvent
+                    |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
+                    |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
             }
-            |> Result.mapError RouterConfigurationError
+            <@> RouterConfigurationError
 
         let build
-            (buildApplication: Configuration<EventToRoute, ProcessedEventToRoute> -> KafkaApplication<EventToRoute, ProcessedEventToRoute>)
-            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<EventToRoute, ProcessedEventToRoute>): ContentBasedRouterApplication<EventToRoute, ProcessedEventToRoute> =
+            (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
+            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent>): ContentBasedRouterApplication<'InputEvent, 'OutputEvent> =
 
             result {
                 let! routerParts = state
 
-                let! router =
-                    routerParts.RouterConfiguration
-                    |> Result.ofOption NotSet
-                    |> Result.mapError RouterConfigurationError
+                let createCustomValues = routerParts.CreateCustomValues <?=> (fun _ -> [])
 
-                let! routeToBrokerList =
-                    routerParts.RouteToBrokerList
-                    |> Result.ofOption OutputBrokerListNotSet
-                    |> Result.mapError RouterConfigurationError
+                let! router = routerParts.RouterConfiguration <?!> NotSet <@> RouterConfigurationError
+                let! routeToBrokerList = routerParts.RouteToBrokerList <?!> OutputBrokerListNotSet <@> RouterConfigurationError
+                let! fromDomain = routerParts.FromDomain <?!> MissingFromDomain <@> RouterConfigurationError
+                let! routeEvent = routerParts.RouteEvent <?!> MissingRouteEvent <@> RouterConfigurationError
+                let! getCommonEventData = routerParts.GetCommonEvent <?!> MissingGetCommonEvent <@> RouterConfigurationError
 
-                let! configuration =
-                    routerParts.Configuration
-                    |> Result.ofOption ConfigurationNotSet
-                    |> Result.mapError ApplicationConfigurationError
+                let! configuration = routerParts.Configuration <?!> ConfigurationNotSet <@> ApplicationConfigurationError
 
                 let! routerConfiguration =
                     configuration
-                    |> addRouterConfiguration router routeToBrokerList
+                    |> addRouterConfiguration router routeToBrokerList routeEvent fromDomain createCustomValues getCommonEventData
 
                 let kafkaApplication =
                     routerConfiguration
@@ -106,48 +110,56 @@ module ContentBasedRouterBuilder =
 
         [<CustomOperation("parseConfiguration")>]
         member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
+            state >>= fun routerParts ->
                 result {
                     let! routerPath =
                         configurationPath
-                        |> FileParser.parseFromPath id (sprintf "Routing configuration was not found at \"%s\".")
-                        |> Result.mapError NotFound
+                        |> FileParser.parseFromPath id (sprintf "Routing configuration was not found at \"%s\".") <@> NotFound
 
                     let! router =
                         routerPath
-                        |> Router.parse
-                        |> Result.mapError RouterError
+                        |> Router.Configuration.parse <@> RouterError
 
-                    return { parts with RouterConfiguration = Some router }
+                    return { routerParts with RouterConfiguration = Some router }
                 }
-                |> Result.mapError RouterConfigurationError
+                <@> RouterConfigurationError
 
         [<CustomOperation("from")>]
         member __.From(state, configuration): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                match parts.Configuration with
-                | None -> Ok { parts with Configuration = Some configuration }
+            state >>= fun routerParts ->
+                match routerParts.Configuration with
+                | None -> Ok { routerParts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error
 
         [<CustomOperation("routeToBrokerFromEnv")>]
-        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state >>= fun routerParts ->
                 result {
-                    let! configuration =
-                        parts.Configuration
-                        |> Result.ofOption ConfigurationNotSet
-                        |> Result.mapError ApplicationConfigurationError
+                    let! configuration = routerParts.Configuration <?!> ConfigurationNotSet <@> ApplicationConfigurationError
 
                     let! configurationParts =
                         configuration
-                        |> Configuration.result
-                        |> Result.mapError InvalidConfiguration
-                        |> Result.mapError ApplicationConfigurationError
+                        |> Configuration.result <@> InvalidConfiguration <@> ApplicationConfigurationError
 
                     let! brokerList =
                         brokerListEnvironmentKey
-                        |> getEnvironmentValue configurationParts Kafka.BrokerList ConnectionConfigurationError.VariableNotFoundError
-                        |> Result.mapError ConnectionConfigurationError
+                        |> getEnvironmentValue configurationParts Kafka.BrokerList ConnectionConfigurationError.VariableNotFoundError <@> ContentBasedRouterApplicationError.ConnectionConfigurationError
 
-                    return { parts with RouteToBrokerList = Some brokerList }
+                    return { routerParts with RouteToBrokerList = Some brokerList; FromDomain = Some fromDomain }
                 }
+
+        [<CustomOperation("route")>]
+        member __.Route(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun routerParts -> { routerParts with RouteEvent = Some (Simple routeEvent) }
+
+        [<CustomOperation("routeWithApplication")>]
+        member __.RouteWithApp(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun routerParts -> { routerParts with RouteEvent = Some (WithApplication routeEvent) }
+
+        [<CustomOperation("getCommonEventBy")>]
+        member __.GetCommonEventBy(state, getCommonEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun routerParts -> { routerParts with GetCommonEvent = Some getCommonEvent }
+
+        [<CustomOperation("addCustomMetricValues")>]
+        member __.AddCustomMetricValues(state, createCustomValues): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state <!> fun routerParts -> { routerParts with CreateCustomValues = Some createCustomValues }
