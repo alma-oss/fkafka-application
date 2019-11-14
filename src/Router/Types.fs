@@ -27,7 +27,7 @@ type ContentBasedRouterApplicationError =
 
 type RouterConfiguration = private RouterConfiguration of Map<EventName, StreamName>
 
-type RouteEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent
+type RouteEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent option
 
 type internal RouteEventHandler<'InputEvent, 'OutputEvent> =
     | Simple of RouteEvent<'InputEvent, 'OutputEvent>

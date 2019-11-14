@@ -47,7 +47,8 @@ module ContentBasedRouterBuilder =
                             router
 
                     events
-                    |> Seq.iter (routeEvent app.ProcessedBy >> produceRoutedEvent)
+                    |> Seq.choose (routeEvent app.ProcessedBy)
+                    |> Seq.iter produceRoutedEvent
 
                 return
                     configuration
