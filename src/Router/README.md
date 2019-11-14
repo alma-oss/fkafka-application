@@ -27,7 +27,7 @@ Content-Based Router computation expression returns `Application of ContentBased
 ### RouteEvent
 It is a function, which is responsible for routing events.
 ```fs
-type RouteEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent
+type RouteEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent option
 ```
 
 ## Configuration
