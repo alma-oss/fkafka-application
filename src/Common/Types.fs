@@ -265,8 +265,8 @@ module internal PreparedConsumeRuntimeParts =
             Box = preparedRuntimeParts.Box
             ProcessedBy = {
                 Instance = preparedRuntimeParts.Box |> Box.instance
-                Commit = GitCommit ""
-                ImageVersion = DockerImageVersion ""
+                Commit = preparedRuntimeParts.GitCommit
+                ImageVersion = preparedRuntimeParts.DockerImageVersion
             }
             Environment = preparedRuntimeParts.Environment
             Connections = preparedRuntimeParts.Connections
