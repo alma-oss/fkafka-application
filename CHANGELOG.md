@@ -3,6 +3,7 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 - Fix `ContentBasedRouter` type `RouteEvent` to return a `OutputEvent option` instead of `OutputEvent`
+- Update dependencies
 
 ## 9.0.0 - 2019-11-14
 - Add `GitCommit` to the configuration
