@@ -117,6 +117,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 - Default `GroupId` is `Random`. And if you define group id without `connection` it will be used for all connections unless you explicitly set other group id for them.
 - Default `Spot` is `Zone = "common"; Bucket = "all"`.
 - Default `Checker` for kafka is default checker defined in Kafka library.
+- Default `GitCommit` is `unknown`.
+- Default `DockerImageVersion` is `unknown`.
 
 ### Add Route example
 ```fs

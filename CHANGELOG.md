@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 9.0.0 - 2019-11-14
 - Add `GitCommit` to the configuration
 - Add `DockerImageVersion` to the configuration
 - [**BC**] Change patterns to add `processedBy` information to the processed events
