@@ -2,6 +2,14 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `GitCommit` to the configuration
+- Add `DockerImageVersion` to the configuration
+- [**BC**] Change patterns to add `processedBy` information to the processed events
+- Add `AssemblyInfo`
+- [**BC**] Change Router pattern to work as others with generic `InputEvent`/`OutputEvent`, since a routing itself is also a generating of a new events
+    - `ContentBasedRouter` computation expression
+        - Add `route`, `routeWithApplication`, `getCommonEventBy`, `addCustomMetricValues`
+        - [**BC**] Change `routeToBrokerFromEnv` to require a new parameter of `FromDomain`
 
 ## 8.0.0 - 2019-11-05
 - [**BC**] Update ConsentsEvents and other dependencies

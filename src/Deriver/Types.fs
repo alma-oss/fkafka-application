@@ -1,6 +1,7 @@
 namespace KafkaApplication.Deriver
 
 open KafkaApplication
+open Events
 
 // Errors
 
@@ -18,7 +19,7 @@ type DeriverApplicationError =
 
 // Deriver configuration
 
-type DeriveEvent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
+type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
 
 type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
     | Simple of DeriveEvent<'InputEvent, 'OutputEvent>

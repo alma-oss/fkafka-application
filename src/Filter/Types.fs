@@ -3,6 +3,7 @@ namespace KafkaApplication.Filter
 open ServiceIdentification
 open KafkaApplication
 open ContractAggregate.Intent
+open Events
 
 // Errors
 
@@ -24,7 +25,7 @@ type FilterConfiguration = {
     Intents: Intent list
 }
 
-type FilterContent<'InputEvent, 'OutputEvent> = 'InputEvent -> 'OutputEvent list
+type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
 
 // Filter Application Configuration
 

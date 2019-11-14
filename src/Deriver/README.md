@@ -20,6 +20,12 @@ Deriver computation expression returns `Application of DeriverApplication<'Input
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | getCommonEventBy | `GetCommonEvent: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent` | It will _register_ a function to get common data out of both input and output events for metrics. |
 
+### DeriveEvent
+It is a function, which is responsible for deriving events.
+```fs
+type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+```
+
 ## Deriver Configuration
 
 The only configuration for deriver is the one in the `DeriveEvent` function.

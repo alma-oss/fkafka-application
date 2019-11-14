@@ -11,6 +11,10 @@ COPY ./paket.lock /fkafka-application/
 COPY ./KafkaApplication.fsproj /fkafka-application/
 COPY ./src /fkafka-application/src
 
+# others
+COPY ./.git /fkafka-application/.git
+COPY ./CHANGELOG.md /fkafka-application/
+
 WORKDIR /fkafka-application
 
 RUN \

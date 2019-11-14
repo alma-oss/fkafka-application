@@ -23,7 +23,7 @@ module DeriverBuilder =
                     | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts)
 
                 events
-                |> Seq.collect deriveEvent
+                |> Seq.collect (deriveEvent app.ProcessedBy)
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
             configuration
@@ -105,9 +105,9 @@ module DeriverBuilder =
 
         [<CustomOperation("from")>]
         member __.From(state, configuration): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                match parts.Configuration with
-                | None -> Ok { parts with Configuration = Some configuration }
+            state >>= fun deriverParts ->
+                match deriverParts.Configuration with
+                | None -> Ok { deriverParts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error
 
         [<CustomOperation("deriveTo")>]
@@ -120,8 +120,8 @@ module DeriverBuilder =
 
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+            state <!> fun deriverParts -> { deriverParts with GetCommonEvent = Some getCommonEvent }
 
         [<CustomOperation("addCustomMetricValues")>]
         member __.AddCustomMetricValues(state, createCustomValues): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with CreateCustomValues = Some createCustomValues }
+            state <!> fun deriverParts -> { deriverParts with CreateCustomValues = Some createCustomValues }

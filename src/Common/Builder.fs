@@ -9,6 +9,7 @@ module ApplicationBuilder =
     open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
+    open Events
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
@@ -39,6 +40,8 @@ module ApplicationBuilder =
                         Logger = currentParts.Logger
                         Environment = newParts.Environment |> Environment.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
+                        GitCommit = newParts.GitCommit <??> currentParts.GitCommit
+                        DockerImageVersion = newParts.DockerImageVersion <??> currentParts.DockerImageVersion
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
@@ -290,6 +293,9 @@ module ApplicationBuilder =
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
                 let kafkaIntervalChecker = Kafka.IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
 
+                let gitCommit = configurationParts.GitCommit <?=> GitCommit "unknown"
+                let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
+
                 //
                 // composed parts
                 //
@@ -391,6 +397,8 @@ module ApplicationBuilder =
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
                     Box = box
+                    GitCommit = gitCommit
+                    DockerImageVersion = dockerImageVersion
                     Environment = environment
                     Connections = connections
                     ConsumerConfigurations = runtimeConsumerConfigurations
@@ -466,6 +474,14 @@ module ApplicationBuilder =
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Instance = Some instance }
+
+        [<CustomOperation("useGitCommit")>]
+        member __.GitCommit(state, gitCommit): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with GitCommit = Some gitCommit }
+
+        [<CustomOperation("useDockerImageVersion")>]
+        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with DockerImageVersion = Some dockerImageVersion }
 
         [<CustomOperation("useSpot")>]
         member __.Spot(state, spot): Configuration<'InputEvent, 'OutputEvent> =
