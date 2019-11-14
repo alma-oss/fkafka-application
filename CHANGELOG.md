@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 9.1.0 - 2019-11-14
 - Fix `ContentBasedRouter` type `RouteEvent` to return a `OutputEvent option` instead of `OutputEvent`
 - Update dependencies
 
