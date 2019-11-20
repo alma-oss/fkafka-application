@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update dependencies
 
 ## 9.1.1 - 2019-11-15
 - Fix `PreparedConsumeRuntimeParts` to contain a `GitCommit` and `DockerImageVersion` values
