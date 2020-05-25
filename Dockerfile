@@ -1,4 +1,4 @@
-FROM dcreg.service.consul/prod/development-dotnet-core-sdk-common:latest
+FROM dcreg.service.consul/dev/development-dotnet-core-sdk-common:3.1
 
 # build scripts
 COPY ./fake.sh /fkafka-application/

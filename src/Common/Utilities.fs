@@ -39,10 +39,6 @@ module internal FileParser =
         }
 
 module internal Serializer =
-    module private Json =
-        open Newtonsoft.Json
+    open Lmc.Serializer
 
-        let serialize obj =
-            JsonConvert.SerializeObject obj
-
-    let toJson = Serialize Json.serialize
+    let toJson = Serialize Serialize.toJson

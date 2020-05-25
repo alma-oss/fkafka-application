@@ -2,6 +2,11 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Use .netcore 3.1
+- [**BC**] Update dependencies
+- [**BC**] Change `DTO` format to PascalCase
+- Use `Lmc.Serializer`
+- [**BC**] Use `ApplicationLogger` from `Lmc.Logging` lib
 
 ## 9.2.0 - 2019-11-20
 - Update dependencies

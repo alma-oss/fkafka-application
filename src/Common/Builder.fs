@@ -5,7 +5,7 @@ module ApplicationBuilder =
     open Kafka
     open KafkaApplication
     open Metrics
-    open Logging
+    open Lmc.Logging
     open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
@@ -107,7 +107,7 @@ module ApplicationBuilder =
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
                     Interval = 30<KafkaApplication.Second>
                     Checker = fun () ->
-                        graylogService
+                        GraylogService graylogService
                         |> Graylog.Diagnostics.isAliveResult
                         |> Async.RunSynchronously
                         |> function

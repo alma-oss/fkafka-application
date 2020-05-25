@@ -4,6 +4,7 @@ open Kafka
 open KafkaApplication
 open ServiceIdentification
 open Metrics
+open Lmc.Logging
 open ContractAggregate.Intent
 
 // Errors

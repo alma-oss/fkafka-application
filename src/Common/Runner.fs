@@ -3,6 +3,7 @@ namespace KafkaApplication
 module internal ApplicationRunner =
     open Kafka
     open ServiceIdentification
+    open Lmc.Logging
     open OptionOperators
 
     module private KafkaApplicationRunner =
