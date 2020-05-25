@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Lmc.KafkaApplication</PackageId>
     <Version>9.2.0</Version>
@@ -16,7 +16,6 @@
   <ItemGroup>
     <!-- Common kafka application -->
     <Compile Include="src/Common/Common.fs" />
-    <Compile Include="src/Common/Logger.fs" />
     <Compile Include="src/Common/Types.fs" />
     <Compile Include="src/Common/Utilities.fs" />
     <Compile Include="src/Common/Resource.fs" />

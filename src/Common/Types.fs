@@ -3,6 +3,7 @@ namespace KafkaApplication
 open Kafka
 open Metrics
 open ServiceIdentification
+open Lmc.Logging
 open Events
 
 [<Measure>] type Second
@@ -184,7 +185,7 @@ type MetricsError =
 [<RequireQualifiedAccess>]
 type LoggingError =
     | InvalidGraylogConnectionString of string
-    | InvalidGraylogHost of Logging.Graylog.HostError
+    | InvalidGraylogHost of Lmc.Logging.Graylog.HostError
     | InvalidPort of string
     | VariableNotFoundError of string
 
@@ -368,7 +369,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
-    GraylogConnections: (Logging.Graylog.Host * Logging.Graylog.Port option) list
+    GraylogConnections: (Lmc.Logging.Graylog.Host * Lmc.Logging.Graylog.Port option) list
     CustomTasks: PreparedCustomTask list
     WebServerSettings: WebServerPart list
 }

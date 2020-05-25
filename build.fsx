@@ -14,7 +14,7 @@ type ToolDir =
     | Local of string
 
 // ========================================================================================================
-// === F# / Library fake build =============================================================== 2019-11-11 =
+// === F# / Library fake build ==================================================================== 1.1.0 =
 // --------------------------------------------------------------------------------------------------------
 // Options:
 //  - no-clean   - disables clean of dirs in the first step (required on CI)
@@ -80,7 +80,10 @@ module private DotnetCore =
             | Local dir -> sprintf "tool %s --tool-path ./%s %s" action dir tool
 
         match runInRoot (toolCommand "install") with
-        | { ExitCode = code } when code <> 0 -> runInRootOrFail (toolCommand "update")
+        | { ExitCode = code } when code <> 0 ->
+            match runInRoot (toolCommand "update") with
+            | { ExitCode = code } when code <> 0 -> Trace.tracefn "Warning: Install and update of %A has failed." tool
+            | _ -> ()
         | _ -> ()
 
     let execute command args (dir: string) =
@@ -114,6 +117,7 @@ Target.create "Clean" <| skipOn "no-clean" (fun _ ->
     !! "./**/bin/Release"
     ++ "./**/bin/Debug"
     ++ "./**/obj"
+    ++ "./**/.ionide"
     |> Shell.cleanDirs
 )
 
@@ -155,7 +159,7 @@ Target.create "Build" (fun _ ->
     |> Seq.iter (DotNet.build id)
 )
 
-Target.create "Lint" (fun p ->
+Target.create "Lint" <| skipOn "no-lint" (fun _ ->
     DotnetCore.installOrUpdateTool toolsDir "dotnet-fsharplint"
 
     let checkResult (messages: string list) =
@@ -165,23 +169,21 @@ Target.create "Lint" (fun p ->
                 if head.Contains "Summary" then
                     match head.Replace("= ", "").Replace(" =", "").Replace("=", "").Replace("Summary: ", "") with
                     | "0 warnings" -> Trace.tracefn "Lint: OK"
-                    | warnings ->
-                        if p.Context.Arguments |> List.contains "no-lint"
-                        then Trace.traceErrorfn "Lint ends up with %s." warnings
-                        else failwithf "Lint ends up with %s." warnings
+                    | warnings -> failwithf "Lint ends up with %s." warnings
                 else check rest
         messages
         |> List.rev
         |> check
 
     !! "**/*.fsproj"
+    -- "example/**/*.*proj"
     |> Seq.map (fun fsproj ->
         match toolsDir with
         | Global ->
-            DotnetCore.runInRoot (sprintf "fsharplint -f %s" fsproj)
+            DotnetCore.runInRoot (sprintf "fsharplint lint %s" fsproj)
             |> fun (result: ProcessResult) -> result.Messages
         | Local dir ->
-            DotnetCore.execute "dotnet-fsharplint" ["-f"; fsproj] dir
+            DotnetCore.execute "dotnet-fsharplint" ["lint"; fsproj] dir
             |> fst
             |> tee (Trace.tracefn "%s")
             |> String.split '\n'
@@ -198,6 +200,8 @@ Target.create "Tests" (fun _ ->
 
 Target.create "Release" (fun _ ->
     DotnetCore.runInRootOrFail "pack"
+
+    Directory.ensure "release"
 
     !! "**/bin/**/*.nupkg"
     |> Seq.iter (Shell.moveFile "release")
