@@ -1,6 +1,6 @@
-namespace KafkaApplication.Deriver
+namespace Lmc.KafkaApplication.Deriver
 
-open KafkaApplication
+open Lmc.KafkaApplication
 open Events
 
 // Errors

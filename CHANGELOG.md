@@ -7,6 +7,7 @@
 - [**BC**] Change `DTO` format to PascalCase
 - Use `Lmc.Serializer`
 - [**BC**] Use `ApplicationLogger` from `Lmc.Logging` lib
+- [**BC**] Change namespace to `Lmc.KafkaApplication`
 
 ## 9.2.0 - 2019-11-20
 - Update dependencies

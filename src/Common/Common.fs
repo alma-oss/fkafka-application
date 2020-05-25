@@ -1,4 +1,4 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 [<AutoOpen>]
 module internal Common =

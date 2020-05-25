@@ -1,9 +1,9 @@
-namespace KafkaApplication.Filter
+namespace Lmc.KafkaApplication.Filter
 
 module FilterBuilder =
-    open KafkaApplication
-    open KafkaApplication.PatternBuilder
-    open KafkaApplication.PatternMetrics
+    open Lmc.KafkaApplication
+    open Lmc.KafkaApplication.PatternBuilder
+    open Lmc.KafkaApplication.PatternMetrics
     open ApplicationBuilder
     open OptionOperators
     open Filter

@@ -1,7 +1,7 @@
-namespace KafkaApplication.Filter
+namespace Lmc.KafkaApplication.Filter
 
 open ServiceIdentification
-open KafkaApplication
+open Lmc.KafkaApplication
 open ContractAggregate.Intent
 open Events
 

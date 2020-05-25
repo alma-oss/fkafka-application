@@ -1,7 +1,7 @@
-namespace KafkaApplication.Router
+namespace Lmc.KafkaApplication.Router
 
 open Kafka
-open KafkaApplication
+open Lmc.KafkaApplication
 open Events
 
 // Errors

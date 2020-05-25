@@ -1,7 +1,7 @@
-namespace KafkaApplication.Router
+namespace Lmc.KafkaApplication.Router
 
 module internal ContentBasedRouterRunner =
-    open KafkaApplication
+    open Lmc.KafkaApplication
 
     let runRouter: RunPattern<ContentBasedRouterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =
         fun run (ContentBasedRouterApplication application) ->

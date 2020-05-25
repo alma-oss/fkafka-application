@@ -1,4 +1,4 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 [<AutoOpen>]
 module EnvironmentBuilder =
@@ -6,7 +6,7 @@ module EnvironmentBuilder =
     open OptionOperators
     open ServiceIdentification
     open Kafka
-    open KafkaApplication
+    open Lmc.KafkaApplication
     open Events
     open ApplicationBuilder.KafkaApplicationBuilder
 

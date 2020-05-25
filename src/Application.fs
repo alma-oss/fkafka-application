@@ -1,16 +1,16 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 [<AutoOpen>]
 module KafkaApplication =
     open Kafka
     open ApplicationBuilder
     open ApplicationRunner
-    open KafkaApplication.Filter
-    open KafkaApplication.Filter.FilterBuilder
-    open KafkaApplication.Router
-    open KafkaApplication.Router.ContentBasedRouterBuilder
-    open KafkaApplication.Deriver
-    open KafkaApplication.Deriver.DeriverBuilder
+    open Lmc.KafkaApplication.Filter
+    open Lmc.KafkaApplication.Filter.FilterBuilder
+    open Lmc.KafkaApplication.Router
+    open Lmc.KafkaApplication.Router.ContentBasedRouterBuilder
+    open Lmc.KafkaApplication.Deriver
+    open Lmc.KafkaApplication.Deriver.DeriverBuilder
 
     //
     // Applications
