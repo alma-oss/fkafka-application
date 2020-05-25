@@ -1,10 +1,10 @@
-namespace KafkaApplication.Router
+namespace Lmc.KafkaApplication.Router
 
 module ContentBasedRouterBuilder =
     open Kafka
-    open KafkaApplication
-    open KafkaApplication.PatternBuilder
-    open KafkaApplication.PatternMetrics
+    open Lmc.KafkaApplication
+    open Lmc.KafkaApplication.PatternBuilder
+    open Lmc.KafkaApplication.PatternMetrics
     open ApplicationBuilder
     open global.Option.Operators
     open global.Result.Operators

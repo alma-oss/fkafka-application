@@ -1,4 +1,4 @@
-namespace KafkaApplication.Router
+namespace Lmc.KafkaApplication.Router
 
 open Kafka
 
@@ -53,7 +53,7 @@ module internal Router =
 
     [<RequireQualifiedAccess>]
     module Routing =
-        open KafkaApplication
+        open Lmc.KafkaApplication
         open global.Option.Operators
 
         let private formatLogMessage (EventName eventName) (streamName: StreamName) =

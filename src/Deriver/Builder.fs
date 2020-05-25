@@ -1,9 +1,9 @@
-namespace KafkaApplication.Deriver
+namespace Lmc.KafkaApplication.Deriver
 
 module DeriverBuilder =
-    open KafkaApplication
-    open KafkaApplication.PatternBuilder
-    open KafkaApplication.PatternMetrics
+    open Lmc.KafkaApplication
+    open Lmc.KafkaApplication.PatternBuilder
+    open Lmc.KafkaApplication.PatternMetrics
     open ApplicationBuilder
     open OptionOperators
 

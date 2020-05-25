@@ -2,7 +2,7 @@ namespace RealLifeExample
 
 module Program =
     open Kafka
-    open KafkaApplication
+    open Lmc.KafkaApplication
     open Lmc.Logging
 
     open Suave

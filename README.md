@@ -126,6 +126,7 @@ open Suave
 open Suave.Filters
 open Suave.Operators
 open Suave.Successful
+open Lmc.KafkaApplication
 
 kafkaApplication {
     showMetricsOn "/metrics"
@@ -210,7 +211,7 @@ Following example is the easiest setup, you can get.
 ```fs
 open Kafka
 open ServiceIdentification
-open KafkaApplication
+open Lmc.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -239,7 +240,7 @@ Instead of previous example, where our application uses only one connections, th
 ```fs
 open Kafka
 open ServiceIdentification
-open KafkaApplication
+open Lmc.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -288,7 +289,7 @@ Keep in mind, that this example is simplified and it is missing the parsing logi
 ```fs
 open Kafka
 open ServiceIdentification
-open KafkaApplication
+open Lmc.KafkaApplication
 
 [<EntryPoint>]
 let main argv =

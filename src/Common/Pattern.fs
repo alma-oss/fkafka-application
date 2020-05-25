@@ -1,7 +1,7 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 open Kafka
-open KafkaApplication
+open Lmc.KafkaApplication
 open ServiceIdentification
 open Metrics
 open Lmc.Logging

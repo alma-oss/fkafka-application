@@ -1,7 +1,7 @@
 // Learn more about F# at http://fsharp.org
 
 open MF.ConsoleStyle
-open KafkaApplication
+open Lmc.KafkaApplication
 
 [<EntryPoint>]
 let main argv =

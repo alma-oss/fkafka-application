@@ -1,4 +1,4 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 module internal ApplicationRunner =
     open Kafka
@@ -45,7 +45,7 @@ module internal ApplicationRunner =
             )
             |> List.iter Async.Start
 
-        let private wait (seconds: int<KafkaApplication.Second>) =
+        let private wait (seconds: int<Lmc.KafkaApplication.Second>) =
             Threading.Thread.Sleep(TimeSpan.FromSeconds (float seconds))
 
         let rec private connectProducersWithErrorHandling connectProducer application =

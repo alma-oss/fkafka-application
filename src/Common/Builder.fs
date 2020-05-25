@@ -1,9 +1,9 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 module ApplicationBuilder =
     open System
     open Kafka
-    open KafkaApplication
+    open Lmc.KafkaApplication
     open Metrics
     open Lmc.Logging
     open Metrics.ServiceStatus
@@ -105,7 +105,7 @@ module ApplicationBuilder =
 
                 let resource = {
                     Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
-                    Interval = 30<KafkaApplication.Second>
+                    Interval = 30<Lmc.KafkaApplication.Second>
                     Checker = fun () ->
                         GraylogService graylogService
                         |> Graylog.Diagnostics.isAliveResult
@@ -275,10 +275,10 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
-                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<KafkaApplication.Second>)
+                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Lmc.KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
-                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<KafkaApplication.Second>)
+                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<Lmc.KafkaApplication.Second>)
                 let getErrorHandler connection =
                     configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
                     <?=> defaultConsumeErrorHandler

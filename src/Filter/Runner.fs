@@ -1,7 +1,7 @@
-namespace KafkaApplication.Filter
+namespace Lmc.KafkaApplication.Filter
 
 module internal FilterRunner =
-    open KafkaApplication
+    open Lmc.KafkaApplication
 
     let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =
         fun run (FilterApplication application) ->

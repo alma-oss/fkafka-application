@@ -1,4 +1,4 @@
-namespace KafkaApplication
+namespace Lmc.KafkaApplication
 
 module internal ResourceChecker =
     open Kafka
