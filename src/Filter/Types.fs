@@ -3,7 +3,7 @@ namespace Lmc.KafkaApplication.Filter
 open ServiceIdentification
 open Lmc.KafkaApplication
 open ContractAggregate.Intent
-open Events
+open Lmc.Consents.Events.Events
 
 // Errors
 

@@ -1,7 +1,7 @@
 namespace Lmc.KafkaApplication.Deriver
 
 open Lmc.KafkaApplication
-open Events
+open Lmc.Consents.Events.Events
 
 // Errors
 
