@@ -7,7 +7,7 @@ module EnvironmentBuilder =
     open ServiceIdentification
     open Kafka
     open Lmc.KafkaApplication
-    open Events
+    open Lmc.Consents.Events.Events
     open ApplicationBuilder.KafkaApplicationBuilder
 
     type EnvironmentBuilder internal (logger) =

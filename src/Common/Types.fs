@@ -4,7 +4,7 @@ open Kafka
 open Metrics
 open ServiceIdentification
 open Lmc.Logging
-open Events
+open Lmc.Consents.Events.Events
 
 [<Measure>] type Second
 [<Measure>] type Attempt

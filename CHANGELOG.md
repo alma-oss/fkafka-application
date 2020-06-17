@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Update dependencies
+    - `ConsentEvents`
 
 ## 10.0.0 - 2020-05-25
 - [**BC**] Use .netcore 3.1

@@ -2,7 +2,7 @@ namespace Lmc.KafkaApplication.Router
 
 open Kafka
 open Lmc.KafkaApplication
-open Events
+open Lmc.Consents.Events.Events
 
 // Errors
 

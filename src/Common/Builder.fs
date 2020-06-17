@@ -9,7 +9,7 @@ module ApplicationBuilder =
     open Metrics.ServiceStatus
     open ServiceIdentification
     open OptionOperators
-    open Events
+    open Lmc.Consents.Events.Events
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
