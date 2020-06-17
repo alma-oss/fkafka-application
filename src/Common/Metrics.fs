@@ -6,9 +6,11 @@ module internal ApplicationMetrics =
 
     type private Count = Count of int
 
+    [<RequireQualifiedAccess>]
     module private Count =
         let value (Count count) = count
 
+    [<RequireQualifiedAccess>]
     module private SimpleDataSetKeys =
         let value (SimpleDataSetKeys dataSetKeys) = dataSetKeys
 
@@ -19,13 +21,9 @@ module internal ApplicationMetrics =
 
     [<AutoOpen>]
     module private InternalState =
-        let private failOnError = function
-            | Ok success -> success
-            | Error error -> failwithf "Error: %A" error
-
         let createKey instance labels =
             DataSetKey.createFromInstance instance labels
-            |> failOnError
+            |> Result.orFail
 
         let private createKeyForStatus instance =
             createKey instance []
