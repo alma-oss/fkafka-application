@@ -1,15 +1,16 @@
 namespace Lmc.KafkaApplication
 
 module internal ApplicationRunner =
-    open Kafka
-    open ServiceIdentification
+    open Lmc.Kafka
+    open Lmc.ServiceIdentification
     open Lmc.Logging
+    open Lmc.ErrorHandling
     open OptionOperators
 
     module private KafkaApplicationRunner =
         open System
-        open Metrics
-        open Metrics.ServiceStatus
+        open Lmc.Metrics
+        open Lmc.Metrics.ServiceStatus
 
         let private checkResources (application: KafkaApplicationParts<_, _>) =
             let instance = application.Box |> Box.instance

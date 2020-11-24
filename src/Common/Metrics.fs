@@ -1,8 +1,9 @@
 namespace Lmc.KafkaApplication
 
 module internal ApplicationMetrics =
-    open Metrics
-    open ServiceIdentification
+    open Lmc.Metrics
+    open Lmc.ServiceIdentification
+    open Lmc.ErrorHandling
 
     type private Count = Count of int
 

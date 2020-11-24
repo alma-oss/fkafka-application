@@ -2,7 +2,7 @@ namespace Lmc.KafkaApplication
 
 [<AutoOpen>]
 module KafkaApplication =
-    open Kafka
+    open Lmc.Kafka
     open ApplicationBuilder
     open ApplicationRunner
     open Lmc.KafkaApplication.Filter

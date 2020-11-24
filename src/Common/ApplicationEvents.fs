@@ -2,8 +2,8 @@ namespace Lmc.KafkaApplication
 
 module internal ApplicationEvents =
     open System
-    open Kafka
-    open ServiceIdentification
+    open Lmc.Kafka
+    open Lmc.ServiceIdentification
     open Lmc.Serializer
 
     //
@@ -60,7 +60,7 @@ module internal ApplicationEvents =
 
     type EmptyDataDto = Map<unit, unit>
 
-    type InstanceStartedDto = Kafka.EventWithoutResourceDto<EmptyDataDto, InstanceStartedDtoMetaData, EmptyDataDto>
+    type InstanceStartedDto = EventWithoutResourceDto<EmptyDataDto, InstanceStartedDtoMetaData, EmptyDataDto>
 
     let fromDomain: FromDomain<InstanceStartedEvent> =
         fun (Serialize serialize) (InstanceStartedEvent event) ->

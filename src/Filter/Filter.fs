@@ -3,9 +3,9 @@ namespace Lmc.KafkaApplication.Filter
 module internal Filter =
     open System.IO
     open FSharp.Data
-    open ServiceIdentification
-    open ContractAggregate.Intent
-    open Kafka
+    open Lmc.ServiceIdentification
+    open Lmc.ContractAggregate.Intent
+    open Lmc.Kafka
     open Lmc.KafkaApplication
 
     type private ConfigurationSchema = JsonProvider<"src/Filter/schema/configuration.json", SampleIsList=true>

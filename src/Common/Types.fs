@@ -1,8 +1,8 @@
 namespace Lmc.KafkaApplication
 
-open Kafka
-open Metrics
-open ServiceIdentification
+open Lmc.Kafka
+open Lmc.Metrics
+open Lmc.ServiceIdentification
 open Lmc.Logging
 open Lmc.Consents.Events.Events
 
@@ -99,7 +99,7 @@ type ConnectionConfiguration = {
 
 [<RequireQualifiedAccess>]
 module internal ConnectionConfiguration =
-    let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Kafka.ConnectionConfiguration =
+    let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Lmc.Kafka.ConnectionConfiguration =
         {
             BrokerList = connection.BrokerList
             Topic = connection.Topic |> StreamName.Instance
@@ -207,8 +207,8 @@ type KafkaApplicationError =
 
 type ProducerSerializer<'OutputEvent> = ProducerSerializer of ('OutputEvent -> string)
 
-type NotConnectedProducer = Kafka.Producer.NotConnectedProducer
-type ConnectedProducer = Kafka.Producer.TopicProducer
+type NotConnectedProducer = Producer.NotConnectedProducer
+type ConnectedProducer = Producer.TopicProducer
 
 type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> 'OutputEvent -> unit
 type ProduceEvent<'OutputEvent> = 'OutputEvent -> unit

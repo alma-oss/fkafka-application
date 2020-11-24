@@ -3,12 +3,15 @@ namespace Lmc.KafkaApplication
 [<AutoOpen>]
 module EnvironmentBuilder =
     open System.IO
-    open OptionOperators
-    open ServiceIdentification
-    open Kafka
+    open Lmc.ServiceIdentification
+    open Lmc.Kafka
     open Lmc.KafkaApplication
     open Lmc.Consents.Events.Events
+    open Lmc.ErrorHandling
+    open OptionOperators
     open ApplicationBuilder.KafkaApplicationBuilder
+
+    module Environment = Lmc.Environment
 
     type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_, _>) =

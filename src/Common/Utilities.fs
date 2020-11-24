@@ -1,7 +1,7 @@
 namespace Lmc.KafkaApplication
 
 module internal OptionOperators =
-    open Option.Operators
+    open Lmc.ErrorHandling.Option.Operators
 
     /// Default value - if value is None, default value will be used
     let inline (<?=>) o defaultValue = o <?=> defaultValue
@@ -27,6 +27,7 @@ module internal Map =
 
 module internal FileParser =
     open System.IO
+    open Lmc.ErrorHandling
 
     type FilePath = string
 
