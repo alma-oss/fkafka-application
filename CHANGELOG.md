@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Update dependencies
 
 ## 11.0.0 - 2020-06-17
 - [**BC**] Update dependencies

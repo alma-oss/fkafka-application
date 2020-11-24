@@ -1,13 +1,14 @@
 namespace Lmc.KafkaApplication.Router
 
 module ContentBasedRouterBuilder =
-    open Kafka
+    open Lmc.Kafka
     open Lmc.KafkaApplication
     open Lmc.KafkaApplication.PatternBuilder
     open Lmc.KafkaApplication.PatternMetrics
+    open Lmc.ErrorHandling
+    open Lmc.ErrorHandling.Option.Operators
+    open Lmc.ErrorHandling.Result.Operators
     open ApplicationBuilder
-    open global.Option.Operators
-    open global.Result.Operators
 
     module internal ContentBasedRouterApplicationBuilder =
         let private addRouterConfiguration<'InputEvent, 'OutputEvent>
@@ -144,7 +145,7 @@ module ContentBasedRouterBuilder =
 
                     let! brokerList =
                         brokerListEnvironmentKey
-                        |> getEnvironmentValue configurationParts Kafka.BrokerList ConnectionConfigurationError.VariableNotFoundError <@> ContentBasedRouterApplicationError.ConnectionConfigurationError
+                        |> getEnvironmentValue configurationParts BrokerList ConnectionConfigurationError.VariableNotFoundError <@> ContentBasedRouterApplicationError.ConnectionConfigurationError
 
                     return { routerParts with RouteToBrokerList = Some brokerList; FromDomain = Some fromDomain }
                 }

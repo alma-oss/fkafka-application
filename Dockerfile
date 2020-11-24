@@ -1,23 +1,24 @@
 FROM dcreg.service.consul/dev/development-dotnet-core-sdk-common:3.1
 
 # build scripts
-COPY ./fake.sh /fkafka-application/
-COPY ./build.fsx /fkafka-application/
-COPY ./paket.dependencies /fkafka-application/
-COPY ./paket.references /fkafka-application/
-COPY ./paket.lock /fkafka-application/
+COPY ./build.sh /lib/
+COPY ./build.fsx /lib/
+COPY ./paket.dependencies /lib/
+COPY ./paket.references /lib/
+COPY ./paket.lock /lib/
 
 # sources
-COPY ./KafkaApplication.fsproj /fkafka-application/
-COPY ./src /fkafka-application/src
+COPY ./KafkaApplication.fsproj /lib/
+COPY ./src /lib/src
 
 # others
-COPY ./.git /fkafka-application/.git
-COPY ./CHANGELOG.md /fkafka-application/
+COPY ./.git /lib/.git
+COPY ./.config /lib/.config
+COPY ./CHANGELOG.md /lib/
 
-WORKDIR /fkafka-application
+WORKDIR /lib
 
 RUN \
-    ./fake.sh build target Build no-clean
+    ./build.sh -t Build no-clean
 
-CMD ["./fake.sh", "build", "target", "Tests", "no-clean"]
+CMD ["./build.sh", "-t", "Tests", "no-clean"]

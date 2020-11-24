@@ -1,6 +1,6 @@
 namespace Lmc.KafkaApplication.Router
 
-open Kafka
+open Lmc.Kafka
 open Lmc.KafkaApplication
 open Lmc.Consents.Events.Events
 

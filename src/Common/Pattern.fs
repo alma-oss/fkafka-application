@@ -1,11 +1,11 @@
 namespace Lmc.KafkaApplication
 
-open Kafka
+open Lmc.Kafka
 open Lmc.KafkaApplication
-open ServiceIdentification
-open Metrics
+open Lmc.ServiceIdentification
+open Lmc.Metrics
 open Lmc.Logging
-open ContractAggregate.Intent
+open Lmc.ContractAggregate.Intent
 
 // Errors
 

@@ -209,8 +209,8 @@ This is also mandatory, to define at least one connection.
 Following example is the easiest setup, you can get.
 
 ```fs
-open Kafka
-open ServiceIdentification
+open Lmc.Kafka
+open Lmc.ServiceIdentification
 open Lmc.KafkaApplication
 
 [<EntryPoint>]
@@ -238,8 +238,8 @@ let main argv =
 Instead of previous example, where our application uses only one connections, there are cases, where we need more than that.
 
 ```fs
-open Kafka
-open ServiceIdentification
+open Lmc.Kafka
+open Lmc.ServiceIdentification
 open Lmc.KafkaApplication
 
 [<EntryPoint>]
@@ -287,8 +287,8 @@ Now we have even more connection and different relationships between them.
 Keep in mind, that this example is simplified and it is missing the parsing logic (which is passed to the `run` function)
 
 ```fs
-open Kafka
-open ServiceIdentification
+open Lmc.Kafka
+open Lmc.ServiceIdentification
 open Lmc.KafkaApplication
 
 [<EntryPoint>]

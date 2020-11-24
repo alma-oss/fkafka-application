@@ -1,16 +1,15 @@
 namespace Lmc.KafkaApplication.Router
 
-open Kafka
-
-// Router
-
 [<RequireQualifiedAccess>]
 module internal Router =
+    open Lmc.Kafka
+    open Lmc.ServiceIdentification
+    open Lmc.ErrorHandling
+
     [<RequireQualifiedAccess>]
     module Configuration =
         open FSharp.Data
         open System.IO
-        open ServiceIdentification
 
         type private RoutingSchema = JsonProvider<"src/Router/schema/routingSchema.json">
 
@@ -54,7 +53,7 @@ module internal Router =
     [<RequireQualifiedAccess>]
     module Routing =
         open Lmc.KafkaApplication
-        open global.Option.Operators
+        open Lmc.ErrorHandling.Option.Operators
 
         let private formatLogMessage (EventName eventName) (streamName: StreamName) =
             sprintf "Route event %s to %A ..." eventName streamName

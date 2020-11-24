@@ -8,14 +8,18 @@ nuget Newtonsoft.Json ~> 12.0
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
-nuget Lmc.ConsentEvents ~> 8.0
-nuget Lmc.ContractAggregate ~> 2.5
-nuget Lmc.Environment ~> 3.1
-nuget Lmc.ErrorHandling ~> 2.1
-nuget Lmc.Kafka ~> 10.0
-nuget Lmc.Logging ~> 3.2
-nuget Lmc.Metrics ~> 3.4
-nuget Lmc.ServiceIdentification ~> 3.4
+nuget Lmc.ConsentEvents ~> 10.0
+nuget Lmc.ContractAggregate ~> 3.0
+nuget Lmc.Environment ~> 4.0
+nuget Lmc.ErrorHandling ~> 3.0
+nuget Lmc.Kafka ~> 11.0
+nuget Lmc.Logging ~> 3.3
+nuget Lmc.Metrics ~> 4.0
+nuget Lmc.ServiceIdentification ~> 4.0
+
+nuget Lmc.ConsentsPerson ~> 1.1
+nuget Lmc.Serializer ~> 1.1
+nuget Lmc.State ~> 3.0
 
 // [ FAKE GROUP ]
 group Build

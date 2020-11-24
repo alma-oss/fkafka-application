@@ -4,6 +4,7 @@ module FilterBuilder =
     open Lmc.KafkaApplication
     open Lmc.KafkaApplication.PatternBuilder
     open Lmc.KafkaApplication.PatternMetrics
+    open Lmc.ErrorHandling
     open ApplicationBuilder
     open OptionOperators
     open Filter

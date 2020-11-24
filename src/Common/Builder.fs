@@ -2,14 +2,15 @@ namespace Lmc.KafkaApplication
 
 module ApplicationBuilder =
     open System
-    open Kafka
+    open Lmc.Kafka
     open Lmc.KafkaApplication
-    open Metrics
     open Lmc.Logging
-    open Metrics.ServiceStatus
-    open ServiceIdentification
-    open OptionOperators
+    open Lmc.Metrics
+    open Lmc.Metrics.ServiceStatus
+    open Lmc.ServiceIdentification
     open Lmc.Consents.Events.Events
+    open Lmc.ErrorHandling
+    open OptionOperators
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
@@ -38,7 +39,7 @@ module ApplicationBuilder =
                 newConfiguration <!> fun newParts ->
                     {
                         Logger = currentParts.Logger
-                        Environment = newParts.Environment |> Environment.update currentParts.Environment
+                        Environment = newParts.Environment |> Lmc.Environment.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         GitCommit = newParts.GitCommit <??> currentParts.GitCommit
                         DockerImageVersion = newParts.DockerImageVersion <??> currentParts.DockerImageVersion
@@ -288,10 +289,10 @@ module ApplicationBuilder =
 
                 let logger = configurationParts.Logger
                 let environment = configurationParts.Environment
-                let defaultGroupId = configurationParts.GroupId <?=> Kafka.GroupId.Random
+                let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
-                let kafkaChecker = configurationParts.KafkaChecker <?=> Kafka.Checker.defaultChecker
-                let kafkaIntervalChecker = Kafka.IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
+                let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
+                let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
 
                 let gitCommit = configurationParts.GitCommit <?=> GitCommit "unknown"
                 let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
@@ -319,10 +320,10 @@ module ApplicationBuilder =
 
                 // service status
                 let! markAsEnabled =
-                    Metrics.ServiceStatus.markAsEnabled instance Metrics.Audience.Sys
+                    ServiceStatus.markAsEnabled instance Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
                 let! markAsDisabled =
-                    Metrics.ServiceStatus.markAsDisabled instance Metrics.Audience.Sys
+                    ServiceStatus.markAsDisabled instance Audience.Sys
                     |> Result.mapError (MetricError >> MetricsError)
 
                 let serviceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled }

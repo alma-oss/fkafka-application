@@ -1,9 +1,9 @@
 namespace Lmc.KafkaApplication
 
 module internal ResourceChecker =
-    open Kafka
-    open Metrics
-    open ServiceIdentification
+    open Lmc.Kafka
+    open Lmc.Metrics
+    open Lmc.ServiceIdentification
 
     let private kafkaClusterResource brokerList = ResourceAvailability.createFromStrings "kafka_cluster" brokerList brokerList Audience.Sys
 
@@ -17,7 +17,7 @@ module internal ResourceChecker =
         | true -> ResourceAvailability.enable instance resource |> ignore
         | false -> ResourceAvailability.disable instance resource |> ignore
 
-    let updateResourceStatusOnCheck instance (BrokerList brokerList) kafkaChecker: Kafka.Checker =
+    let updateResourceStatusOnCheck instance (BrokerList brokerList) kafkaChecker: Checker =
         let kafkaClusterResource = kafkaClusterResource brokerList
         let kafkaTopicResource = kafkaTopicResource brokerList
 
@@ -27,7 +27,7 @@ module internal ResourceChecker =
                 CheckTopic = (fun topic -> kafkaChecker.CheckTopic topic >> tee (updateResourceStatus instance (kafkaTopicResource topic)))
         }
 
-    let updateResourceStatusOnIntervalCheck instance (BrokerList brokerList) kafkaIntervalChecker: Kafka.IntervalChecker =
+    let updateResourceStatusOnIntervalCheck instance (BrokerList brokerList) kafkaIntervalChecker: IntervalChecker =
         let kafkaClusterResource = kafkaClusterResource brokerList
         let kafkaTopicResource = kafkaTopicResource brokerList
 
