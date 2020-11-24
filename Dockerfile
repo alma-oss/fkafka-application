@@ -1,4 +1,4 @@
-FROM dcreg.service.consul/dev/development-dotnet-core-sdk-common:3.1
+FROM dcreg.service.consul/dev/development-dotnet-core-sdk-common:5.0
 
 # build scripts
 COPY ./build.sh /lib/

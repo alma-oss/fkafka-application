@@ -1,4 +1,4 @@
-framework: netcoreapp3.1
+framework: net5.0
 storage none
 
 source https://api.nuget.org/v3/index.json
@@ -8,18 +8,14 @@ nuget Newtonsoft.Json ~> 12.0
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
-nuget Lmc.ConsentEvents ~> 10.0
-nuget Lmc.ContractAggregate ~> 3.0
-nuget Lmc.Environment ~> 4.0
-nuget Lmc.ErrorHandling ~> 3.0
-nuget Lmc.Kafka ~> 11.0
-nuget Lmc.Logging ~> 3.3
-nuget Lmc.Metrics ~> 4.0
-nuget Lmc.ServiceIdentification ~> 4.0
-
-nuget Lmc.ConsentsPerson ~> 1.1
-nuget Lmc.Serializer ~> 1.1
-nuget Lmc.State ~> 3.0
+nuget Lmc.ConsentEvents ~> 11.0
+nuget Lmc.ContractAggregate ~> 4.0
+nuget Lmc.Environment ~> 5.0
+nuget Lmc.ErrorHandling ~> 4.0
+nuget Lmc.Kafka ~> 12.0
+nuget Lmc.Logging ~> 4.0
+nuget Lmc.Metrics ~> 5.0
+nuget Lmc.ServiceIdentification ~> 5.0
 
 // [ FAKE GROUP ]
 group Build
