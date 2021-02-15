@@ -7,6 +7,7 @@ module EnvironmentBuilder =
     open Lmc.Kafka
     open Lmc.KafkaApplication
     open Lmc.Consents.Events.Events
+    open Lmc.Environment
     open Lmc.ErrorHandling
     open OptionOperators
     open ApplicationBuilder.KafkaApplicationBuilder
@@ -88,7 +89,7 @@ module EnvironmentBuilder =
             { defaultParts
                 with
                     Logger = logger
-                    Environment = Environment.getEnvs()
+                    Environment = Envs.getAll()
             }
             |> Ok
             |> Configuration
@@ -104,11 +105,11 @@ module EnvironmentBuilder =
                         envFileLocations
                         |> List.tryFind File.Exists
                         |> function
-                            | Some file -> file |> Environment.loadFromFile
+                            | Some file -> file |> Envs.loadFromFile
                             | _ -> Ok ()
                         |> Result.mapError EnvironmentError.LoadError
 
-                    let environment = Environment.getEnvs()
+                    let environment = Envs.getAll()
 
                     environment
                     |> Map.toList

@@ -14,7 +14,7 @@ type ToolDir =
     | Local of string
 
 // ========================================================================================================
-// === F# / Library fake build ==================================================================== 1.1.0 =
+// === F# / Library fake build ==================================================================== 1.3.1 =
 // --------------------------------------------------------------------------------------------------------
 // Options:
 //  - no-clean   - disables clean of dirs in the first step (required on CI)
@@ -143,8 +143,9 @@ Target.create "AssemblyInfo" (fun _ ->
             (getAssemblyInfoAttributes projectName)
         )
 
-    !! "**/*.*proj"
-    -- "example/**/*.*proj"
+    !! "src/**/*.fsproj"
+    ++ "./*.fsproj"
+    ++ "tests/**/*.fsproj"
     |> Seq.map getProjectDetails
     |> Seq.iter (fun (projFileName, _, folderName, attributes) ->
         match projFileName with
@@ -154,8 +155,9 @@ Target.create "AssemblyInfo" (fun _ ->
 )
 
 Target.create "Build" (fun _ ->
-    !! "**/*.*proj"
-    -- "example/**/*.*proj"
+    !! "src/**/*.fsproj"
+    ++ "./*.fsproj"
+    ++ "tests/**/*.fsproj"
     |> Seq.iter (DotNet.build id)
 )
 
@@ -175,8 +177,9 @@ Target.create "Lint" <| skipOn "no-lint" (fun _ ->
         |> List.rev
         |> check
 
-    !! "**/*.fsproj"
-    -- "example/**/*.*proj"
+    !! "src/**/*.fsproj"
+    ++ "./*.fsproj"
+    ++ "tests/**/*.fsproj"
     |> Seq.map (fun fsproj ->
         match toolsDir with
         | Global ->
@@ -193,7 +196,7 @@ Target.create "Lint" <| skipOn "no-lint" (fun _ ->
 )
 
 Target.create "Tests" (fun _ ->
-    if !! "tests/*.fsproj" |> Seq.isEmpty
+    if !! "tests/**/*.fsproj" |> Seq.isEmpty
     then Trace.tracefn "There are no tests yet."
     else DotnetCore.runOrFail "run" "tests"
 )
