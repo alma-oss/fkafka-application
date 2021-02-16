@@ -9,6 +9,7 @@ module ApplicationBuilder =
     open Lmc.Metrics.ServiceStatus
     open Lmc.ServiceIdentification
     open Lmc.Consents.Events.Events
+    open Lmc.Environment
     open Lmc.ErrorHandling
     open OptionOperators
 
@@ -39,7 +40,7 @@ module ApplicationBuilder =
                 newConfiguration <!> fun newParts ->
                     {
                         Logger = currentParts.Logger
-                        Environment = newParts.Environment |> Lmc.Environment.update currentParts.Environment
+                        Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         GitCommit = newParts.GitCommit <??> currentParts.GitCommit
                         DockerImageVersion = newParts.DockerImageVersion <??> currentParts.DockerImageVersion
