@@ -3,8 +3,8 @@ storage none
 
 source https://api.nuget.org/v3/index.json
 nuget FSharp.Core
-nuget FSharp.Data ~> 3.0
-nuget Newtonsoft.Json ~> 12.0
+nuget FSharp.Data ~> 4.0
+nuget Newtonsoft.Json ~> 13.0
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
@@ -12,8 +12,8 @@ nuget Lmc.ConsentEvents ~> 11.1
 nuget Lmc.ContractAggregate ~> 4.1
 nuget Lmc.Environment ~> 6.0
 nuget Lmc.ErrorHandling ~> 5.0
-nuget Lmc.Kafka ~> 12.1
-nuget Lmc.Logging ~> 4.1
+nuget Lmc.Kafka ~> 13.0
+nuget Lmc.Logging ~> 4.2
 nuget Lmc.Metrics ~> 5.1
 nuget Lmc.ServiceIdentification ~> 5.2
 
