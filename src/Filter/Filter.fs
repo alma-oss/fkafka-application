@@ -4,7 +4,7 @@ module internal Filter =
     open System.IO
     open FSharp.Data
     open Lmc.ServiceIdentification
-    open Lmc.ContractAggregate.Intent
+    open Lmc.Consents.Intent
     open Lmc.Kafka
     open Lmc.KafkaApplication
 
@@ -40,7 +40,9 @@ module internal Filter =
         Some spot |> isValueAllowed spots
         || intent |> isValueAllowed intents
 
-    let filterByConfiguration getCommonEvent getIntent configuration inputEvent =
+    let filterByConfiguration getCommonEvent getIntent configuration tracedEvent =
+        let inputEvent = tracedEvent |> TracedEvent.event
+
         let commonEvent: CommonEvent =
             inputEvent
             |> Input
@@ -51,5 +53,5 @@ module internal Filter =
             inputEvent
             |> getIntent
 
-        if (spot, intent) |> isAllowedBy configuration then Some inputEvent
+        if (spot, intent) |> isAllowedBy configuration then Some tracedEvent
         else None

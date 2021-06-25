@@ -1,11 +1,13 @@
 FSharp.Core
 FSharp.Data
 Newtonsoft.Json
+Lmc.Consents.ContractAggregate
+Lmc.Consents.Events
+Lmc.Consents.PersonAggregate
 Lmc.Environment
 Lmc.ErrorHandling
 Lmc.Kafka
 Lmc.Logging
 Lmc.Metrics
 Lmc.ServiceIdentification
-Lmc.ConsentEvents
-Lmc.ContractAggregate
+Lmc.Tracing

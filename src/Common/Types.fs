@@ -1,9 +1,11 @@
 namespace Lmc.KafkaApplication
 
+open System
 open Lmc.Kafka
 open Lmc.Metrics
 open Lmc.ServiceIdentification
 open Lmc.Logging
+open Lmc.Tracing
 open Lmc.Consents.Events.Events
 
 [<Measure>] type Second
@@ -207,8 +209,8 @@ type KafkaApplicationError =
 
 type ProducerSerializer<'OutputEvent> = ProducerSerializer of ('OutputEvent -> string)
 
-type NotConnectedProducer = Producer.NotConnectedProducer
-type ConnectedProducer = Producer.TopicProducer
+type NotConnectedProducer = Producer.NotConnected
+type ConnectedProducer = Producer
 
 type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> 'OutputEvent -> unit
 type ProduceEvent<'OutputEvent> = 'OutputEvent -> unit
@@ -228,6 +230,23 @@ type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> SerializedEvent
 //
 // Consume handlers
 //
+
+type ParseEvent<'Event> = string -> 'Event
+
+type Event<'Event> = {
+    Event: 'Event
+    ConsumeTrace: Trace
+}
+
+[<RequireQualifiedAccess>]
+module Event =
+    let parse (parseEvent: ParseEvent<'Event>) (message: Consumer.TracedMessage<string>): Event<'Event> =
+        {
+            Event = message.Message |> parseEvent
+            ConsumeTrace = message.Trace
+        }
+
+    let event ({ Event = event }: Event<'Event>) = event
 
 type PreparedConsumeRuntimeParts<'OutputEvent> = {
     Logger: ApplicationLogger
@@ -281,13 +300,58 @@ module internal PreparedConsumeRuntimeParts =
             DisableResource = preparedRuntimeParts.DisableResource
         }
 
+type TracedEvent<'Event> =
+    {
+        Event: 'Event
+        Trace: Trace
+    }
+
+    member this.Finish() =
+        this.Trace |> Trace.finish
+
+    interface IDisposable with
+        member this.Dispose() =
+            this.Finish()
+
+[<RequireQualifiedAccess>]
+module TracedEvent =
+    let event ({ Event = event }: TracedEvent<'Event>) = event
+    let trace ({ Trace = trace }: TracedEvent<'Event>) = trace
+
+    let startHandle ({ Event = event; ConsumeTrace = trace }: Event<'Event>): TracedEvent<'Event> =
+        {
+            Event = event
+            Trace =
+                "Handle event"
+                |> Trace.ChildOf.startActive trace
+                |> Trace.addTags [
+                    "peer.service", "kafka"
+                    "component", (sprintf "fkafka-application (%s)" AssemblyVersionInformation.AssemblyVersion)
+                ]
+        }
+
+    let continueAs pattern name (event: TracedEvent<'Event>) =
+        { event with
+            Trace =
+                name
+                |> Trace.ChildOf.startActive event.Trace
+                |> Trace.addTags [
+                    "peer.service", "kafka"
+                    "component", (sprintf "fkafka-application (%s)" AssemblyVersionInformation.AssemblyVersion)
+                    "pattern", pattern
+                ]
+        }
+
+    let finish (event: TracedEvent<'Event>) =
+        event.Finish()
+
 type ConsumeHandler<'InputEvent, 'OutputEvent> =
-    | Events of (ConsumeRuntimeParts<'OutputEvent> -> 'InputEvent seq -> unit)
-    | LastEvent of (ConsumeRuntimeParts<'OutputEvent> -> 'InputEvent -> unit)
+    | Events of (ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit)
+    | LastEvent of (ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit)
 
 type RuntimeConsumeHandler<'InputEvent> =
-    | Events of ('InputEvent seq -> unit)
-    | LastEvent of ('InputEvent -> unit)
+    | Events of (TracedEvent<'InputEvent> -> unit)
+    | LastEvent of (TracedEvent<'InputEvent> -> unit)
 
 [<RequireQualifiedAccess>]
 module internal ConsumeHandler =

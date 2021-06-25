@@ -9,7 +9,7 @@ module EnvironmentBuilder =
     open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
-    open OptionOperators
+    open Lmc.ErrorHandling.Option.Operators
     open ApplicationBuilder.KafkaApplicationBuilder
 
     module Environment = Lmc.Environment

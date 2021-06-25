@@ -34,7 +34,9 @@ module ContentBasedRouterBuilder =
                     outputStreams
                     |> List.map StreamName.value
 
-                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
+                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+                    use eventToRoute = event |> TracedEvent.continueAs "Router" "Route event"
+
                     let routeEvent =
                         match routeEventHandler with
                         | Simple routeEvent -> routeEvent
@@ -47,9 +49,9 @@ module ContentBasedRouterBuilder =
                             (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
 
-                    events
-                    |> Seq.choose (routeEvent app.ProcessedBy)
-                    |> Seq.iter produceRoutedEvent
+                    eventToRoute
+                    |> routeEvent app.ProcessedBy
+                    |> Option.iter produceRoutedEvent
 
                 return
                     configuration

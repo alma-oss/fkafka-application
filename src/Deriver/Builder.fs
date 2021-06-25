@@ -4,9 +4,10 @@ module DeriverBuilder =
     open Lmc.KafkaApplication
     open Lmc.KafkaApplication.PatternBuilder
     open Lmc.KafkaApplication.PatternMetrics
+    open Lmc.Tracing
     open Lmc.ErrorHandling
     open ApplicationBuilder
-    open OptionOperators
+    open Lmc.ErrorHandling.Option.Operators
 
     [<AutoOpen>]
     module internal DeriverApplicationBuilder =
@@ -17,14 +18,16 @@ module DeriverBuilder =
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
-            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
+            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+                use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
+
                 let deriveEvent =
                     match deriveEventHandler with
                     | Simple deriveEvent -> deriveEvent
                     | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts)
 
-                events
-                |> Seq.collect (deriveEvent app.ProcessedBy)
+                eventToDerive
+                |> deriveEvent app.ProcessedBy
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
             configuration

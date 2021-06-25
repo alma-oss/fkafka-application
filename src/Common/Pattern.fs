@@ -5,7 +5,7 @@ open Lmc.KafkaApplication
 open Lmc.ServiceIdentification
 open Lmc.Metrics
 open Lmc.Logging
-open Lmc.ContractAggregate.Intent
+open Lmc.Consents.Intent
 
 // Errors
 
@@ -70,8 +70,8 @@ type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'Patt
 type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
+    open Lmc.ErrorHandling.Option.Operators
     open ApplicationBuilder
-    open OptionOperators
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> =
         fun (PatternName pattern) getConfiguration patternParts ->

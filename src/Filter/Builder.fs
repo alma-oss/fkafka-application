@@ -4,9 +4,9 @@ module FilterBuilder =
     open Lmc.KafkaApplication
     open Lmc.KafkaApplication.PatternBuilder
     open Lmc.KafkaApplication.PatternMetrics
-    open Lmc.ErrorHandling
     open ApplicationBuilder
-    open OptionOperators
+    open Lmc.ErrorHandling
+    open Lmc.ErrorHandling.Option.Operators
     open Filter
 
     module internal FilterApplicationBuilder =
@@ -19,11 +19,13 @@ module FilterBuilder =
             (getIntent: GetIntent<'InputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
-            let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (events: 'InputEvent seq) =
-                events
-                |> Seq.choose (filterByConfiguration getCommonEvent getIntent filterConfiguration)
-                |> Seq.collect (filterContentFromInputEvent app.ProcessedBy)
-                |> Seq.iter app.ProduceTo.[filterOutputStream]
+            let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+                use eventToFilter = event |> TracedEvent.continueAs "Filter" "Filter event"
+
+                eventToFilter
+                |> filterByConfiguration getCommonEvent getIntent filterConfiguration
+                >>= filterContentFromInputEvent app.ProcessedBy
+                |>! app.ProduceTo.[filterOutputStream]
 
             configuration
             |> addDefaultConsumeHandler filterConsumeHandler
