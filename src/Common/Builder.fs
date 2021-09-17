@@ -11,6 +11,7 @@ module ApplicationBuilder =
     open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
+    open Lmc.ErrorHandling.Option.Operators
     open OptionOperators
 
     [<AutoOpen>]

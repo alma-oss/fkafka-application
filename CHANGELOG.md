@@ -2,6 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add tracing to consume events
+    - [**BC**] Change `consume handlers` to get a single `TracedEvent` instead of `Event seq`
+    - [**BC**] Update dependencies
 
 ## 13.1.0 - 2021-02-16
 - Update dependencies

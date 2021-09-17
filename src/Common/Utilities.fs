@@ -3,17 +3,8 @@ namespace Lmc.KafkaApplication
 module internal OptionOperators =
     open Lmc.ErrorHandling.Option.Operators
 
-    /// Default value - if value is None, default value will be used
-    let inline (<?=>) o defaultValue = o <?=> defaultValue
-
-    /// Or else - if value is None, other option will be used
-    let inline (<??>) o other = o <??> other
-
     /// Mandatory - if value is None, error will be returned
     let inline (<?!>) o errorMessage = o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError)
-
-    /// Option.iter
-    let inline (|>!) o f = o |>! f
 
 [<RequireQualifiedAccess>]
 module internal Map =

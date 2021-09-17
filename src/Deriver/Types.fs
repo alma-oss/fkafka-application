@@ -19,7 +19,7 @@ type DeriverApplicationError =
 
 // Deriver configuration
 
-type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> 'OutputEvent list
 
 type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
     | Simple of DeriveEvent<'InputEvent, 'OutputEvent>

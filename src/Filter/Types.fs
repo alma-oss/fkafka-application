@@ -2,7 +2,7 @@ namespace Lmc.KafkaApplication.Filter
 
 open Lmc.ServiceIdentification
 open Lmc.KafkaApplication
-open Lmc.ContractAggregate.Intent
+open Lmc.Consents.Intent
 open Lmc.Consents.Events.Events
 
 // Errors
@@ -25,7 +25,7 @@ type FilterConfiguration = {
     Intents: Intent list
 }
 
-type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> 'OutputEvent option
 
 // Filter Application Configuration
 

@@ -5,12 +5,13 @@ module internal ApplicationRunner =
     open Lmc.ServiceIdentification
     open Lmc.Logging
     open Lmc.ErrorHandling
-    open OptionOperators
+    open Lmc.ErrorHandling.Option.Operators
 
     module private KafkaApplicationRunner =
         open System
         open Lmc.Metrics
         open Lmc.Metrics.ServiceStatus
+        open Lmc.Tracing
 
         let private checkResources (application: KafkaApplicationParts<_, _>) =
             let instance = application.Box |> Box.instance
@@ -82,19 +83,28 @@ module internal ApplicationRunner =
             logger.Verbose "Application<Supervision>" "Instance started produced."
 
         let private consume<'InputEvent>
-            (consumeEvents: ConsumerConfiguration -> 'InputEvent seq)
-            (consumeLastEvent: ConsumerConfiguration -> 'InputEvent option)
+            (consumeEvents: ConsumerConfiguration -> Event<'InputEvent> seq)
+            (consumeLastEvent: ConsumerConfiguration -> Event<'InputEvent> option)
             configuration
-            incrementInputEventCount = function
+            incrementInputEventCount =
+
+            let handleEvent handle event =
+                event
+                |> TracedEvent.startHandle
+                |> tee (TracedEvent.event >> incrementInputEventCount)
+                |> tee handle
+                |> TracedEvent.finish
+
+            function
             | Events eventsHandler ->
                 configuration
                 |> consumeEvents
-                |> Seq.map (tee incrementInputEventCount)
-                |> eventsHandler
+                |> Seq.iter (handleEvent eventsHandler)
+
             | LastEvent lastEventHandler ->
                 configuration
                 |> consumeLastEvent
-                |>! lastEventHandler
+                |>! (handleEvent lastEventHandler)
 
         let private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
             (logger: ApplicationLogger)
@@ -148,8 +158,8 @@ module internal ApplicationRunner =
             |> List.iter action
 
         let run<'InputEvent, 'OutputEvent>
-            (consumeEvents: ConsumerConfiguration -> 'InputEvent seq)
-            (consumeLastEvent: ConsumerConfiguration -> 'InputEvent option)
+            (consumeEvents: ConsumerConfiguration -> Event<'InputEvent> seq)
+            (consumeLastEvent: ConsumerConfiguration -> Event<'InputEvent> option)
             connectProducer
             produceSingleMessage
             flushProducer
@@ -224,11 +234,11 @@ module internal ApplicationRunner =
             match application with
             | Ok app ->
                 try
-                    let consume configuration =
-                        Consumer.consume configuration app.ParseEvent
+                    let consume configuration: Event<'InputEvent> seq =
+                        Consumer.consume configuration (Event.parse app.ParseEvent)
 
-                    let consumeLast configuration =
-                        Consumer.consumeLast configuration app.ParseEvent
+                    let consumeLast configuration: Event<'InputEvent> option =
+                        Consumer.consumeLast configuration (Event.parse app.ParseEvent)
 
                     app
                     |> tee beforeRun
@@ -238,8 +248,8 @@ module internal ApplicationRunner =
                         consumeLast
                         Producer.connect
                         Producer.produceSingle
-                        Producer.TopicProducer.flush
-                        Producer.TopicProducer.close
+                        Producer.flush
+                        Producer.close
                     Successfully
                 with
                 | error ->
