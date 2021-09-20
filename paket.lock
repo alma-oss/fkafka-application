@@ -28,7 +28,7 @@ NUGET
       System.Runtime.Extensions (>= 4.1)
       System.Runtime.InteropServices (>= 4.1)
       System.Text.RegularExpressions (>= 4.1)
-    Confluent.Kafka (1.8)
+    Confluent.Kafka (1.8.1)
       librdkafka.redist (>= 1.8)
       System.Memory (>= 4.5)
     ConsoleStyle (2.0)
@@ -649,17 +649,17 @@ NUGET
       Lmc.ServiceIdentification (>= 5.3)
       Lmc.State (>= 4.1)
       Lmc.Tracing (>= 2.2)
-    Lmc.Consents.Events (12.0.0)
+    Lmc.Consents.Events (13.0.0)
       FSharp.Core (>= 5.0.2)
       FSharp.Data (>= 4.2.3)
       Lmc.Aggregate (>= 6.0)
       Lmc.Consents.ContractAggregate (>= 7.1)
-      Lmc.Consents.PersonAggregate (>= 1.1)
+      Lmc.Consents.PersonAggregate (>= 2.0)
       Lmc.ErrorHandling (>= 5.1)
       Lmc.Kafka (>= 16.2)
       Lmc.Serializer (>= 2.0)
       Lmc.ServiceIdentification (>= 5.3)
-    Lmc.Consents.PersonAggregate (1.1.0)
+    Lmc.Consents.PersonAggregate (2.0.0)
       FSharp.Core (>= 5.0.2)
       FSharp.Data (>= 4.2.3)
       Lmc.Aggregate (>= 6.0)
@@ -720,7 +720,7 @@ NUGET
       Lmc.State (>= 4.1)
 GIT
   remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
-     (7d60f757db039d45660b752f7853cade60c99207)
+     (68ae2bfc539959dcba168b6e885af986cb973670)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
