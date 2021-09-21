@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix default spot from `(Zone=common, Bucket=all)` to `(Zone=all, Bucket=common)`
 
 ## 14.1.0 - 2021-09-20
 - Update dependencies

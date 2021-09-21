@@ -286,7 +286,7 @@ module ApplicationBuilder =
                     configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
                     <?=> defaultConsumeErrorHandler
 
-                let spot = configurationParts.Spot <?=> { Zone = Zone "common"; Bucket = Bucket "all" }
+                let spot = configurationParts.Spot <?=> { Zone = Zone "all"; Bucket = Bucket "common" }
                 let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version spot.Zone spot.Bucket
 
                 let logger = configurationParts.Logger
