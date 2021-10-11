@@ -1,10 +1,10 @@
 namespace Lmc.KafkaApplication
 
+open Microsoft.Extensions.Logging
 open Lmc.Kafka
 open Lmc.KafkaApplication
 open Lmc.ServiceIdentification
 open Lmc.Metrics
-open Lmc.Logging
 open Lmc.Consents.Intent
 
 // Errors
@@ -23,7 +23,9 @@ type internal PatternName = PatternName of string
 type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
 type PatternRuntimeParts = {
-    Logger: ApplicationLogger
+    // todo - tady bylo lepsi mit spis loggerFactory
+    Logger: ILogger
+    LoggerFactory: ILoggerFactory
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
@@ -37,6 +39,7 @@ module internal PatternRuntimeParts =
     let fromConsumeParts<'OutputEvent> (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
         {
             Logger = consumeRuntimeParts.Logger
+            LoggerFactory = consumeRuntimeParts.LoggerFactory
             Box = consumeRuntimeParts.Box
             Environment = consumeRuntimeParts.Environment
             IncrementMetric = consumeRuntimeParts.IncrementMetric
@@ -61,8 +64,8 @@ module internal PatternRunner =
             |> run (beforeRun patternParts)
         | Error error ->
             error
-            |> logApplicationError (sprintf "%s Application" pattern)
-            |> WithError
+            |> sprintf "[Critical Error] %s Application cannot start because of %A" pattern
+            |> WithCriticalError
 
 // Build Patterns
 
@@ -79,9 +82,9 @@ module internal PatternBuilder =
             |> getConfiguration
             |>! fun configuration ->
                 configuration <!> tee (fun parts ->
-                    patternParts
-                    |> sprintf "%A"
-                    |> parts.Logger.Debug pattern
+                    parts.LoggerFactory
+                        .CreateLogger($"Pattern<{pattern}>")
+                        .LogTrace("Configuration: {configuration}", patternParts)
                 )
                 |> ignore
 

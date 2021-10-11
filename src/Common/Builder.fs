@@ -2,9 +2,9 @@ namespace Lmc.KafkaApplication
 
 module ApplicationBuilder =
     open System
+    open Microsoft.Extensions.Logging
     open Lmc.Kafka
     open Lmc.KafkaApplication
-    open Lmc.Logging
     open Lmc.Metrics
     open Lmc.Metrics.ServiceStatus
     open Lmc.ServiceIdentification
@@ -12,26 +12,26 @@ module ApplicationBuilder =
     open Lmc.Environment
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
-    open OptionOperators
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
-        let private debugConfiguration (parts: ConfigurationParts<_, _>) =
-            parts
-            |> sprintf "%A"
-            |> parts.Logger.Debug "Configuration"
+        let private traceConfiguration (parts: ConfigurationParts<_, _>) =
+            parts.LoggerFactory
+                .CreateLogger("KafkaApplication.Configuration")
+                .LogTrace("{Configuration parts}", parts)
 
         let (>>=) (Configuration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee traceConfiguration) >> f)
             |> Configuration
 
         let (<!>) state f =
             state >>= (f >> Ok)
 
+        [<System.Obsolete("todo - to se pouziva kde?")>]
         let logger (Configuration configuration) =
             configuration
-            |> Result.map (fun parts -> parts.Logger)
+            |> Result.map (fun parts -> parts.LoggerFactory)
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
@@ -40,7 +40,7 @@ module ApplicationBuilder =
             currentConfiguration >>= fun currentParts ->
                 newConfiguration <!> fun newParts ->
                     {
-                        Logger = currentParts.Logger
+                        LoggerFactory = currentParts.LoggerFactory
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         GitCommit = newParts.GitCommit <??> currentParts.GitCommit
@@ -61,72 +61,10 @@ module ApplicationBuilder =
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
-                        GraylogConnections = currentParts.GraylogConnections @ newParts.GraylogConnections
                         CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
                         WebServerSettings = currentParts.WebServerSettings @ newParts.WebServerSettings
                     }
                 |> Configuration.result
-
-        let addGraylogToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) (graylog: string, graylogService: string) =
-            result {
-                let! hostsPorts =
-                    graylog.Split ","
-                    |> Array.filter (String.IsNullOrEmpty >> not)
-                    |> Array.map (fun graylog ->
-                        match graylog.Split ":" with
-                        | [| host |] -> Ok (host, None)
-                        | [| host; port |] -> Ok (host, Some port)
-                        | _ -> Error (LoggingError.InvalidGraylogConnectionString graylog)
-                    )
-                    |> Array.toList
-                    |> Result.sequence
-
-                let! graylogHostsPorts =
-                    hostsPorts
-                    |> List.map (fun (host, port) ->
-                        result {
-                            let! host =
-                                host
-                                |> Graylog.Host.create
-                                |> Result.mapError LoggingError.InvalidGraylogHost
-
-                            let! port =
-                                match port with
-                                | Some port ->
-                                    match Int32.TryParse port with
-                                    | true, port -> Ok <| Some (Graylog.Port port)
-                                    | _ -> Error (LoggingError.InvalidPort port)
-                                | _ -> Ok None
-
-                            return (host, port)
-                        }
-                    )
-                    |> Result.sequence
-
-                if graylogHostsPorts |> List.isEmpty then
-                    return! Error (LoggingError.InvalidGraylogConnectionString graylog)
-
-                let resource = {
-                    Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
-                    Interval = 30<Lmc.KafkaApplication.Second>
-                    Checker = fun () ->
-                        GraylogService graylogService
-                        |> Graylog.Diagnostics.isAliveResult
-                        |> Async.RunSynchronously
-                        |> function
-                            | Ok isAlive when isAlive -> Up
-                            | Ok _ -> Down
-                            | Error e ->
-                                parts.Logger.Error "Graylog Resource" <| sprintf "%A" e
-                                Down
-                }
-
-                return { parts
-                    with
-                        GraylogConnections = parts.GraylogConnections @ graylogHostsPorts
-                        IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers
-                }
-            }
 
         let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
@@ -264,6 +202,10 @@ module ApplicationBuilder =
             }
 
         let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent> =
+            /// Overriden Result.ofOption operator to return a KafkaApplicationError instead of generic error
+            let inline (<?!>) o errorMessage =
+                o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError)
+
             result {
                 let! configurationParts = configuration
 
@@ -287,14 +229,14 @@ module ApplicationBuilder =
                     <?=> defaultConsumeErrorHandler
 
                 let spot = configurationParts.Spot <?=> { Zone = Zone "all"; Bucket = Bucket "common" }
-                let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version spot.Zone spot.Bucket
+                let box = Create.Box(instance, spot)
 
-                let logger = configurationParts.Logger
+                let loggerFactory = configurationParts.LoggerFactory
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
-                let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
+                let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo<later> - allow passing custom interval checker
 
                 let gitCommit = configurationParts.GitCommit <?=> GitCommit "unknown"
                 let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
@@ -303,20 +245,8 @@ module ApplicationBuilder =
                 // composed parts
                 //
 
-                // logging
-                let logger =
-                    match configurationParts.GraylogConnections with
-                    | [] -> logger
-                    | connections ->
-                        connections
-                        |> List.map (fun (host, port) ->
-                            (host, port <?=> Graylog.Port Graylog.DefaultPort)
-                        )
-                        |> ApplicationLogger.graylogLogger instance
-                        |> ApplicationLogger.combine logger
-
                 // kafka parts
-                let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
+                let kafkaLogger runtimeConnection = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" runtimeConnection)
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
                 let kafkaIntervalChecker brokerList = kafkaIntervalChecker |> ResourceChecker.updateResourceStatusOnIntervalCheck instance brokerList
 
@@ -345,6 +275,7 @@ module ApplicationBuilder =
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
+                                CommitMessage = CommitMessage.Automatically // todo - set by configuration value
                             }
                         )
                     ) Map.empty
@@ -396,7 +327,8 @@ module ApplicationBuilder =
                 let setMetric = ApplicationMetrics.setCustomMetricValue instance
 
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
-                    Logger = logger
+                    Logger = loggerFactory.CreateLogger "KafkaApplication.Runtime"
+                    LoggerFactory = loggerFactory
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
                     Box = box
@@ -421,7 +353,7 @@ module ApplicationBuilder =
                 let customTasks =
                     configurationParts.CustomTasks
                     |> CustomTasks.prepare {
-                        Logger = logger
+                        Logger = loggerFactory.CreateLogger "KafkaApplication.CustomTasks"
                         Box = box
                         Environment = environment
                         IncrementMetric = incrementMetric
@@ -431,7 +363,8 @@ module ApplicationBuilder =
                     }
 
                 return {
-                    Logger = logger
+                    Logger = loggerFactory.CreateLogger "KafkaApplication"
+                    LoggerFactory = loggerFactory
                     Environment = environment
                     Box = box
                     ParseEvent = parseEvent
@@ -463,16 +396,9 @@ module ApplicationBuilder =
         member __.Run(state: Configuration<'InputEvent, 'OutputEvent>) =
             buildApplication state
 
-        [<CustomOperation("useLogger")>]
-        member __.Logger(state, logger: ApplicationLogger): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with Logger = logger }
-
-        [<CustomOperation("logToGraylog")>]
-        member __.LogToGraylog(state, graylog, graylogService): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                (graylog, graylogService)
-                |> addGraylogToParts parts
-                |> Result.mapError LoggingError
+        [<CustomOperation("useLoggerFactory")>]
+        member __.Logger(state, loggerFactory: ILoggerFactory): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with LoggerFactory = loggerFactory }
 
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =

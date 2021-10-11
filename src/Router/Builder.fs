@@ -25,7 +25,7 @@ module ContentBasedRouterBuilder =
                 let! outputStreamTopics =
                     outputStreams
                     |> List.map (function
-                        | StreamName streamName -> Error (RouterError.StreamNameIsNotInstance streamName)
+                        | StreamName streamName -> Error (RouterError.StreamNameIsNotInstance [ Lmc.ServiceIdentification.InstanceError.InvalidFormat streamName ])
                         | Instance instance -> Ok instance
                     )
                     |> Result.sequence <@> RouterError
@@ -44,7 +44,7 @@ module ContentBasedRouterBuilder =
 
                     let produceRoutedEvent =
                         Router.Routing.routeEvent
-                            (app.Logger.VeryVerbose "Routing")
+                            (app.LoggerFactory.CreateLogger("KafkaApplication.Router"))
                             (Output >> getCommonEvent >> CommonEvent.eventType)
                             (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
@@ -116,13 +116,11 @@ module ContentBasedRouterBuilder =
         member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun routerParts ->
                 result {
-                    let! routerPath =
-                        configurationPath
-                        |> FileParser.parseFromPath id (sprintf "Routing configuration was not found at \"%s\".") <@> NotFound
-
                     let! router =
-                        routerPath
-                        |> Router.Configuration.parse <@> RouterError
+                        configurationPath
+                        |> FileParser.parseFromPath
+                            (Router.Configuration.parse >@> RouterError)
+                            (sprintf "Routing configuration was not found at \"%s\"." >> NotFound)
 
                     return { routerParts with RouterConfiguration = Some router }
                 }

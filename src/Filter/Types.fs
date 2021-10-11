@@ -6,10 +6,10 @@ open Lmc.Consents.Intent
 open Lmc.Consents.Events.Events
 
 // Errors
-
 type FilterConfigurationError =
     | NotFound of string
     | NotSet
+    | InvalidSpot of Lmc.ServiceIdentification.SpotError list
     | MissingOutputStream
     | MissingFilterContent
     | MissingGetCommonEvent

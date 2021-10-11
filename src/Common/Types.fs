@@ -1,6 +1,7 @@
 namespace Lmc.KafkaApplication
 
 open System
+open Microsoft.Extensions.Logging
 open Lmc.Kafka
 open Lmc.Metrics
 open Lmc.ServiceIdentification
@@ -131,7 +132,7 @@ type ProducerErrorPolicy =
     | Retry
     | RetryIn of int<Second>
 
-type ProducerErrorHandler = ApplicationLogger -> ErrorMessage -> ProducerErrorPolicy
+type ProducerErrorHandler = ILogger -> ErrorMessage -> ProducerErrorPolicy
 
 type ConsumeErrorPolicy =
     | Shutdown
@@ -140,7 +141,7 @@ type ConsumeErrorPolicy =
     | RetryIn of int<Second>
     | Continue
 
-type ConsumeErrorHandler = ApplicationLogger -> ErrorMessage -> ConsumeErrorPolicy
+type ConsumeErrorHandler = ILogger -> ErrorMessage -> ConsumeErrorPolicy
 
 // Error types
 
@@ -154,12 +155,12 @@ type EnvironmentError =
 [<RequireQualifiedAccess>]
 type InstanceError =
     | VariableNotFoundError of string
-    | InvalidFormatError of string
+    | InvalidFormatError of Lmc.ServiceIdentification.InstanceError
 
 [<RequireQualifiedAccess>]
 type SpotError =
     | VariableNotFoundError of string
-    | InvalidFormatError of string
+    | InvalidFormatError of Lmc.ServiceIdentification.SpotError
 
 [<RequireQualifiedAccess>]
 type GroupIdError =
@@ -168,7 +169,7 @@ type GroupIdError =
 [<RequireQualifiedAccess>]
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
-    | TopicIsNotInstanceError of string
+    | TopicIsNotInstanceError of Lmc.ServiceIdentification.InstanceError
 
 [<RequireQualifiedAccess>]
 type ConsumeHandlerError =
@@ -186,8 +187,6 @@ type MetricsError =
 
 [<RequireQualifiedAccess>]
 type LoggingError =
-    | InvalidGraylogConnectionString of string
-    | InvalidGraylogHost of Lmc.Logging.Graylog.HostError
     | InvalidPort of string
     | VariableNotFoundError of string
 
@@ -222,34 +221,37 @@ type private PreparedProducer<'OutputEvent> = {
 }
 
 // Output events
-type SerializedEvent = string
-
-type Serialize = Serialize of (obj -> SerializedEvent)
-type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> SerializedEvent
+type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> string
 
 //
 // Consume handlers
 //
 
-type ParseEvent<'Event> = string -> 'Event
+type ParseEvent<'InputEvent> = string -> 'InputEvent
 
-type Event<'Event> = {
-    Event: 'Event
+type ParsedEvent<'InputEvent> = {
+    Commit: ManualCommit
+    Event: 'InputEvent
     ConsumeTrace: Trace
 }
 
+type ParsedEventResult<'InputEvent> = Consumer.ConsumedResult<ParsedEvent<'InputEvent>>
+
 [<RequireQualifiedAccess>]
 module Event =
-    let parse (parseEvent: ParseEvent<'Event>) (message: Consumer.TracedMessage<string>): Event<'Event> =
-        {
-            Event = message.Message |> parseEvent
-            ConsumeTrace = message.Trace
-        }
+    let parse (parseEvent: ParseEvent<'Event>): Consumer.ParseEvent<ParsedEvent<'Event>> =
+        fun tracedMessage ->
+            {
+                Event = tracedMessage.Message |> parseEvent
+                ConsumeTrace = tracedMessage.Trace
+                Commit = tracedMessage.Commit
+            }
 
-    let event ({ Event = event }: Event<'Event>) = event
+    let event ({ Event = event }: ParsedEvent<'Event>) = event
 
 type PreparedConsumeRuntimeParts<'OutputEvent> = {
-    Logger: ApplicationLogger
+    Logger: ILogger
+    LoggerFactory: ILoggerFactory
     Box: Box
     GitCommit: GitCommit
     DockerImageVersion: DockerImageVersion
@@ -264,7 +266,8 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
-    Logger: ApplicationLogger
+    Logger: ILogger
+    LoggerFactory: ILoggerFactory
     Box: Box
     ProcessedBy: ProcessedBy
     Environment: Map<string, string>
@@ -282,6 +285,7 @@ module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
         {
             Logger = preparedRuntimeParts.Logger
+            LoggerFactory = preparedRuntimeParts.LoggerFactory
             Box = preparedRuntimeParts.Box
             ProcessedBy = {
                 Instance = preparedRuntimeParts.Box |> Box.instance
@@ -315,10 +319,10 @@ type TracedEvent<'Event> =
 
 [<RequireQualifiedAccess>]
 module TracedEvent =
-    let event ({ Event = event }: TracedEvent<'Event>) = event
-    let trace ({ Trace = trace }: TracedEvent<'Event>) = trace
+    let event ({ Event = event }: TracedEvent<'InputEvent>) = event
+    let trace ({ Trace = trace }: TracedEvent<'InputEvent>) = trace
 
-    let startHandle ({ Event = event; ConsumeTrace = trace }: Event<'Event>): TracedEvent<'Event> =
+    let startHandle ({ Event = event; ConsumeTrace = trace }: ParsedEvent<'InputEvent>): TracedEvent<'InputEvent> =
         {
             Event = event
             Trace =
@@ -382,7 +386,7 @@ type TaskErrorPolicy =
     | Ignore
 
 type CustomTaskRuntimeParts = {
-    Logger: ApplicationLogger
+    Logger: ILogger
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
@@ -412,7 +416,7 @@ type internal WebServerPart = Suave.Http.HttpContext -> Async<Suave.Http.HttpCon
 //
 
 type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
-    Logger: ApplicationLogger
+    LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
     GitCommit: GitCommit option
@@ -433,16 +437,21 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
-    GraylogConnections: (Lmc.Logging.Graylog.Host * Lmc.Logging.Graylog.Port option) list
     CustomTasks: PreparedCustomTask list
     WebServerSettings: WebServerPart list
 }
 
 [<AutoOpen>]
 module internal ConfigurationParts =
-    let defaultParts =
+    let defaultLoggerFactory =
+        LoggerFactory.create [
+            LogToSimpleConsole
+            UseLevel LogLevel.Warning
+        ]
+
+    let defaultParts: ConfigurationParts<'InputEvent, 'OutputEvent> =
         {
-            Logger = ApplicationLogger.defaultLogger
+            LoggerFactory = defaultLoggerFactory
             Environment = Map.empty
             Instance = None
             GitCommit = None
@@ -463,7 +472,6 @@ module internal ConfigurationParts =
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
-            GraylogConnections = []
             CustomTasks = []
             WebServerSettings = []
         }
@@ -482,7 +490,9 @@ module private Configuration =
     let result (Configuration result) = result
 
 type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
-    Logger: ApplicationLogger
+    // todo - kouknout, kde se pouziva logger a kde loggerFactory - ve vysledku by melo stacit jen jedno (asi factory)
+    Logger: ILogger
+    LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Box: Box
     ParseEvent: ParseEvent<'InputEvent>
@@ -507,7 +517,7 @@ type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of 
 
 type ApplicationShutdown =
     | Successfully
-    | WithError of ErrorMessage
+    | WithCriticalError of ErrorMessage
     | WithRuntimeError of ErrorMessage
 
 [<RequireQualifiedAccess>]

@@ -7,7 +7,6 @@ module FilterBuilder =
     open ApplicationBuilder
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
-    open Filter
 
     module internal FilterApplicationBuilder =
         let addFilterConfiguration<'InputEvent, 'OutputEvent>
@@ -23,7 +22,7 @@ module FilterBuilder =
                 use eventToFilter = event |> TracedEvent.continueAs "Filter" "Filter event"
 
                 eventToFilter
-                |> filterByConfiguration getCommonEvent getIntent filterConfiguration
+                |> Filter.Filtering.filterByConfiguration getCommonEvent getIntent filterConfiguration
                 >>= filterContentFromInputEvent app.ProcessedBy
                 |>! app.ProduceTo.[filterOutputStream]
 
@@ -102,8 +101,9 @@ module FilterBuilder =
                 result {
                     let! filter =
                         configurationPath
-                        |> FileParser.parseFromPath Filter.parseFilterConfiguration (sprintf "Filter configuration was not found at \"%s\".")
-                        |> Result.mapError NotFound
+                        |> FileParser.parseFromPath
+                            Filter.Configuration.parse
+                            (sprintf "Filter configuration was not found at \"%s\"." >> NotFound)
 
                     return { parts with FilterConfiguration = Some filter }
                 }
@@ -135,12 +135,12 @@ module FilterBuilder =
 
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with GetCommonEvent = Some getCommonEvent }
+            state <!> fun filterParts -> { filterParts with GetCommonEvent = Some getCommonEvent }
 
         [<CustomOperation("getIntentBy")>]
         member __.GetIntentBy(state, getIntent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with GetIntent = Some getIntent }
+            state <!> fun filterParts -> { filterParts with GetIntent = Some getIntent }
 
         [<CustomOperation("addCustomMetricValues")>]
         member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterparts -> { filterparts with CreateCustomValues = Some createCustomValues }
+            state <!> fun filterParts -> { filterParts with CreateCustomValues = Some createCustomValues }

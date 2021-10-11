@@ -2,8 +2,8 @@ FSharp.Core
 FSharp.Data
 Newtonsoft.Json
 Lmc.Consents.ContractAggregate
-Lmc.Consents.Events
-Lmc.Consents.PersonAggregate
+#Lmc.Consents.Events
+#Lmc.Consents.PersonAggregate
 Lmc.Environment
 Lmc.ErrorHandling
 Lmc.Kafka

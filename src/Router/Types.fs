@@ -7,7 +7,8 @@ open Lmc.Consents.Events.Events
 // Errors
 
 type RouterError =
-    | StreamNameIsNotInstance of string
+    | InvalidConfiguration of file: string * exn
+    | StreamNameIsNotInstance of Lmc.ServiceIdentification.InstanceError list
 
 type RouterConfigurationError =
     | NotFound of string

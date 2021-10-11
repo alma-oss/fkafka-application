@@ -13,33 +13,34 @@ module internal Router =
 
         type private RoutingSchema = JsonProvider<"src/Router/schema/routingSchema.json">
 
-        let parse path =
-            result {
-                let rawRouting =
+        let parse path = result {
+            let! rawRouting =
+                try
                     path
                     |> File.ReadAllText
                     |> RoutingSchema.Parse
+                    |> Ok
+                with e ->
+                    Error (InvalidConfiguration (path, e))
 
-                let! routing =
-                    rawRouting.Route
-                    |> Seq.map (fun route ->
-                        result {
-                            let! topicInstance =
-                                route.TargetStream
-                                |> Instance.parse "-"
-                                |> Result.ofOption (StreamNameIsNotInstance route.TargetStream)
+            let! routing =
+                rawRouting.Route
+                |> Seq.map (fun route ->
+                    result {
+                        let! topicInstance = Create.Instance(route.TargetStream)
 
-                            return (EventName route.Event, StreamName.Instance topicInstance)
-                        }
-                    )
-                    |> Seq.toList
-                    |> Result.sequence
+                        return (EventName route.Event, StreamName.Instance topicInstance)
+                    }
+                )
+                |> Seq.toList
+                |> Validation.ofResults
+                |> Result.mapError StreamNameIsNotInstance
 
-                return
-                    routing
-                    |> Map.ofList
-                    |> RouterConfiguration
-            }
+            return
+                routing
+                |> Map.ofList
+                |> RouterConfiguration
+        }
 
         let getStreamFor event (RouterConfiguration router) =
             router
@@ -52,24 +53,19 @@ module internal Router =
 
     [<RequireQualifiedAccess>]
     module Routing =
+        open Microsoft.Extensions.Logging
         open Lmc.KafkaApplication
         open Lmc.ErrorHandling.Option.Operators
 
-        let private formatLogMessage (EventName eventName) (streamName: StreamName) =
-            sprintf "Route event %s to %A ..." eventName streamName
-
-        let private sendToStream log produceTo eventToRoute (stream: StreamName) =
-            log <| sprintf "-> Sending to stream %A ..." stream
+        let private sendToStream (logger: ILogger) produceTo (EventName eventType, eventToRoute: 'OutputEvent) (stream: StreamName) =
+            logger.LogTrace("Route event {event} to stream {stream}", eventType, (stream |> StreamName.value))
 
             eventToRoute
             |> produceTo stream
 
-        let routeEvent log getEventType produce router eventToRoute =
+        let routeEvent logger getEventType produce router (eventToRoute: 'OutputEvent) =
             let eventType = eventToRoute |> getEventType
 
             router
             |> Configuration.getStreamFor eventType
-            |>! (
-                tee (formatLogMessage eventType >> log)
-                >> sendToStream log produce eventToRoute
-            )
+            |>! (sendToStream logger produce (eventType, eventToRoute))

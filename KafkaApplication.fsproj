@@ -10,14 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../consent-events/ConsentEvents.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Common kafka application -->
-    <Compile Include="src/Common/Common.fs" />
+    <Compile Include="src/Common/Utils.fs" />
     <Compile Include="src/Common/Types.fs" />
-    <Compile Include="src/Common/Utilities.fs" />
     <Compile Include="src/Common/Resource.fs" />
     <Compile Include="src/Common/Metrics.fs" />
     <Compile Include="src/Common/ApplicationEvents.fs" />

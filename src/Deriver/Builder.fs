@@ -4,9 +4,8 @@ module DeriverBuilder =
     open Lmc.KafkaApplication
     open Lmc.KafkaApplication.PatternBuilder
     open Lmc.KafkaApplication.PatternMetrics
-    open Lmc.Tracing
-    open Lmc.ErrorHandling
     open ApplicationBuilder
+    open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
 
     [<AutoOpen>]
