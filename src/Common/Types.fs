@@ -169,7 +169,7 @@ type GroupIdError =
 [<RequireQualifiedAccess>]
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
-    | TopicIsNotInstanceError of Lmc.ServiceIdentification.InstanceError
+    | TopicIsNotInstanceError of Lmc.ServiceIdentification.InstanceError list
 
 [<RequireQualifiedAccess>]
 type ConsumeHandlerError =
@@ -196,9 +196,10 @@ type KafkaApplicationError =
     | SpotError of SpotError
     | GroupIdError of GroupIdError
     | ConnectionConfigurationError of ConnectionConfigurationError
+    | RequiredEnvironmentVariablesErrors of EnvironmentError list
     | EnvironmentError of EnvironmentError
-    | ConsumeHandlerError of ConsumeHandlerError
-    | ProduceError of ProduceError
+    | ConsumeHandlerError of ConsumeHandlerError list
+    | ProduceError of ProduceError list
     | MetricsError of MetricsError
     | LoggingError of LoggingError
 

@@ -7,17 +7,17 @@ open Lmc.Consents.Events.Events
 // Errors
 
 type RouterError =
-    | InvalidConfiguration of file: string * exn
-    | StreamNameIsNotInstance of Lmc.ServiceIdentification.InstanceError list
+    | StreamNameIsNotInstance of Lmc.ServiceIdentification.InstanceError
 
 type RouterConfigurationError =
+    | InvalidConfiguration of file: string * exn
     | NotFound of string
     | NotSet
     | MissingRouteEvent
     | MissingFromDomain
     | MissingGetCommonEvent
     | OutputBrokerListNotSet
-    | RouterError of RouterError
+    | RouterErrors of RouterError list
 
 type ContentBasedRouterApplicationError =
     | ApplicationConfigurationError of ApplicationConfigurationError

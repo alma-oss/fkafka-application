@@ -10,6 +10,7 @@
     - ...
 - [**BC**] Use `LoggerFactory` instead of `ApplicationLogger` and create other loggers by context
     - Rename operation `useLogger` to `useLoggerFactory`
+- Make multi-errors as a list instead of returning just a first one
 
 ## 14.1.0 - 2021-09-20
 - Update dependencies

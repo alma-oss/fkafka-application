@@ -297,7 +297,7 @@ module ApplicationBuilder =
                 let! preparedProducers =
                     configurationParts.ProduceTo
                     |> List.map prepareProducer
-                    |> Result.sequence
+                    |> Validation.ofResults
                     |> Result.mapError ProduceError
 
                 let (producers, produces) =
@@ -347,7 +347,7 @@ module ApplicationBuilder =
                 let! runtimeConsumeHandlers =
                     consumeHandlers
                     |> List.map composeRuntimeHandler
-                    |> Result.sequence
+                    |> Validation.ofResults
                     |> Result.mapError ConsumeHandlerError
 
                 let customTasks =

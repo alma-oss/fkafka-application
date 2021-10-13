@@ -25,10 +25,10 @@ module ContentBasedRouterBuilder =
                 let! outputStreamTopics =
                     outputStreams
                     |> List.map (function
-                        | StreamName streamName -> Error (RouterError.StreamNameIsNotInstance [ Lmc.ServiceIdentification.InstanceError.InvalidFormat streamName ])
+                        | StreamName streamName -> Error (StreamNameIsNotInstance (Lmc.ServiceIdentification.InstanceError.InvalidFormat streamName))
                         | Instance instance -> Ok instance
                     )
-                    |> Result.sequence <@> RouterError
+                    |> Validation.ofResults <@> RouterErrors
 
                 let outputStreamNames =
                     outputStreams
@@ -119,7 +119,7 @@ module ContentBasedRouterBuilder =
                     let! router =
                         configurationPath
                         |> FileParser.parseFromPath
-                            (Router.Configuration.parse >@> RouterError)
+                            Router.Configuration.parse
                             (sprintf "Routing configuration was not found at \"%s\"." >> NotFound)
 
                     return { routerParts with RouterConfiguration = Some router }
@@ -141,7 +141,7 @@ module ContentBasedRouterBuilder =
 
                     let! configurationParts =
                         configuration
-                        |> Configuration.result <@> InvalidConfiguration <@> ApplicationConfigurationError
+                        |> Configuration.result <@> (InvalidConfiguration >> ApplicationConfigurationError)
 
                     let! brokerList =
                         brokerListEnvironmentKey

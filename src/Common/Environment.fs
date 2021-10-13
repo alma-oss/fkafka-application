@@ -39,7 +39,7 @@ module EnvironmentBuilder =
 
                     let! topicInstance =
                         Create.Instance(topic)
-                        |> Result.mapError ConnectionConfigurationError.TopicIsNotInstanceError
+                        |> Result.mapError (List.singleton >> ConnectionConfigurationError.TopicIsNotInstanceError)
 
                     let connectionConfiguration: ConnectionConfiguration = {
                         BrokerList = brokerList
@@ -61,9 +61,7 @@ module EnvironmentBuilder =
                         connectionConfiguration.Topics
                         |> List.map (fun topic ->
                             result {
-                                let! topicInstance =
-                                    Create.Instance(topic)
-                                    |> Result.mapError ConnectionConfigurationError.TopicIsNotInstanceError
+                                let! topicInstance = Create.Instance(topic)
 
                                 return (
                                     topic |> ConnectionName,
@@ -71,7 +69,8 @@ module EnvironmentBuilder =
                                 )
                             }
                         )
-                        |> Result.sequence
+                        |> Validation.ofResults
+                        |> Result.mapError ConnectionConfigurationError.TopicIsNotInstanceError
 
                     let connectionConfigurations: Connections =
                         configurations
@@ -144,11 +143,11 @@ module EnvironmentBuilder =
                     let! _ =
                         names
                         |> List.map (getEnvironmentValue parts id EnvironmentError.VariableNotFoundError)
-                        |> Result.sequence
+                        |> Validation.ofResults
 
                     return parts
                 }
-                |> Result.mapError EnvironmentError
+                |> Result.mapError RequiredEnvironmentVariablesErrors
 
         [<CustomOperation("instance")>]
         member __.Instance(state, instanceVariableName): Configuration<'InputEvent, 'OutputEvent> =

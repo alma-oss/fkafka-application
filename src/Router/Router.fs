@@ -27,14 +27,16 @@ module internal Router =
                 rawRouting.Route
                 |> Seq.map (fun route ->
                     result {
-                        let! topicInstance = Create.Instance(route.TargetStream)
+                        let! topicInstance =
+                            Create.Instance(route.TargetStream)
+                            |> Result.mapError StreamNameIsNotInstance
 
                         return (EventName route.Event, StreamName.Instance topicInstance)
                     }
                 )
                 |> Seq.toList
                 |> Validation.ofResults
-                |> Result.mapError StreamNameIsNotInstance
+                |> Result.mapError RouterErrors
 
             return
                 routing
