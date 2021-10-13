@@ -250,7 +250,7 @@ module Event =
 
     let event ({ Event = event }: ParsedEvent<'Event>) = event
 
-type PreparedConsumeRuntimeParts<'OutputEvent> = {
+type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Box: Box
     GitCommit: GitCommit
@@ -265,6 +265,7 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
     DisableResource: ResourceAvailability -> unit
 }
 
+/// Application parts exposed in consume handlers
 type ConsumeRuntimeParts<'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Box: Box
@@ -383,6 +384,7 @@ type TaskErrorPolicy =
     | Restart
     | Ignore
 
+/// Application parts exposed in custom task handlers
 type CustomTaskRuntimeParts = {
     LoggerFactory: ILoggerFactory
     Box: Box
@@ -521,6 +523,19 @@ module ApplicationShutdown =
     let withStatusCode = function
         | Successfully -> 0
         | _ -> 1
+
+    let withStatusCodeAndLogResult (loggerFactory: ILoggerFactory) = function
+        | Successfully -> 0
+        | WithCriticalError error ->
+            loggerFactory
+                .CreateLogger("KafkaApplication")
+                .LogCritical("Application shutdown with critical error: {error}", error)
+            1
+        | WithRuntimeError error ->
+            loggerFactory
+                .CreateLogger("KafkaApplication")
+                .LogCritical("Application shutdown with runtime error: {error}", error)
+            1
 
 type internal BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
 type internal Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown

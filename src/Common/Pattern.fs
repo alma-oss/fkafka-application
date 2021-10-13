@@ -22,7 +22,7 @@ type internal PatternName = PatternName of string
 
 type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
-/// Kafka Application internals available in Pattern Runtime
+/// Application pattern parts exposed in handlers
 type PatternRuntimeParts = {
     LoggerFactory: ILoggerFactory
     Box: Box
