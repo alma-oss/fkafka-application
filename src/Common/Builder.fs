@@ -18,7 +18,7 @@ module ApplicationBuilder =
         let private traceConfiguration (parts: ConfigurationParts<_, _>) =
             parts.LoggerFactory
                 .CreateLogger("KafkaApplication.Configuration")
-                .LogTrace("{Configuration parts}", parts)
+                .LogTrace("Configuration: {configuration}", parts)
 
         let (>>=) (Configuration configuration) f =
             configuration
@@ -43,6 +43,8 @@ module ApplicationBuilder =
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
+                        CommitMessage = newParts.CommitMessage
+                        CommitMessages = newParts.CommitMessages |> Map.merge currentParts.CommitMessages
                         ParseEvent = newParts.ParseEvent <??> currentParts.ParseEvent
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
                         ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
@@ -230,6 +232,8 @@ module ApplicationBuilder =
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
+                let defaultCommitMessage = configurationParts.CommitMessage
+                let commitMessages = configurationParts.CommitMessages
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
                 let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo<later> - allow passing custom interval checker
 
@@ -270,7 +274,7 @@ module ApplicationBuilder =
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
-                                CommitMessage = CommitMessage.Automatically // todo - set by configuration value
+                                CommitMessage = commitMessages.TryFind name <?=> defaultCommitMessage
                             }
                         )
                     ) Map.empty
@@ -416,6 +420,14 @@ module ApplicationBuilder =
         [<CustomOperation("useGroupIdFor")>]
         member __.GroupIdFor(state, name, groupId): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with GroupIds = parts.GroupIds.Add(ConnectionName name, groupId) }
+
+        [<CustomOperation("useCommitMessage")>]
+        member __.CommitMessage(state, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CommitMessage = commitMessage }
+
+        [<CustomOperation("useCommitMessageFor")>]
+        member __.CommitMessageFor(state, name, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CommitMessages = parts.CommitMessages.Add(ConnectionName name, commitMessage) }
 
         [<CustomOperation("parseEventWith")>]
         member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =

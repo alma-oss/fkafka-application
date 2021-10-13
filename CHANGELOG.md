@@ -7,11 +7,13 @@
 - [**BC**] Use `ILogger` instead of `ApplicationLogger`
 - [**BC**] Remove Graylog support
     - Remove `logToGraylog`
-    - ...
 - [**BC**] Use `LoggerFactory` instead of `ApplicationLogger` and create other loggers by context
     - Rename operation `useLogger` to `useLoggerFactory`
 - Make multi-errors as a list instead of returning just a first one
 - Add `ApplicationShutdown.withStatusCodeAndLogResult` function
+- Allow to set up commit message mode for consuming
+    - Add `useCommitMessage` custom operation
+    - Add `useCommitMessageFor` custom operation
 
 ## 14.1.0 - 2021-09-20
 - Update dependencies

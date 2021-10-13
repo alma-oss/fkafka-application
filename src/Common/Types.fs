@@ -424,6 +424,8 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Spot: Spot option
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
+    CommitMessage: CommitMessage
+    CommitMessages: Map<ConnectionName, CommitMessage>
     ParseEvent: ParseEvent<'InputEvent> option
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
@@ -459,6 +461,8 @@ module internal ConfigurationParts =
             Spot = None
             GroupId = None
             GroupIds = Map.empty
+            CommitMessage = CommitMessage.Automatically
+            CommitMessages = Map.empty
             ParseEvent = None
             Connections = Connections.empty
             ConsumeHandlers = []

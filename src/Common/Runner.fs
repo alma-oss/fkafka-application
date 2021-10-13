@@ -26,7 +26,7 @@ module internal ApplicationRunner =
             |> List.map (fun { Resource = resource; Interval = interval; Checker = checker } ->
                 async {
                     let intervalInMilliseconds = (int interval) * 1000
-                    resourceLogger.LogDebug("Start checking for {resource} in interval of {interval} s", resource, interval)
+                    resourceLogger.LogDebug("Start checking for {resource} in interval of {interval}s", resource, interval)
 
                     while true do
                         resourceLogger.LogTrace("Check {resource}", resource)
@@ -256,39 +256,33 @@ module internal ApplicationRunner =
             match application with
             | Ok app ->
                 try
-                    try
-                        let consume configuration: ParsedEventResult<'InputEvent> seq =
-                            Consumer.consume configuration (Event.parse app.ParseEvent)
+                    let consume configuration: ParsedEventResult<'InputEvent> seq =
+                        Consumer.consume configuration (Event.parse app.ParseEvent)
 
-                        let consumeLast configuration: ParsedEventResult<'InputEvent> option =
-                            Consumer.consumeLast configuration (Event.parse app.ParseEvent)
+                    let consumeLast configuration: ParsedEventResult<'InputEvent> option =
+                        Consumer.consumeLast configuration (Event.parse app.ParseEvent)
 
-                        app
-                        |> tee beforeRun
-                        |> tee KafkaApplicationRunner.runCustomTasks
-                        |> KafkaApplicationRunner.run
-                            consume
-                            consumeLast
-                            Producer.connect
-                            Producer.produceSingle
-                            Producer.flush
-                            Producer.close
-                        Successfully
-                    with
-                    | error ->
-                        let logger = app.LoggerFactory.CreateLogger "KafkaApplication"
-                        error
-                        |> sprintf "Exception:\n%A"
-                        |> tee (logger.LogError >> fun _ ->
-                            logger.LogInformation "Shutting down with runtime error ..."
-                            KafkaApplicationRunner.wait 2<Lmc.KafkaApplication.Second>  // Main thread waits till logger logs error message
-                        )
-                        |> WithRuntimeError
-                finally
+                    app
+                    |> tee beforeRun
+                    |> tee KafkaApplicationRunner.runCustomTasks
+                    |> KafkaApplicationRunner.run
+                        consume
+                        consumeLast
+                        Producer.connect
+                        Producer.produceSingle
+                        Producer.flush
+                        Producer.close
+                    Successfully
+                with
+                | error ->
                     let logger = app.LoggerFactory.CreateLogger "KafkaApplication"
-                    logger.LogDebug "Disposing all resources ..."
-
-                    app.LoggerFactory.Dispose()
+                    error
+                    |> sprintf "Exception:\n%A"
+                    |> tee (logger.LogError >> fun _ ->
+                        logger.LogInformation "Shutting down with runtime error ..."
+                        KafkaApplicationRunner.wait 2<Lmc.KafkaApplication.Second>  // Main thread waits till logger logs error message
+                    )
+                    |> WithRuntimeError
 
             | Error error ->
                 error
