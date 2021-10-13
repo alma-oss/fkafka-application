@@ -22,9 +22,8 @@ type internal PatternName = PatternName of string
 
 type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
+/// Kafka Application internals available in Pattern Runtime
 type PatternRuntimeParts = {
-    // todo - tady bylo lepsi mit spis loggerFactory
-    Logger: ILogger
     LoggerFactory: ILoggerFactory
     Box: Box
     Environment: Map<string, string>
@@ -34,11 +33,15 @@ type PatternRuntimeParts = {
     DisableResource: ResourceAvailability -> unit
 }
 
+[<AutoOpen>]
+module internal PatternUtils =
+    let patternLogger (PatternName name) (loggerFactory: ILoggerFactory) =
+        loggerFactory.CreateLogger($"KafkaApplication.Pattern<{name}>")
+
 [<RequireQualifiedAccess>]
 module internal PatternRuntimeParts =
-    let fromConsumeParts<'OutputEvent> (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
+    let fromConsumeParts<'OutputEvent> patternName (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
         {
-            Logger = consumeRuntimeParts.Logger
             LoggerFactory = consumeRuntimeParts.LoggerFactory
             Box = consumeRuntimeParts.Box
             Environment = consumeRuntimeParts.Environment
@@ -77,13 +80,12 @@ module internal PatternBuilder =
     open ApplicationBuilder
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> =
-        fun (PatternName pattern) getConfiguration patternParts ->
+        fun pattern getConfiguration patternParts ->
             patternParts
             |> getConfiguration
             |>! fun configuration ->
                 configuration <!> tee (fun parts ->
-                    parts.LoggerFactory
-                        .CreateLogger($"Pattern<{pattern}>")
+                    (patternLogger pattern parts.LoggerFactory)
                         .LogTrace("Configuration: {configuration}", patternParts)
                 )
                 |> ignore

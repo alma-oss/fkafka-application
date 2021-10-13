@@ -8,9 +8,8 @@ module internal FilterRunner =
         fun run (FilterApplication application) ->
             let beforeRun filterApplication: BeforeRun<'InputEvent, 'OutputEvent> =
                 fun app ->
-                    app.LoggerFactory
-                        .CreateLogger("KafkaApplication.Filter")
+                    (patternLogger FilterBuilder.pattern app.LoggerFactory)
                         .LogDebug("Configuration: {configuration}", filterApplication.FilterConfiguration)
 
             application
-            |> PatternRunner.runPattern (PatternName "Filter") FilterApplication.application beforeRun run
+            |> PatternRunner.runPattern FilterBuilder.pattern FilterApplication.application beforeRun run

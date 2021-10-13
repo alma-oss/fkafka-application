@@ -9,4 +9,4 @@ module internal DeriverRunner =
                 ignore
 
             application
-            |> PatternRunner.runPattern (PatternName "Deriver") DeriverApplication.application beforeRun run
+            |> PatternRunner.runPattern DeriverBuilder.pattern DeriverApplication.application beforeRun run

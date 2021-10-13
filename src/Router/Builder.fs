@@ -10,6 +10,8 @@ module ContentBasedRouterBuilder =
     open Lmc.ErrorHandling.Result.Operators
     open ApplicationBuilder
 
+    let internal pattern = PatternName "ContentBasedRouter"
+
     module internal ContentBasedRouterApplicationBuilder =
         let private addRouterConfiguration<'InputEvent, 'OutputEvent>
             router
@@ -40,7 +42,7 @@ module ContentBasedRouterBuilder =
                     let routeEvent =
                         match routeEventHandler with
                         | Simple routeEvent -> routeEvent
-                        | WithApplication routeEvent -> routeEvent (app |> PatternRuntimeParts.fromConsumeParts)
+                        | WithApplication routeEvent -> routeEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
                     let produceRoutedEvent =
                         Router.Routing.routeEvent
@@ -98,7 +100,7 @@ module ContentBasedRouterBuilder =
     type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee (debugPatternConfiguration (PatternName "ContentBasedRouter") (fun { Configuration = c } -> c))) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)
             |> ContentBasedRouterApplicationConfiguration
 
         let (<!>) state f =

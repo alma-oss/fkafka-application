@@ -8,6 +8,8 @@ module DeriverBuilder =
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
 
+    let internal pattern = PatternName "Deriver"
+
     [<AutoOpen>]
     module internal DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent>
@@ -23,7 +25,7 @@ module DeriverBuilder =
                 let deriveEvent =
                     match deriveEventHandler with
                     | Simple deriveEvent -> deriveEvent
-                    | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts)
+                    | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
                 eventToDerive
                 |> deriveEvent app.ProcessedBy
@@ -92,7 +94,7 @@ module DeriverBuilder =
     type DeriverBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
         let (>>=) (DeriverApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee (debugPatternConfiguration (PatternName "Deriver") (fun { Configuration = c } -> c))) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)
             |> DeriverApplicationConfiguration
 
         let (<!>) state f =

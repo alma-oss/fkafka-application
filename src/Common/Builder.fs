@@ -28,11 +28,6 @@ module ApplicationBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        [<System.Obsolete("todo - to se pouziva kde?")>]
-        let logger (Configuration configuration) =
-            configuration
-            |> Result.map (fun parts -> parts.LoggerFactory)
-
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
@@ -327,7 +322,6 @@ module ApplicationBuilder =
                 let setMetric = ApplicationMetrics.setCustomMetricValue instance
 
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
-                    Logger = loggerFactory.CreateLogger "KafkaApplication.Runtime"
                     LoggerFactory = loggerFactory
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
@@ -353,7 +347,7 @@ module ApplicationBuilder =
                 let customTasks =
                     configurationParts.CustomTasks
                     |> CustomTasks.prepare {
-                        Logger = loggerFactory.CreateLogger "KafkaApplication.CustomTasks"
+                        LoggerFactory = loggerFactory
                         Box = box
                         Environment = environment
                         IncrementMetric = incrementMetric
@@ -363,7 +357,6 @@ module ApplicationBuilder =
                     }
 
                 return {
-                    Logger = loggerFactory.CreateLogger "KafkaApplication"
                     LoggerFactory = loggerFactory
                     Environment = environment
                     Box = box

@@ -251,7 +251,6 @@ module Event =
     let event ({ Event = event }: ParsedEvent<'Event>) = event
 
 type PreparedConsumeRuntimeParts<'OutputEvent> = {
-    Logger: ILogger
     LoggerFactory: ILoggerFactory
     Box: Box
     GitCommit: GitCommit
@@ -267,7 +266,6 @@ type PreparedConsumeRuntimeParts<'OutputEvent> = {
 }
 
 type ConsumeRuntimeParts<'OutputEvent> = {
-    Logger: ILogger
     LoggerFactory: ILoggerFactory
     Box: Box
     ProcessedBy: ProcessedBy
@@ -285,7 +283,6 @@ type ConsumeRuntimeParts<'OutputEvent> = {
 module internal PreparedConsumeRuntimeParts =
     let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
         {
-            Logger = preparedRuntimeParts.Logger
             LoggerFactory = preparedRuntimeParts.LoggerFactory
             Box = preparedRuntimeParts.Box
             ProcessedBy = {
@@ -387,7 +384,7 @@ type TaskErrorPolicy =
     | Ignore
 
 type CustomTaskRuntimeParts = {
-    Logger: ILogger
+    LoggerFactory: ILoggerFactory
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
@@ -491,8 +488,6 @@ module private Configuration =
     let result (Configuration result) = result
 
 type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
-    // todo - kouknout, kde se pouziva logger a kde loggerFactory - ve vysledku by melo stacit jen jedno (asi factory)
-    Logger: ILogger
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Box: Box

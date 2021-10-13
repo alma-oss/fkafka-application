@@ -8,9 +8,8 @@ module internal ContentBasedRouterRunner =
         fun run (ContentBasedRouterApplication application) ->
             let beforeRun routerApplication: BeforeRun<'InputEvent, 'OutputEvent> =
                 fun app ->
-                    app.LoggerFactory
-                        .CreateLogger("KafkaApplication.Router")
+                    (patternLogger ContentBasedRouterBuilder.pattern app.LoggerFactory)
                         .LogDebug("Configuration: {configuration}", routerApplication.RouterConfiguration)
 
             application
-            |> PatternRunner.runPattern (PatternName "Router") ContentBasedRouterApplication.application beforeRun run
+            |> PatternRunner.runPattern ContentBasedRouterBuilder.pattern ContentBasedRouterApplication.application beforeRun run

@@ -8,6 +8,8 @@ module FilterBuilder =
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
 
+    let internal pattern = PatternName "FilterContentFilter"
+
     module internal FilterApplicationBuilder =
         let addFilterConfiguration<'InputEvent, 'OutputEvent>
             filterConfiguration
@@ -81,7 +83,7 @@ module FilterBuilder =
     type FilterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
         let (>>=) (FilterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee (debugPatternConfiguration (PatternName "FilterContentFilter") (fun { Configuration = c } -> c ))) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c ))) >> f)
             |> FilterApplicationConfiguration
 
         let (<!>) state f =
