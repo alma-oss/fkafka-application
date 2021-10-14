@@ -1,9 +1,8 @@
 namespace Lmc.KafkaApplication.Filter
 
 open Lmc.ServiceIdentification
+open Lmc.Kafka.MetaData
 open Lmc.KafkaApplication
-open Lmc.Consents.Intent
-open Lmc.Consents.Events.Events
 
 // Errors
 type FilterConfigurationError =
@@ -20,23 +19,23 @@ type FilterApplicationError =
 
 // Filter configuration
 
-type FilterConfiguration = {
+type FilterConfiguration<'FilterValue> = {
     Spots: Spot list
-    Intents: Intent list
+    FilterValues: 'FilterValue list
 }
 
 type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> 'OutputEvent option
 
 // Filter Application Configuration
 
-type internal FilterParts<'InputEvent, 'OutputEvent> = {
+type internal FilterParts<'InputEvent, 'OutputEvent, 'FilterValue> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent> option
-    FilterConfiguration: FilterConfiguration option
+    FilterConfiguration: FilterConfiguration<'FilterValue> option
     FilterTo: ConnectionName option
     FilterContent: FilterContent<'InputEvent, 'OutputEvent> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
-    GetIntent: GetIntent<'InputEvent> option
+    GetFilterValue: GetFilterValue<'InputEvent, 'FilterValue> option
 }
 
 [<RequireQualifiedAccess>]
@@ -48,17 +47,17 @@ module internal FilterParts =
         FilterContent = None
         CreateCustomValues = None
         GetCommonEvent = None
-        GetIntent = None
+        GetFilterValue = None
     }
 
-type FilterApplicationConfiguration<'InputEvent, 'OutputEvent> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent>, FilterApplicationError>
+type FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent, 'FilterValue>, FilterApplicationError>
 
-type internal FilterApplicationParts<'InputEvent, 'OutputEvent> = {
+type internal FilterApplicationParts<'InputEvent, 'OutputEvent, 'FilterValue> = {
     Application: KafkaApplication<'InputEvent, 'OutputEvent>
-    FilterConfiguration: FilterConfiguration
+    FilterConfiguration: FilterConfiguration<'FilterValue>
 }
 
-type FilterApplication<'InputEvent, 'OutputEvent> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent>, FilterApplicationError>
+type FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent, 'FilterValue>, FilterApplicationError>
 
 [<RequireQualifiedAccess>]
 module internal FilterApplication =

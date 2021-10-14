@@ -1,8 +1,8 @@
 namespace Lmc.KafkaApplication.Router
 
 open Lmc.Kafka
+open Lmc.Kafka.MetaData
 open Lmc.KafkaApplication
-open Lmc.Consents.Events.Events
 
 // Errors
 

@@ -4,7 +4,7 @@ module internal FilterRunner =
     open Microsoft.Extensions.Logging
     open Lmc.KafkaApplication
 
-    let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent>, 'InputEvent, 'OutputEvent> =
+    let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue>, 'InputEvent, 'OutputEvent> =
         fun run (FilterApplication application) ->
             let beforeRun filterApplication: BeforeRun<'InputEvent, 'OutputEvent> =
                 fun app ->

@@ -16,9 +16,9 @@ module KafkaApplication =
     // Applications
     //
 
-    type Application<'InputEvent, 'OutputEvent> =
+    type Application<'InputEvent, 'OutputEvent, 'FilterValue> =
         | CustomApplication of KafkaApplication<'InputEvent, 'OutputEvent>
-        | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent>
+        | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue>
         | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent>
         | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
 
@@ -34,9 +34,9 @@ module KafkaApplication =
         let id: Configuration<'InputEvent, 'OutputEvent> -> Configuration<'InputEvent, 'OutputEvent> = id
         KafkaApplicationBuilder(id)
 
-    let filterContentFilter<'InputEvent, 'OutputEvent> =
+    let filterContentFilter<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality> =
         let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produce
-        let buildFilter: FilterApplicationConfiguration<'InputEvent, 'OutputEvent> -> FilterApplication<'InputEvent, 'OutputEvent> = FilterApplicationBuilder.buildFilter buildApplication
+        let buildFilter: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> -> FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue> = FilterApplicationBuilder.buildFilter buildApplication
         FilterBuilder(buildFilter >> FilterContentFilter)
 
     let contentBasedRouter<'InputEvent, 'OutputEvent> =
@@ -53,7 +53,7 @@ module KafkaApplication =
     // Run applications
     //
 
-    let run<'InputEvent, 'OutputEvent> (application: Application<'InputEvent, 'OutputEvent>) =
+    let run<'InputEvent, 'OutputEvent, 'FilterValue> (application: Application<'InputEvent, 'OutputEvent, 'FilterValue>) =
         match application with
         | CustomApplication kafkaApplication -> runKafkaApplication ignore kafkaApplication
         | FilterContentFilter filterApplication -> FilterRunner.runFilter runKafkaApplication filterApplication

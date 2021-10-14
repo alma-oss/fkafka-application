@@ -1,9 +1,8 @@
 namespace Lmc.KafkaApplication.Filter
 
-
 [<RequireQualifiedAccess>]
 module internal Filter =
-    open Lmc.Consents.Intent
+    open Lmc.Kafka
     open Lmc.ErrorHandling
     open Lmc.ServiceIdentification
 
@@ -14,7 +13,7 @@ module internal Filter =
 
         type private ConfigurationSchema = JsonProvider<"src/Filter/schema/configuration.json", SampleIsList=true>
 
-        let parse path = result {
+        let parse (parseFilterValue: RawData -> 'FilterValue) path = result {
             let configuration =
                 path
                 |> File.ReadAllText
@@ -29,9 +28,9 @@ module internal Filter =
 
             return {
                 Spots = spots
-                Intents =
-                    configuration.Filter.Intents
-                    |> Seq.map (fun intent -> { Purpose = IntentPurpose intent.Purpose; Scope = IntentScope intent.Scope } )
+                FilterValues =
+                    configuration.Filter.Values
+                    |> Seq.map (fun value -> value.JsonValue |> RawData |> parseFilterValue)
                     |> List.ofSeq
             }
         }
@@ -45,16 +44,20 @@ module internal Filter =
                     allowedValues
                     |> List.contains value
 
-        let isAllowedBy { Spots = spots; Intents = intents } (spot, intent) =
+        let isAllowedBy { Spots = spots; FilterValues = filterValues } (spot, value) =
             Some spot |> isValueAllowed spots
-            || intent |> isValueAllowed intents
+            || value |> isValueAllowed filterValues
 
     [<RequireQualifiedAccess>]
     module Filtering =
-        open Lmc.Kafka
         open Lmc.KafkaApplication
 
-        let filterByConfiguration getCommonEvent getIntent configuration tracedEvent =
+        let filterByConfiguration<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality>
+            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
+            (getFilterValue: GetFilterValue<'InputEvent, 'FilterValue>)
+            (configuration: FilterConfiguration<'FilterValue>)
+            (tracedEvent: TracedEvent<'InputEvent>) =
+
             let inputEvent = tracedEvent |> TracedEvent.event
 
             let commonEvent: CommonEvent =
@@ -63,9 +66,9 @@ module internal Filter =
                 |> getCommonEvent
             let spot = Create.Spot(commonEvent.Zone, commonEvent.Bucket)
 
-            let intent: Intent option =
+            let filterValue =
                 inputEvent
-                |> getIntent
+                |> getFilterValue
 
-            if (spot, intent) |> Configuration.isAllowedBy configuration then Some tracedEvent
+            if (spot, filterValue) |> Configuration.isAllowedBy configuration then Some tracedEvent
             else None

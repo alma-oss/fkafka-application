@@ -6,8 +6,8 @@ module EnvironmentBuilder =
     open Microsoft.Extensions.Logging
     open Lmc.ServiceIdentification
     open Lmc.Kafka
+    open Lmc.Kafka.MetaData
     open Lmc.KafkaApplication
-    open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators

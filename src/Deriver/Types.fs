@@ -1,7 +1,7 @@
 namespace Lmc.KafkaApplication.Deriver
 
 open Lmc.KafkaApplication
-open Lmc.Consents.Events.Events
+open Lmc.Kafka.MetaData
 
 // Errors
 

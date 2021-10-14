@@ -5,7 +5,6 @@ open Lmc.Kafka
 open Lmc.KafkaApplication
 open Lmc.ServiceIdentification
 open Lmc.Metrics
-open Lmc.Consents.Intent
 
 // Errors
 
@@ -98,7 +97,7 @@ type InputOrOutputEvent<'InputEvent, 'OutputEvent> =
 
 type CreateCustomValues<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> (string * string) list
 type GetCommonEvent<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent
-type GetIntent<'InputEvent> = 'InputEvent -> Intent option
+type GetFilterValue<'InputEvent, 'FilterValue> = 'InputEvent -> 'FilterValue option
 
 module internal PatternMetrics =
     let createKeysForInputEvent<'InputEvent, 'OutputEvent>

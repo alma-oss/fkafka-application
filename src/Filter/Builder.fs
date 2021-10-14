@@ -11,20 +11,20 @@ module FilterBuilder =
     let internal pattern = PatternName "FilterContentFilter"
 
     module internal FilterApplicationBuilder =
-        let addFilterConfiguration<'InputEvent, 'OutputEvent>
+        let addFilterConfiguration<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality>
             filterConfiguration
             (ConnectionName filterOutputStream)
             (filterContentFromInputEvent: FilterContent<'InputEvent, 'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
-            (getIntent: GetIntent<'InputEvent>)
+            (getFilterValue: GetFilterValue<'InputEvent, 'FilterValue>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
                 use eventToFilter = event |> TracedEvent.continueAs "Filter" "Filter event"
 
                 eventToFilter
-                |> Filter.Filtering.filterByConfiguration getCommonEvent getIntent filterConfiguration
+                |> Filter.Filtering.filterByConfiguration getCommonEvent getFilterValue filterConfiguration
                 >>= filterContentFromInputEvent app.ProcessedBy
                 |>! app.ProduceTo.[filterOutputStream]
 
@@ -33,9 +33,9 @@ module FilterBuilder =
             |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
             |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 
-        let buildFilter<'InputEvent, 'OutputEvent>
+        let buildFilter<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality>
             (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
-            (FilterApplicationConfiguration state: FilterApplicationConfiguration<'InputEvent, 'OutputEvent>): FilterApplication<'InputEvent, 'OutputEvent> =
+            (FilterApplicationConfiguration state: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue>): FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue> =
 
             result {
                 let! filterParts = state
@@ -50,7 +50,7 @@ module FilterBuilder =
                     |> Result.ofOption MissingOutputStream
                     |> Result.mapError FilterConfigurationError
 
-                let getIntent = filterParts.GetIntent <?=> (fun _ -> None)
+                let getFilterValue = filterParts.GetFilterValue <?=> (fun _ -> None)
                 let createCustomValues = filterParts.CreateCustomValues <?=> (fun _ -> [])
 
                 let! getCommonEvent =
@@ -70,7 +70,7 @@ module FilterBuilder =
 
                 let kafkaApplication =
                     configuration
-                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent getIntent
+                    |> addFilterConfiguration filterConfiguration filterTo filterContent createCustomValues getCommonEvent getFilterValue
                     |> buildApplication
 
                 return {
@@ -80,7 +80,7 @@ module FilterBuilder =
             }
             |> FilterApplication
 
-    type FilterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
+    type FilterBuilder<'InputEvent, 'OutputEvent, 'FilterValue, 'a> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> -> 'a) =
         let (>>=) (FilterApplicationConfiguration configuration) f =
             configuration
             |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c ))) >> f)
@@ -89,22 +89,22 @@ module FilterBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        member __.Yield (_): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.Yield (_): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             FilterParts.defaultFilter
             |> Ok
             |> FilterApplicationConfiguration
 
-        member __.Run(state: FilterApplicationConfiguration<'InputEvent, 'OutputEvent>) =
+        member __.Run(state: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue>) =
             buildApplication state
 
         [<CustomOperation("parseConfiguration")>]
-        member __.ParseConfiguration(state, configurationPath): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.ParseConfiguration(state, parseFilterValue, configurationPath): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             state >>= fun parts ->
                 result {
                     let! filter =
                         configurationPath
                         |> FileParser.parseFromPath
-                            Filter.Configuration.parse
+                            (Filter.Configuration.parse parseFilterValue)
                             (sprintf "Filter configuration was not found at \"%s\"." >> NotFound)
 
                     return { parts with FilterConfiguration = Some filter }
@@ -112,14 +112,14 @@ module FilterBuilder =
                 |> Result.mapError FilterConfigurationError
 
         [<CustomOperation("from")>]
-        member __.From(state, configuration): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.From(state, configuration): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             state >>= fun parts ->
                 match parts.Configuration with
                 | None -> Ok { parts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error
 
         [<CustomOperation("filterTo")>]
-        member __.FilterTo(state, name, filterContent, fromDomain): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.FilterTo(state, name, filterContent, fromDomain): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             state >>= fun filterParts ->
                 result {
                     let! configuration =
@@ -136,13 +136,13 @@ module FilterBuilder =
                 }
 
         [<CustomOperation("getCommonEventBy")>]
-        member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             state <!> fun filterParts -> { filterParts with GetCommonEvent = Some getCommonEvent }
 
-        [<CustomOperation("getIntentBy")>]
-        member __.GetIntentBy(state, getIntent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state <!> fun filterParts -> { filterParts with GetIntent = Some getIntent }
+        [<CustomOperation("getFilterBy")>]
+        member __.GetFilterValueBy(state, getFilterValue): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
+            state <!> fun filterParts -> { filterParts with GetFilterValue = Some getFilterValue }
 
         [<CustomOperation("addCustomMetricValues")>]
-        member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.AddCustomMetricValues(state, createCustomValues): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             state <!> fun filterParts -> { filterParts with CreateCustomValues = Some createCustomValues }

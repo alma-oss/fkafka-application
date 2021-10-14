@@ -4,11 +4,11 @@ module ApplicationBuilder =
     open System
     open Microsoft.Extensions.Logging
     open Lmc.Kafka
+    open Lmc.Kafka.MetaData
     open Lmc.KafkaApplication
     open Lmc.Metrics
     open Lmc.Metrics.ServiceStatus
     open Lmc.ServiceIdentification
-    open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators

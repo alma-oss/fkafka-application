@@ -14,6 +14,9 @@
 - Allow to set up commit message mode for consuming
     - Add `useCommitMessage` custom operation
     - Add `useCommitMessageFor` custom operation
+- [**BC**] Remove dependency on `Consents` libraries
+    - [**BC**] Rename `getIntentBy` in `Filter` pattern to more generic `getFilterBy`
+    - [**BC**] Change `parseConfiguration` in `Filter` to have a `parseFilterValue` function
 
 ## 14.1.0 - 2021-09-20
 - Update dependencies

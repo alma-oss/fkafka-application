@@ -10,10 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../consent-events/ConsentEvents.fsproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
   </ItemGroup>
 

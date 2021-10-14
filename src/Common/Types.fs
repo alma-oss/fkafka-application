@@ -3,11 +3,11 @@ namespace Lmc.KafkaApplication
 open System
 open Microsoft.Extensions.Logging
 open Lmc.Kafka
+open Lmc.Kafka.MetaData
 open Lmc.Metrics
 open Lmc.ServiceIdentification
 open Lmc.Logging
 open Lmc.Tracing
-open Lmc.Consents.Events.Events
 
 [<Measure>] type Second
 [<Measure>] type Attempt

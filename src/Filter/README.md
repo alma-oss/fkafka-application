@@ -18,8 +18,8 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 | filterTo | `connectionName: string`, `FilterContent<'InputEvent, 'OutputEvent>`, `FromDomain<'OutputEvent>` | It will create producer with filter content function. |
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | getCommonEventBy | `GetCommonEvent: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent` | It will _register_ a function to get common data out of both input and output events for metrics. |
-| getIntentBy | `GetIntent: 'InputEvent -> Intent option` | It will _register_ a function to get an Intent from the Input Event - to be used in Filter. Otherwise Intent is ignored. |
-| parseConfiguration | `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
+| getFilterValue | `GetFilterValue: 'InputEvent -> 'FilterValue option` | It will _register_ a function to get a generic 'FilterValue from the Input Event - to be used in Filter. Otherwise 'FilterValue is ignored. |
+| parseConfiguration | `parseFilterValue: (RawData -> 'FilterValue)`, `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
 ### FilterContent
 It is a function, which is responsible for filtering events.
@@ -32,7 +32,7 @@ type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'O
 Filter will use configuration to filter input events. Values in configuration determines, what is allowed. If section is empty, all values are allowed.
 
 #### Allow everything:
-This allows all intents implicitly.
+This allows all filter values implicitly.
 
 ```json
 {
@@ -43,19 +43,19 @@ This allows all intents implicitly.
 ```
 
 #### Allow everything explicitly:
-This allows all intents explicitly.
+This allows all filter values explicitly.
 
 ```json
 {
     "filter": {
         "spot": [],
-        "intents": []
+        "values": []
     }
 }
 ```
 
 #### Allow only specific spot:
-And all intents.
+And all filter values.
 
 ```json
 {
@@ -67,14 +67,14 @@ And all intents.
 }
 ```
 
-#### Allow one spot and 2 intents
+#### Allow one spot and 2 values (consent intents)
 ```json
 {
     "filter": {
         "spot": [
             { "zone": "prod", "bucket": "all" }
         ],
-        "intents": [
+        "values": [
             { "purpose": "data_processing", "scope": "lmc_cz" },
             { "purpose": "employers_assessment", "scope": "lmc_cz" }
         ]
