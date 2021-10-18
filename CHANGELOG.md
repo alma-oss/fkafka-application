@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 15.0.0 - 2021-10-18
 - Fix default spot from `(Zone=common, Bucket=all)` to `(Zone=all, Bucket=common)`
 - Update dependencies
 - [**BC**] Use `ILogger` instead of `ApplicationLogger`
