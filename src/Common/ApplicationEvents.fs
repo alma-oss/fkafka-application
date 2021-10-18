@@ -10,7 +10,7 @@ module internal ApplicationEvents =
     // Constants
     //
 
-    [<LiteralAttribute>]
+    [<Literal>]
     let InstanceStartedEventName = "instance_started"
 
     //

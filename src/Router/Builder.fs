@@ -10,6 +10,8 @@ module ContentBasedRouterBuilder =
     open Lmc.ErrorHandling.Result.Operators
     open ApplicationBuilder
 
+    let internal pattern = PatternName "ContentBasedRouter"
+
     module internal ContentBasedRouterApplicationBuilder =
         let private addRouterConfiguration<'InputEvent, 'OutputEvent>
             router
@@ -25,10 +27,10 @@ module ContentBasedRouterBuilder =
                 let! outputStreamTopics =
                     outputStreams
                     |> List.map (function
-                        | StreamName streamName -> Error (RouterError.StreamNameIsNotInstance streamName)
+                        | StreamName streamName -> Error (StreamNameIsNotInstance (Lmc.ServiceIdentification.InstanceError.InvalidFormat streamName))
                         | Instance instance -> Ok instance
                     )
-                    |> Result.sequence <@> RouterError
+                    |> Validation.ofResults <@> RouterErrors
 
                 let outputStreamNames =
                     outputStreams
@@ -40,11 +42,11 @@ module ContentBasedRouterBuilder =
                     let routeEvent =
                         match routeEventHandler with
                         | Simple routeEvent -> routeEvent
-                        | WithApplication routeEvent -> routeEvent (app |> PatternRuntimeParts.fromConsumeParts)
+                        | WithApplication routeEvent -> routeEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
                     let produceRoutedEvent =
                         Router.Routing.routeEvent
-                            (app.Logger.VeryVerbose "Routing")
+                            (app.LoggerFactory.CreateLogger("KafkaApplication.Router"))
                             (Output >> getCommonEvent >> CommonEvent.eventType)
                             (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
@@ -98,7 +100,7 @@ module ContentBasedRouterBuilder =
     type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
-            |> Result.bind ((tee (debugPatternConfiguration (PatternName "ContentBasedRouter") (fun { Configuration = c } -> c))) >> f)
+            |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)
             |> ContentBasedRouterApplicationConfiguration
 
         let (<!>) state f =
@@ -116,13 +118,11 @@ module ContentBasedRouterBuilder =
         member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state >>= fun routerParts ->
                 result {
-                    let! routerPath =
-                        configurationPath
-                        |> FileParser.parseFromPath id (sprintf "Routing configuration was not found at \"%s\".") <@> NotFound
-
                     let! router =
-                        routerPath
-                        |> Router.Configuration.parse <@> RouterError
+                        configurationPath
+                        |> FileParser.parseFromPath
+                            Router.Configuration.parse
+                            (sprintf "Routing configuration was not found at \"%s\"." >> NotFound)
 
                     return { routerParts with RouterConfiguration = Some router }
                 }
@@ -143,7 +143,7 @@ module ContentBasedRouterBuilder =
 
                     let! configurationParts =
                         configuration
-                        |> Configuration.result <@> InvalidConfiguration <@> ApplicationConfigurationError
+                        |> Configuration.result <@> (InvalidConfiguration >> ApplicationConfigurationError)
 
                     let! brokerList =
                         brokerListEnvironmentKey

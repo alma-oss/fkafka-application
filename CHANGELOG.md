@@ -2,6 +2,21 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix default spot from `(Zone=common, Bucket=all)` to `(Zone=all, Bucket=common)`
+- Update dependencies
+- [**BC**] Use `ILogger` instead of `ApplicationLogger`
+- [**BC**] Remove Graylog support
+    - Remove `logToGraylog`
+- [**BC**] Use `LoggerFactory` instead of `ApplicationLogger` and create other loggers by context
+    - Rename operation `useLogger` to `useLoggerFactory`
+- Make multi-errors as a list instead of returning just a first one
+- Add `ApplicationShutdown.withStatusCodeAndLogResult` function
+- Allow to set up commit message mode for consuming
+    - Add `useCommitMessage` custom operation
+    - Add `useCommitMessageFor` custom operation
+- [**BC**] Remove dependency on `Consents` libraries
+    - [**BC**] Rename `getIntentBy` in `Filter` pattern to more generic `getFilterBy`
+    - [**BC**] Change `parseConfiguration` in `Filter` to have a `parseFilterValue` function
 
 ## 14.1.0 - 2021-09-20
 - Update dependencies

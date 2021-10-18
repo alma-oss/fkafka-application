@@ -7,9 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../KafkaApplication.fsproj">
-      <Name>KafkaApplication</Name>
-    </ProjectReference>
+    <ProjectReference Include="../KafkaApplication.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

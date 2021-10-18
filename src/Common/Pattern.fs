@@ -1,11 +1,10 @@
 namespace Lmc.KafkaApplication
 
+open Microsoft.Extensions.Logging
 open Lmc.Kafka
 open Lmc.KafkaApplication
 open Lmc.ServiceIdentification
 open Lmc.Metrics
-open Lmc.Logging
-open Lmc.Consents.Intent
 
 // Errors
 
@@ -22,8 +21,9 @@ type internal PatternName = PatternName of string
 
 type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
 
+/// Application pattern parts exposed in handlers
 type PatternRuntimeParts = {
-    Logger: ApplicationLogger
+    LoggerFactory: ILoggerFactory
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
@@ -32,11 +32,16 @@ type PatternRuntimeParts = {
     DisableResource: ResourceAvailability -> unit
 }
 
+[<AutoOpen>]
+module internal PatternUtils =
+    let patternLogger (PatternName name) (loggerFactory: ILoggerFactory) =
+        loggerFactory.CreateLogger($"KafkaApplication.Pattern<{name}>")
+
 [<RequireQualifiedAccess>]
 module internal PatternRuntimeParts =
-    let fromConsumeParts<'OutputEvent> (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
+    let fromConsumeParts<'OutputEvent> patternName (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
         {
-            Logger = consumeRuntimeParts.Logger
+            LoggerFactory = consumeRuntimeParts.LoggerFactory
             Box = consumeRuntimeParts.Box
             Environment = consumeRuntimeParts.Environment
             IncrementMetric = consumeRuntimeParts.IncrementMetric
@@ -61,8 +66,8 @@ module internal PatternRunner =
             |> run (beforeRun patternParts)
         | Error error ->
             error
-            |> logApplicationError (sprintf "%s Application" pattern)
-            |> WithError
+            |> sprintf "[Critical Error] %s Application cannot start because of %A" pattern
+            |> WithCriticalError
 
 // Build Patterns
 
@@ -74,14 +79,13 @@ module internal PatternBuilder =
     open ApplicationBuilder
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> =
-        fun (PatternName pattern) getConfiguration patternParts ->
+        fun pattern getConfiguration patternParts ->
             patternParts
             |> getConfiguration
             |>! fun configuration ->
                 configuration <!> tee (fun parts ->
-                    patternParts
-                    |> sprintf "%A"
-                    |> parts.Logger.Debug pattern
+                    (patternLogger pattern parts.LoggerFactory)
+                        .LogTrace("Configuration: {configuration}", patternParts)
                 )
                 |> ignore
 
@@ -93,7 +97,7 @@ type InputOrOutputEvent<'InputEvent, 'OutputEvent> =
 
 type CreateCustomValues<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> (string * string) list
 type GetCommonEvent<'InputEvent, 'OutputEvent> = InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent
-type GetIntent<'InputEvent> = 'InputEvent -> Intent option
+type GetFilterValue<'InputEvent, 'FilterValue> = 'InputEvent -> 'FilterValue option
 
 module internal PatternMetrics =
     let createKeysForInputEvent<'InputEvent, 'OutputEvent>

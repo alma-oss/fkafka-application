@@ -1,15 +1,19 @@
 // Learn more about F# at http://fsharp.org
 
-open MF.ConsoleStyle
+open Microsoft.Extensions.Logging
+open Lmc.Logging
 open Lmc.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
-    Console.title "Admin - kafka"
+    use loggerFactory = LoggerFactory.create [
+        LoggerOption.UseLevel LogLevel.Trace
 
-    RealLifeExample.Program.run()
-    |> function
-        | Successfully ->
-            Console.success "Done"
-            0
-        | _ -> 1
+        LoggerOption.LogToSerilog [
+            SerilogOption.LogToConsole
+            SerilogOption.AddMeta ("facility", "kafka-app-example")
+        ]
+    ]
+
+    RealLifeExample.Program.run loggerFactory
+    |> ApplicationShutdown.withStatusCodeAndLogResult loggerFactory

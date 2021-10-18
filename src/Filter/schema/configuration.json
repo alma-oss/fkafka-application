@@ -14,7 +14,7 @@
   {
     "filter": {
       "spot": [],
-      "intents": []
+      "values": []
     }
   },
   {
@@ -22,7 +22,7 @@
       "spot": [
         { "zone": "prod", "bucket": "all" }
       ],
-      "intents": []
+      "values": []
     }
   },
   {
@@ -30,7 +30,7 @@
       "spot": [
         { "zone": "prod", "bucket": "all" }
       ],
-      "intents": [
+      "values": [
         { "purpose": "data_processing", "scope": "lmc_cz" },
         { "purpose": "employers_assessment", "scope": "lmc_cz" }
       ]

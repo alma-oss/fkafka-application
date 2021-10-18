@@ -2,36 +2,31 @@ namespace Lmc.KafkaApplication
 
 module ApplicationBuilder =
     open System
+    open Microsoft.Extensions.Logging
     open Lmc.Kafka
+    open Lmc.Kafka.MetaData
     open Lmc.KafkaApplication
-    open Lmc.Logging
     open Lmc.Metrics
     open Lmc.Metrics.ServiceStatus
     open Lmc.ServiceIdentification
-    open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
-    open OptionOperators
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
-        let private debugConfiguration (parts: ConfigurationParts<_, _>) =
-            parts
-            |> sprintf "%A"
-            |> parts.Logger.Debug "Configuration"
+        let private traceConfiguration (parts: ConfigurationParts<_, _>) =
+            parts.LoggerFactory
+                .CreateLogger("KafkaApplication.Configuration")
+                .LogTrace("Configuration: {configuration}", parts)
 
         let (>>=) (Configuration configuration) f =
             configuration
-            |> Result.bind ((tee debugConfiguration) >> f)
+            |> Result.bind ((tee traceConfiguration) >> f)
             |> Configuration
 
         let (<!>) state f =
             state >>= (f >> Ok)
-
-        let logger (Configuration configuration) =
-            configuration
-            |> Result.map (fun parts -> parts.Logger)
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
@@ -40,7 +35,7 @@ module ApplicationBuilder =
             currentConfiguration >>= fun currentParts ->
                 newConfiguration <!> fun newParts ->
                     {
-                        Logger = currentParts.Logger
+                        LoggerFactory = currentParts.LoggerFactory
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         GitCommit = newParts.GitCommit <??> currentParts.GitCommit
@@ -48,6 +43,8 @@ module ApplicationBuilder =
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
+                        CommitMessage = newParts.CommitMessage
+                        CommitMessages = newParts.CommitMessages |> Map.merge currentParts.CommitMessages
                         ParseEvent = newParts.ParseEvent <??> currentParts.ParseEvent
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
                         ConsumeHandlers = currentParts.ConsumeHandlers @ newParts.ConsumeHandlers
@@ -61,72 +58,10 @@ module ApplicationBuilder =
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
-                        GraylogConnections = currentParts.GraylogConnections @ newParts.GraylogConnections
                         CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
                         WebServerSettings = currentParts.WebServerSettings @ newParts.WebServerSettings
                     }
                 |> Configuration.result
-
-        let addGraylogToParts<'InputEvent, 'OutputEvent> (parts: ConfigurationParts<'InputEvent, 'OutputEvent>) (graylog: string, graylogService: string) =
-            result {
-                let! hostsPorts =
-                    graylog.Split ","
-                    |> Array.filter (String.IsNullOrEmpty >> not)
-                    |> Array.map (fun graylog ->
-                        match graylog.Split ":" with
-                        | [| host |] -> Ok (host, None)
-                        | [| host; port |] -> Ok (host, Some port)
-                        | _ -> Error (LoggingError.InvalidGraylogConnectionString graylog)
-                    )
-                    |> Array.toList
-                    |> Result.sequence
-
-                let! graylogHostsPorts =
-                    hostsPorts
-                    |> List.map (fun (host, port) ->
-                        result {
-                            let! host =
-                                host
-                                |> Graylog.Host.create
-                                |> Result.mapError LoggingError.InvalidGraylogHost
-
-                            let! port =
-                                match port with
-                                | Some port ->
-                                    match Int32.TryParse port with
-                                    | true, port -> Ok <| Some (Graylog.Port port)
-                                    | _ -> Error (LoggingError.InvalidPort port)
-                                | _ -> Ok None
-
-                            return (host, port)
-                        }
-                    )
-                    |> Result.sequence
-
-                if graylogHostsPorts |> List.isEmpty then
-                    return! Error (LoggingError.InvalidGraylogConnectionString graylog)
-
-                let resource = {
-                    Resource = ResourceAvailability.createFromStrings "graylog" graylogService graylog Audience.Sys
-                    Interval = 30<Lmc.KafkaApplication.Second>
-                    Checker = fun () ->
-                        GraylogService graylogService
-                        |> Graylog.Diagnostics.isAliveResult
-                        |> Async.RunSynchronously
-                        |> function
-                            | Ok isAlive when isAlive -> Up
-                            | Ok _ -> Down
-                            | Error e ->
-                                parts.Logger.Error "Graylog Resource" <| sprintf "%A" e
-                                Down
-                }
-
-                return { parts
-                    with
-                        GraylogConnections = parts.GraylogConnections @ graylogHostsPorts
-                        IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers
-                }
-            }
 
         let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
@@ -264,6 +199,10 @@ module ApplicationBuilder =
             }
 
         let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent> =
+            /// Overriden Result.ofOption operator to return a KafkaApplicationError instead of generic error
+            let inline (<?!>) o errorMessage =
+                o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError)
+
             result {
                 let! configurationParts = configuration
 
@@ -286,15 +225,17 @@ module ApplicationBuilder =
                     configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
                     <?=> defaultConsumeErrorHandler
 
-                let spot = configurationParts.Spot <?=> { Zone = Zone "common"; Bucket = Bucket "all" }
-                let box = Box.createFromValues instance.Domain instance.Context instance.Purpose instance.Version spot.Zone spot.Bucket
+                let spot = configurationParts.Spot <?=> { Zone = Zone "all"; Bucket = Bucket "common" }
+                let box = Create.Box(instance, spot)
 
-                let logger = configurationParts.Logger
+                let loggerFactory = configurationParts.LoggerFactory
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
+                let defaultCommitMessage = configurationParts.CommitMessage
+                let commitMessages = configurationParts.CommitMessages
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
-                let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo - allow passing custom interval checker
+                let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo<later> - allow passing custom interval checker
 
                 let gitCommit = configurationParts.GitCommit <?=> GitCommit "unknown"
                 let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
@@ -303,20 +244,8 @@ module ApplicationBuilder =
                 // composed parts
                 //
 
-                // logging
-                let logger =
-                    match configurationParts.GraylogConnections with
-                    | [] -> logger
-                    | connections ->
-                        connections
-                        |> List.map (fun (host, port) ->
-                            (host, port <?=> Graylog.Port Graylog.DefaultPort)
-                        )
-                        |> ApplicationLogger.graylogLogger instance
-                        |> ApplicationLogger.combine logger
-
                 // kafka parts
-                let kafkaLogger runtimeConnection = { Log = logger.Verbose (sprintf "Kafka<%s>" runtimeConnection ) }
+                let kafkaLogger runtimeConnection = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" runtimeConnection)
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
                 let kafkaIntervalChecker brokerList = kafkaIntervalChecker |> ResourceChecker.updateResourceStatusOnIntervalCheck instance brokerList
 
@@ -345,6 +274,7 @@ module ApplicationBuilder =
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
+                                CommitMessage = commitMessages.TryFind name <?=> defaultCommitMessage
                             }
                         )
                     ) Map.empty
@@ -366,7 +296,7 @@ module ApplicationBuilder =
                 let! preparedProducers =
                     configurationParts.ProduceTo
                     |> List.map prepareProducer
-                    |> Result.sequence
+                    |> Validation.ofResults
                     |> Result.mapError ProduceError
 
                 let (producers, produces) =
@@ -396,7 +326,7 @@ module ApplicationBuilder =
                 let setMetric = ApplicationMetrics.setCustomMetricValue instance
 
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
-                    Logger = logger
+                    LoggerFactory = loggerFactory
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
                     Box = box
@@ -415,13 +345,13 @@ module ApplicationBuilder =
                 let! runtimeConsumeHandlers =
                     consumeHandlers
                     |> List.map composeRuntimeHandler
-                    |> Result.sequence
+                    |> Validation.ofResults
                     |> Result.mapError ConsumeHandlerError
 
                 let customTasks =
                     configurationParts.CustomTasks
                     |> CustomTasks.prepare {
-                        Logger = logger
+                        LoggerFactory = loggerFactory
                         Box = box
                         Environment = environment
                         IncrementMetric = incrementMetric
@@ -431,7 +361,7 @@ module ApplicationBuilder =
                     }
 
                 return {
-                    Logger = logger
+                    LoggerFactory = loggerFactory
                     Environment = environment
                     Box = box
                     ParseEvent = parseEvent
@@ -463,16 +393,9 @@ module ApplicationBuilder =
         member __.Run(state: Configuration<'InputEvent, 'OutputEvent>) =
             buildApplication state
 
-        [<CustomOperation("useLogger")>]
-        member __.Logger(state, logger: ApplicationLogger): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with Logger = logger }
-
-        [<CustomOperation("logToGraylog")>]
-        member __.LogToGraylog(state, graylog, graylogService): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                (graylog, graylogService)
-                |> addGraylogToParts parts
-                |> Result.mapError LoggingError
+        [<CustomOperation("useLoggerFactory")>]
+        member __.Logger(state, loggerFactory: ILoggerFactory): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with LoggerFactory = loggerFactory }
 
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
@@ -497,6 +420,14 @@ module ApplicationBuilder =
         [<CustomOperation("useGroupIdFor")>]
         member __.GroupIdFor(state, name, groupId): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with GroupIds = parts.GroupIds.Add(ConnectionName name, groupId) }
+
+        [<CustomOperation("useCommitMessage")>]
+        member __.CommitMessage(state, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CommitMessage = commitMessage }
+
+        [<CustomOperation("useCommitMessageFor")>]
+        member __.CommitMessageFor(state, name, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CommitMessages = parts.CommitMessages.Add(ConnectionName name, commitMessage) }
 
         [<CustomOperation("parseEventWith")>]
         member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =

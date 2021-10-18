@@ -3,22 +3,20 @@ namespace Lmc.KafkaApplication
 [<AutoOpen>]
 module EnvironmentBuilder =
     open System.IO
+    open Microsoft.Extensions.Logging
     open Lmc.ServiceIdentification
     open Lmc.Kafka
+    open Lmc.Kafka.MetaData
     open Lmc.KafkaApplication
-    open Lmc.Consents.Events.Events
     open Lmc.Environment
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
-    open ApplicationBuilder.KafkaApplicationBuilder
 
-    module Environment = Lmc.Environment
+    type EnvironmentBuilder internal (loggerFactory: ILoggerFactory) =
+        let logger = loggerFactory.CreateLogger "KafkaApplication.Environment"
 
-    type EnvironmentBuilder internal (logger) =
         let debugConfiguration (parts: ConfigurationParts<_, _>) =
-            parts
-            |> sprintf "%A"
-            |> parts.Logger.Debug "Environment"
+            logger.LogTrace("Configuration: {configuration}", parts)
 
         let (>>=) (Configuration configuration) f =
             configuration
@@ -40,9 +38,8 @@ module EnvironmentBuilder =
                         |> getEnvironmentValue parts id ConnectionConfigurationError.VariableNotFoundError
 
                     let! topicInstance =
-                        topic
-                        |> Instance.parse "-"
-                        |> Result.ofOption (ConnectionConfigurationError.TopicIsNotInstanceError topic)
+                        Create.Instance(topic)
+                        |> Result.mapError (List.singleton >> ConnectionConfigurationError.TopicIsNotInstanceError)
 
                     let connectionConfiguration: ConnectionConfiguration = {
                         BrokerList = brokerList
@@ -64,10 +61,7 @@ module EnvironmentBuilder =
                         connectionConfiguration.Topics
                         |> List.map (fun topic ->
                             result {
-                                let! topicInstance =
-                                    topic
-                                    |> Instance.parse "-"
-                                    |> Result.ofOption (ConnectionConfigurationError.TopicIsNotInstanceError topic)
+                                let! topicInstance = Create.Instance(topic)
 
                                 return (
                                     topic |> ConnectionName,
@@ -75,7 +69,8 @@ module EnvironmentBuilder =
                                 )
                             }
                         )
-                        |> Result.sequence
+                        |> Validation.ofResults
+                        |> Result.mapError ConnectionConfigurationError.TopicIsNotInstanceError
 
                     let connectionConfigurations: Connections =
                         configurations
@@ -88,7 +83,7 @@ module EnvironmentBuilder =
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
             { defaultParts
                 with
-                    Logger = logger
+                    LoggerFactory = loggerFactory
                     Environment = Envs.getAll()
             }
             |> Ok
@@ -111,11 +106,14 @@ module EnvironmentBuilder =
 
                     let environment = Envs.getAll()
 
-                    environment
-                    |> Map.toList
-                    |> List.iter (sprintf "%A" >> parts.Logger.VeryVerbose "Dotenv")
+                    let variables =
+                        environment
+                        |> Map.toList
+                        |> List.map (fun (k, v) -> $"{k}:{v}")
+                        |> String.concat "; "
+                    logger.LogDebug("Environment variables: {variables}", variables)
 
-                    return { parts with Environment = environment }
+                    return { parts with Environment = Envs.getAll() }
                 }
                 |> Result.mapError EnvironmentError
 
@@ -145,11 +143,11 @@ module EnvironmentBuilder =
                     let! _ =
                         names
                         |> List.map (getEnvironmentValue parts id EnvironmentError.VariableNotFoundError)
-                        |> Result.sequence
+                        |> Validation.ofResults
 
                     return parts
                 }
-                |> Result.mapError EnvironmentError
+                |> Result.mapError RequiredEnvironmentVariablesErrors
 
         [<CustomOperation("instance")>]
         member __.Instance(state, instanceVariableName): Configuration<'InputEvent, 'OutputEvent> =
@@ -160,9 +158,7 @@ module EnvironmentBuilder =
                         |> getEnvironmentValue parts id InstanceError.VariableNotFoundError
 
                     let! instance =
-                        instanceString
-                        |> Instance.parse "-"
-                        |> Result.ofOption (sprintf "Value \"%s\" for Instance is not in correct format (expecting values separated by \"-\")." instanceString)
+                        Create.Instance(instanceString)
                         |> Result.mapError InstanceError.InvalidFormatError
 
                     return { parts with Instance = Some instance }
@@ -202,9 +198,7 @@ module EnvironmentBuilder =
                         |> getEnvironmentValue parts id SpotError.VariableNotFoundError
 
                     let! spot =
-                        spotString
-                        |> Spot.parse "-"
-                        |> Result.ofOption (sprintf "Value \"%s\" for Spot is not in correct format (expecting values separated by \"-\")." spotString)
+                        Create.Spot(spotString)
                         |> Result.mapError SpotError.InvalidFormatError
 
                     return { parts with Spot = Some spot }
@@ -248,23 +242,5 @@ module EnvironmentBuilder =
 
                 parts
 
-        [<CustomOperation("logToGraylog")>]
-        member __.LogToGraylog(state, graylogVariableName, graylogServiceVariableName): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                result {
-                    let! graylog =
-                        graylogVariableName
-                        |> getEnvironmentValue parts id LoggingError.VariableNotFoundError
-
-                    let! graylogService =
-                        graylogServiceVariableName
-                        |> getEnvironmentValue parts id LoggingError.VariableNotFoundError
-
-                    return!
-                        (graylog, graylogService)
-                        |> addGraylogToParts parts
-                }
-                |> Result.mapError LoggingError
-
     let environmentWithLogger logger = EnvironmentBuilder(logger)
-    let environment = EnvironmentBuilder(defaultParts.Logger)
+    let environment = EnvironmentBuilder(defaultParts.LoggerFactory)

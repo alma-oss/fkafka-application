@@ -83,7 +83,6 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
 | consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
-| logToGraylog | `graylog: string`, `graylogService: string` | It will register graylog host (and port) (_or many_). Graylog service will be used for resource health check in consul. All logs will be sent to the graylog using UDP with Instance as facility. (_It must not start with protocol._) |
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) |
 | onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
@@ -101,6 +100,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useGitCommit | `GitCommit` | |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useGroupIdFor | `connectionName: string`, `GroupId` | Set group id for connection. |
+| useCommitMessage | `CommitMessage` | It is optional with default `CommitMessage.Automatically`. |
+| useCommitMessageFor | `connectionName: string`, `CommitMessage` | Set commit message mode for connection. |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |
@@ -192,7 +193,6 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
-| logToGraylog | `graylogVariableName: string`, `graylogServiceVariableName: string` | It will register graylog host (and port) (_or many_). Graylog service will be used for resource health check in consul. All logs will be sent to the graylog using UDP with Instance as facility. (_It must not start with protocol._) |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
 | supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
@@ -335,6 +335,15 @@ You can define specific group id for a connection by
 ```fs
 useGroupIdFor "connection" "groupId-for-connection"
 ```
+
+##### Commit Message
+You can use different commit message mode for every connection, but you have to explicitly define it, otherwise `CommitMessage.Automatically` will be used.
+If you just define `useCommitMessage CommitMessage.Manually`, it will be shared for all connections as default.
+You can define specific commit message for a connection by
+```fs
+useCommitMessageFor "connection" CommitMessage.Manually
+```
+**NOTE**: Kafka application will also Manually commit the handled message for you - so there is nothing else to do, than just set a commit message mode.
 
 ## Release
 1. Increment version in `KafkaApplication.fsproj`

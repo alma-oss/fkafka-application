@@ -3,7 +3,6 @@ namespace RealLifeExample
 module Program =
     open Lmc.Kafka
     open Lmc.KafkaApplication
-    open Lmc.Logging
 
     open Suave
     open Suave.Filters
@@ -22,7 +21,7 @@ module Program =
             ("output_stream", outputStream |> StreamName.value)
         ]
 
-    let run () =
+    let run loggerFactory =
         //
         // pattern
         //
@@ -42,12 +41,12 @@ module Program =
         //
 
         kafkaApplication {
+            useLoggerFactory loggerFactory
+
             merge (environment {
                 file [".env"]
 
                 instance "INSTANCE"
-                ifSetDo "VERBOSITY" Log.setVerbosityLevel
-                logToGraylog "GRAYLOG" "GRAYLOG_SERVICE"
 
                 connect {
                     BrokerList = "BROKER_LIST"
@@ -75,22 +74,24 @@ module Program =
             merge (partialKafkaApplication {
                 produceTo "outputStream" fromDomain
 
-                consume (fun app events ->
+                consume (fun app ->
                     let produce = app.ProduceTo.["outputStream"]
 
-                    events
-                    |> Seq.take 1000
-                    |> Seq.iter (filterDomainData >> produce)
+                    fun { Event = event } ->
+                        event
+                        |> filterDomainData
+                        |> produce
                 )
             })
 
-            consumeFrom "contracts" (fun app contractEvents ->
+            consumeFrom "contracts" (fun app ->
                 let produce = app.ProduceTo.["outputStream"]
 
-                contractEvents
-                |> Seq.filter isActivatedContracts
-                //|> Seq.take 1
-                |> Seq.iter (filterDomainData >> produce)
+                fun { Event = contractEvent } ->
+                    if contractEvent |> isActivatedContracts then
+                        contractEvent
+                        |> filterDomainData
+                        |> produce
             )
 
             showMetricsOn "/metrics"
