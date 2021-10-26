@@ -100,7 +100,7 @@ module EnvironmentBuilder =
                         envFileLocations
                         |> List.tryFind File.Exists
                         |> function
-                            | Some file -> file |> Envs.loadFromFile
+                            | Some file -> file |> Envs.loadResolvedFromFile
                             | _ -> Ok ()
                         |> Result.mapError EnvironmentError.LoadError
 
@@ -113,7 +113,7 @@ module EnvironmentBuilder =
                         |> String.concat "; "
                     logger.LogDebug("Environment variables: {variables}", variables)
 
-                    return { parts with Environment = Envs.getAll() }
+                    return { parts with Environment = environment }
                 }
                 |> Result.mapError EnvironmentError
 
