@@ -23,13 +23,13 @@ NUGET
     FSharp.Core (5.0.2)
     FSharp.Data (4.2.4)
       FSharp.Core (>= 4.7.2)
-    Google.Protobuf (3.19)
-    Grpc (2.41)
-      Grpc.Core (>= 2.41)
-    Grpc.Core (2.41)
-      Grpc.Core.Api (>= 2.41)
+    Google.Protobuf (3.19.1)
+    Grpc (2.41.1)
+      Grpc.Core (>= 2.41.1)
+    Grpc.Core (2.41.1)
+      Grpc.Core.Api (>= 2.41.1)
       System.Memory (>= 4.5.3)
-    Grpc.Core.Api (2.41)
+    Grpc.Core.Api (2.41.1)
       System.Memory (>= 4.5.3)
     Jaeger (1.0.3)
       Jaeger.Core (>= 1.0.3)
@@ -522,7 +522,7 @@ NUGET
       Lmc.ErrorHandling (>= 5.1)
     Lmc.ErrorHandling (5.1.0)
       FSharp.Core (>= 5.0.2)
-    Lmc.Kafka (17.2.0)
+    Lmc.Kafka (18.0.0)
       Confluent.Kafka (>= 1.8.1)
       FSharp.Control.AsyncSeq (>= 3.2)
       FSharp.Core (>= 5.0.2)
@@ -568,7 +568,7 @@ NUGET
       Microsoft.Extensions.Logging (>= 5.0)
 GIT
   remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
-     (3b10f151147e260d004574181fb756e9f6c014dd)
+     (ce72906d4f31eedeb39112bb0f6b09a3ed9b6cc7)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
