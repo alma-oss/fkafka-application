@@ -10,7 +10,7 @@ git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nug
 # LMC Nuget dependencies:
 nuget Lmc.Environment ~> 6.0
 nuget Lmc.ErrorHandling ~> 5.1
-nuget Lmc.Kafka ~> 17.1
+nuget Lmc.Kafka ~> 18.0
 nuget Lmc.Logging ~> 5.1
 nuget Lmc.Metrics ~> 5.1
 nuget Lmc.ServiceIdentification ~> 5.5
