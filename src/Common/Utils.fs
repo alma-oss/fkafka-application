@@ -36,3 +36,39 @@ module internal Utils =
         open Lmc.Serializer
 
         let toJson = Serialize Serialize.toJson
+
+[<RequireQualifiedAccess>]
+module LoggerFactory =
+    open System.IO
+    open Microsoft.Extensions.Logging
+    open Lmc.Environment
+    open Lmc.Logging
+    open Lmc.Tracing
+    open Lmc.ErrorHandling
+
+    type LoggerEnvVar = {
+        LogTo: string
+        Verbosity: string
+        LoggerTags: string
+        EnableTraceProvider: bool
+    }
+
+    let common loggerEnvVars envFiles = result {
+        do!
+            envFiles
+            |> List.find File.Exists
+            |> Envs.loadResolvedFromFile
+
+        return LoggerFactory.create [
+            LogToFromEnvironment loggerEnvVars.LogTo
+
+            if loggerEnvVars.EnableTraceProvider then
+                UseLevel LogLevel.Trace
+                UseProvider (LoggerProvider.TracingProvider.create())
+
+            LogToSerilog ([
+                SerilogOption.UseLevelFromEnvironment loggerEnvVars.Verbosity
+                AddMetaFromEnvironment loggerEnvVars.LoggerTags
+            ])
+        ]
+    }

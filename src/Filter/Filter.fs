@@ -2,6 +2,7 @@ namespace Lmc.KafkaApplication.Filter
 
 [<RequireQualifiedAccess>]
 module internal Filter =
+    open Microsoft.Extensions.Logging
     open Lmc.Kafka
     open Lmc.ErrorHandling
     open Lmc.ServiceIdentification
@@ -35,40 +36,62 @@ module internal Filter =
             }
         }
 
-        let private isValueAllowed allowedValues = function
-            | None -> true
+        let private tee f a =
+            f a
+            a
+
+        let private isValueAllowed (logger: ILogger) allowedValues = function
+            | None ->
+                logger.LogTrace("Value is allowed because it is empty.")
+                true
+
             | Some value ->
                 match allowedValues with
-                | [] -> true
+                | [] ->
+                    logger.LogTrace("Value is allowed because it does not have any requirements.")
+                    true
+
                 | allowedValues ->
                     allowedValues
                     |> List.contains value
+                    |> tee (fun isAllowed -> logger.LogTrace("Value {value} is {is_allowed}", value, if isAllowed then "allowed" else "not allowed"))
 
-        let isAllowedBy { Spots = spots; FilterValues = filterValues } (spot, value) =
-            Some spot |> isValueAllowed spots
-            || value |> isValueAllowed filterValues
+        let isAllowedBy (logger: ILogger) { Spots = spots; FilterValues = filterValues } (spot, value) =
+            Some spot |> isValueAllowed logger spots
+            && value |> isValueAllowed logger filterValues
+
+            |> tee (fun isAllowed -> logger.LogTrace("Event with ({value_spot}, {value_filter_value}) is allowed: {is_allowed}", spot, value, isAllowed))
 
     [<RequireQualifiedAccess>]
     module Filtering =
         open Lmc.KafkaApplication
 
         let filterByConfiguration<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality>
+            (loggerFactory: ILoggerFactory)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (getFilterValue: GetFilterValue<'InputEvent, 'FilterValue>)
             (configuration: FilterConfiguration<'FilterValue>)
             (tracedEvent: TracedEvent<'InputEvent>) =
 
+            let logger = loggerFactory.CreateLogger("FilterEvent")
             let inputEvent = tracedEvent |> TracedEvent.event
 
             let commonEvent: CommonEvent =
                 inputEvent
                 |> Input
                 |> getCommonEvent
+
             let spot = Create.Spot(commonEvent.Zone, commonEvent.Bucket)
+            let filterValue = inputEvent |> getFilterValue
 
-            let filterValue =
-                inputEvent
-                |> getFilterValue
+            logger.LogTrace(
+                "Filter event {event_type}({event_id}) from ({event_zone},{event_bucket}) with {filter_value}",
+                commonEvent.Event |> EventName.value,
+                commonEvent.Id |> EventId.value,
+                spot.Zone |> Zone.value,
+                spot.Bucket |> Bucket.value,
+                filterValue
+            )
 
-            if (spot, filterValue) |> Configuration.isAllowedBy configuration then Some tracedEvent
+            if (spot, filterValue) |> Configuration.isAllowedBy logger configuration then Some tracedEvent
             else None

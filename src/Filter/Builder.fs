@@ -24,7 +24,7 @@ module FilterBuilder =
                 use eventToFilter = event |> TracedEvent.continueAs "Filter" "Filter event"
 
                 eventToFilter
-                |> Filter.Filtering.filterByConfiguration getCommonEvent getFilterValue filterConfiguration
+                |> Filter.Filtering.filterByConfiguration app.LoggerFactory getCommonEvent getFilterValue filterConfiguration
                 >>= filterContentFromInputEvent app.ProcessedBy
                 |>! app.ProduceTo.[filterOutputStream]
 

@@ -10,7 +10,7 @@ It filters input stream by specific configuration and then filters out content y
 ## Filter computation expression
 It allows you to create a filter application easier. It has build-in a filter consumer, metrics, etc.
 
-Filter computation expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent>` and it is run by `Application.run` function.
+Filter computation expression returns `Application of FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue>` and it is run by `Application.run` function.
 
 | Function | Arguments | Description |
 | --- | --- | --- |
@@ -19,17 +19,17 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | getCommonEventBy | `GetCommonEvent: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent` | It will _register_ a function to get common data out of both input and output events for metrics. |
 | getFilterValue | `GetFilterValue: 'InputEvent -> 'FilterValue option` | It will _register_ a function to get a generic 'FilterValue from the Input Event - to be used in Filter. Otherwise 'FilterValue is ignored. |
-| parseConfiguration | `parseFilterValue: (RawData -> 'FilterValue)`, `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
+| parseConfiguration | `parseFilterValue: (Lmc.Kafka.RawData -> 'FilterValue)`, `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
 ### FilterContent
 It is a function, which is responsible for filtering events.
 ```fs
-type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> 'OutputEvent option
 ```
 
 ## Filter Configuration
 
-Filter will use configuration to filter input events. Values in configuration determines, what is allowed. If section is empty, all values are allowed.
+Filter will use configuration to filter input events. Values in configuration determines, what is allowed. If section is empty, all values in that section are allowed.
 
 #### Allow everything:
 This allows all filter values implicitly.
@@ -85,12 +85,11 @@ And all filter values.
 ## Example
 ```fs
 filterContentFilter {
-    parseConfiguration "./configuration/configuration.json"
+    parseConfiguration Intent.parse "./configuration/configuration.json"
 
     from (partialKafkaApplication {
         merge (environment {
             file ["./.env"; "./.dist.env"]
-            ifSetDo "VERBOSITY" Log.setVerbosityLevel
 
             instance "INSTANCE"
             groupId "GROUP_ID"
@@ -115,25 +114,14 @@ filterContentFilter {
         parseEventWith Parser.parseInputEvent
     })
 
-    filterTo "outputStream" Filter.filterContentFromInputEvent Serializer.fromDomain
+    filterTo "outputStream" Filter.filterContentFromInputEvent OutputEvent.serialize
 
     getCommonEventBy (function
-        | Input event ->
-            match event with
-            | InputEvent.NewPersonIdentified newPersonIdentified ->
-                newPersonIdentified
-                |> NewPersonIdentified.Event.toCommon
-            | InputEvent.NotRelevant rawEvent ->
-                rawEvent
-                |> RawEvent.toCommon
-
-        | Output event ->
-            match event with
-            | OutputEvent.NewPersonIdentified publicEvent ->
-                publicEvent
-                |> NewPersonIdentified.PublicEvent.event
-                |> Event.toCommon
+        | Input event -> event |> InputEvent.common
+        | Output event -> event |> OutputEvent.common
     )
+
+    getFilterBy InputEvent.intent
 }
 |> run
 |> ApplicationShutdown.withStatusCode

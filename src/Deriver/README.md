@@ -36,7 +36,6 @@ deriver {
     from (partialKafkaApplication {
         merge (environment {
             file ["./.env"; "./.dist.env"]
-            ifSetDo "VERBOSITY" Log.setVerbosityLevel
 
             instance "INSTANCE"
             groupId "GROUP_ID"
