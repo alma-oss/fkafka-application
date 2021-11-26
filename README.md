@@ -234,6 +234,50 @@ let main argv =
     |> ApplicationShutdown.withStatusCode
 ```
 
+#### Simple one connection with logger
+Following example is the easiest setup, you can get but uses a logger factory to log internal events.
+
+```fs
+open Lmc.Kafka
+open Lmc.ServiceIdentification
+open Lmc.KafkaApplication
+open Lmc.ErrorHandling
+
+[<EntryPoint>]
+let main argv =
+    let envFiles = [ "./.env"; "./.dist.env" ]
+
+    use loggerFactory =
+        envFiles
+        |> LoggerFactory.common {
+            LogTo = "LOG_TO"
+            Verbosity = "VERBOSITY"
+            LoggerTags = "LOGGER_TAGS"
+            EnableTraceProvider = true
+        }
+        |> Result.orFail
+
+    kafkaApplication {
+        useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useGitCommit (GitCommit "abc123")
+        useDockerImageVersion (DockerImageVersion "42-2019")
+
+        useLoggerFactory loggerFactory
+
+        connect {
+            BrokerList = BrokerList "127.0.0.1:9092"
+            Topic = StreamName "my-input-stream"
+        }
+
+        consume (fun _ events ->
+            events
+            |> Seq.iter (printfn "%A")
+        )
+    }
+    |> run
+    |> ApplicationShutdown.withStatusCodeAndLogResult loggerFactory
+```
+
 #### More than one connection
 Instead of previous example, where our application uses only one connections, there are cases, where we need more than that.
 
