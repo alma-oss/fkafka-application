@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 15.3.0 - 2021-11-26
 - Fix filter pattern to use `and` instead of `or` in filtering so the event is _allowed_ if it is allowed by **both** spot and the filterValue (_unless one of those allowed lists is empty_)
 - Add trace logs to filter pattern
 - Add `LoggerFactory.common` function to help create a common logger factory for kafka application usage
