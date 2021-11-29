@@ -56,8 +56,9 @@ module LoggerFactory =
     let common loggerEnvVars envFiles = result {
         do!
             envFiles
-            |> List.find File.Exists
-            |> Envs.loadResolvedFromFile
+            |> List.tryFind File.Exists
+            |> Option.map Envs.loadResolvedFromFile
+            |> Option.defaultValue (Ok ())
 
         return LoggerFactory.create [
             LogToFromEnvironment loggerEnvVars.LogTo
