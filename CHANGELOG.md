@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix `LoggerFactory.common` to allow run without an existing env file
 
 ## 15.3.0 - 2021-11-26
 - Fix filter pattern to use `and` instead of `or` in filtering so the event is _allowed_ if it is allowed by **both** spot and the filterValue (_unless one of those allowed lists is empty_)
