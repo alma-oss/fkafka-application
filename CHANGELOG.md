@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 15.3.1 - 2021-11-29
 - Fix `LoggerFactory.common` to allow run without an existing env file
 
 ## 15.3.0 - 2021-11-26
