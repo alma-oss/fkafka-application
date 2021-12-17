@@ -1,7 +1,9 @@
 FSharp.Core
 FSharp.Data
 Newtonsoft.Json
+Lmc.ApplicationStatus
 Lmc.Environment
+Lmc.EnvironmentModel
 Lmc.ErrorHandling
 Lmc.Kafka
 Lmc.Logging

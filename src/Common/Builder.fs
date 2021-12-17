@@ -38,6 +38,7 @@ module ApplicationBuilder =
                         LoggerFactory = currentParts.LoggerFactory
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
+                        CurrentEnvironment = newParts.CurrentEnvironment <??> currentParts.CurrentEnvironment
                         GitCommit = newParts.GitCommit <??> currentParts.GitCommit
                         DockerImageVersion = newParts.DockerImageVersion <??> currentParts.DockerImageVersion
                         Spot = newParts.Spot <??> currentParts.Spot
@@ -210,6 +211,7 @@ module ApplicationBuilder =
                 // required parts
                 //
                 let! instance = configurationParts.Instance <?!> "Instance is required."
+                let! currentEnvironment = configurationParts.CurrentEnvironment <?!> "Current environment is required."
                 let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
                 let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
                 let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required."
@@ -364,6 +366,7 @@ module ApplicationBuilder =
                     LoggerFactory = loggerFactory
                     Environment = environment
                     Box = box
+                    CurrentEnvironment = currentEnvironment
                     ParseEvent = parseEvent
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
@@ -559,3 +562,7 @@ module ApplicationBuilder =
         [<CustomOperation("addRoute")>]
         member __.AddRoute(state, route): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with WebServerSettings = route :: parts.WebServerSettings }
+
+        [<CustomOperation("showAppRootStatus")>]
+        member this.ShowAppRootStatus(state): Configuration<'InputEvent, 'OutputEvent> =
+            this.AddRoute(state, AppRootStatus.route "todo status")

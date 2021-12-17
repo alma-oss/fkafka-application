@@ -144,6 +144,7 @@ module internal ApplicationMetrics =
 
     // Showing state
 
+    // todo - move webserver as a component here from the metrics lib and use giraffe
     let showStateOnWebServerAsync instance customMetrics (settings: WebServerPart list) route =
         let route =
             route

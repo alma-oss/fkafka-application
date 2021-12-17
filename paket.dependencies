@@ -8,7 +8,9 @@ nuget Newtonsoft.Json ~> 13.0
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
+nuget Lmc.ApplicationStatus ~> 1.0
 nuget Lmc.Environment ~> 6.0
+nuget Lmc.EnvironmentModel ~> 3.2.1
 nuget Lmc.ErrorHandling ~> 5.1
 nuget Lmc.Kafka ~> 18.0
 nuget Lmc.Logging ~> 5.1

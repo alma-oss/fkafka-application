@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Require `CurrentEnvironment` in all kafka applications
+- Add `ApplicationStatus`
 
 ## 16.0.0 - 2021-12-17
 - [**BC**] Require `Instance` in common `LoggerFactory`

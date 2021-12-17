@@ -78,3 +78,46 @@ module LoggerFactory =
             ])
         ]
     }
+
+[<RequireQualifiedAccess>]
+module AppRootStatus =
+    open System
+    open Suave
+    open Suave.Filters
+    open Suave.Operators
+    open Suave.Successful
+    open Lmc.ApplicationStatus
+    open Lmc.ErrorHandling
+    open Lmc.Environment
+
+    let status instance environment dockerImageVersion =
+        let valueOrNA = Option.defaultValue "N/A"
+
+        let dockerImageVersion = dockerImageVersion |> valueOrNA |> DockerImageVersion
+        let nomadJobName = "NOMAD_JOB_NAME" |> Envs.tryResolve |> valueOrNA |> NomadJobName
+        let nomadAllocId = "NOMAD_ALLOC_ID" |> Envs.tryResolve |> valueOrNA |> NomadAllocationId
+
+        ApplicationStatus.create {
+            new ApplicationStatusFeature.ICurrentApplication with
+                member __.Instance = instance
+                member __.Environment = environment
+
+            interface ApplicationStatusFeature.IAssemblyInformation with
+                member __.GitBranch = GitBranch AssemblyVersionInformation.AssemblyMetadata_gitbranch
+                member __.GitCommit = GitCommit AssemblyVersionInformation.AssemblyMetadata_gitcommit
+                member __.GitRepository = GitRepository.empty
+
+            interface ApplicationStatusFeature.IDockerApplication with
+                member __.DockerImageVersion = dockerImageVersion
+
+            interface ApplicationStatusFeature.INomadApplication with
+                member __.NomadJobName = nomadJobName
+                member __.NomadAllocationId = nomadAllocId
+        }
+
+    // todo - use giraffe nad Lmc.WebApplication
+    let route status: Http.HttpContext -> Async<Http.HttpContext option> =
+        GET >=> choose [
+            path "/appRoot/status"
+                >=> request ((fun _ -> status) >> OK)
+        ]

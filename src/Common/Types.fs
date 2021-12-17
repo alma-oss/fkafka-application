@@ -419,6 +419,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment option
     GitCommit: GitCommit option
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option
@@ -456,6 +457,7 @@ module internal ConfigurationParts =
             LoggerFactory = defaultLoggerFactory
             Environment = Map.empty
             Instance = None
+            CurrentEnvironment = None
             GitCommit = None
             DockerImageVersion = None
             Spot = None
@@ -497,6 +499,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Box: Box
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     ParseEvent: ParseEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list

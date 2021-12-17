@@ -201,6 +201,9 @@ module internal ApplicationRunner =
 
             application |> checkResources
 
+            // todo - if show appRootStatus
+            let status = AppRootStatus.status instance application.CurrentEnvironment None (* application.DockerImageVersion *)
+
             application.MetricsRoute
             |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics application.WebServerSettings)
             |> Option.iter Async.Start
