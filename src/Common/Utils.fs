@@ -42,11 +42,13 @@ module LoggerFactory =
     open System.IO
     open Microsoft.Extensions.Logging
     open Lmc.Environment
+    open Lmc.ServiceIdentification
     open Lmc.Logging
     open Lmc.Tracing
     open Lmc.ErrorHandling
 
     type LoggerEnvVar = {
+        Instance: string
         LogTo: string
         Verbosity: string
         LoggerTags: string
@@ -60,6 +62,9 @@ module LoggerFactory =
             |> Option.map Envs.loadResolvedFromFile
             |> Option.defaultValue (Ok ())
 
+        let! instanceValue = loggerEnvVars.Instance |> Envs.tryResolve |> Result.ofOption "Missing instance"
+        let! instance = Create.Instance(instanceValue) |> Result.mapError (sprintf "%A")
+
         return LoggerFactory.create [
             LogToFromEnvironment loggerEnvVars.LogTo
 
@@ -67,7 +72,7 @@ module LoggerFactory =
                 UseLevel LogLevel.Trace
                 UseProvider (LoggerProvider.TracingProvider.create())
 
-            LogToSerilog ([
+            LogToSerilog (SerilogOptions.ofInstance instance @ [
                 SerilogOption.UseLevelFromEnvironment loggerEnvVars.Verbosity
                 AddMetaFromEnvironment loggerEnvVars.LoggerTags
             ])

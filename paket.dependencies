@@ -1,8 +1,8 @@
-framework: net5.0
+framework: net6.0
 storage none
 
 source https://api.nuget.org/v3/index.json
-nuget FSharp.Core ~> 5.0
+nuget FSharp.Core ~> 6.0
 nuget FSharp.Data ~> 4.0
 nuget Newtonsoft.Json ~> 13.0
 
@@ -20,9 +20,9 @@ nuget Lmc.Tracing ~> 2.4
 group Build
     storage none
     source https://api.nuget.org/v3/index.json
-    nuget Fake.DotNet.Cli
-    nuget Fake.IO.FileSystem
-    nuget Fake.Core.Target
-    nuget Fake.DotNet.AssemblyInfoFile
-    nuget Fake.Core.ReleaseNotes
-    nuget Fake.Tools.Git
+    nuget Fake.DotNet.Cli 5.21.0-alpha003
+    nuget Fake.IO.FileSystem 5.21.0-alpha003
+    nuget Fake.Core.Target 5.21.0-alpha003
+    nuget Fake.DotNet.AssemblyInfoFile 5.21.0-alpha003
+    nuget Fake.Core.ReleaseNotes 5.21.0-alpha003
+    nuget Fake.Tools.Git 5.21.0-alpha003
