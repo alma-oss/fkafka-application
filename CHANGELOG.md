@@ -3,6 +3,7 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 - [**BC**] Require `Instance` in common `LoggerFactory`
+- [**BC**] Use net6.0
 
 ## 15.3.1 - 2021-11-29
 - Fix `LoggerFactory.common` to allow run without an existing env file
