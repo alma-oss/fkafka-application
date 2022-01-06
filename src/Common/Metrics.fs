@@ -72,7 +72,7 @@ module internal ApplicationMetrics =
 
             State.enableStatusMetric metricName dataSetKey
 
-        let getFormattedMetricsForPrometheus (customMetrics: CustomMetric list) (instance: Instance) _ =
+        let getFormattedMetricsForPrometheus (customMetrics: CustomMetric list) (instance: Instance) =
             let formatMetric metricType description metricName =
                 metricName
                 |> State.getMetric
@@ -144,15 +144,6 @@ module internal ApplicationMetrics =
 
     // Showing state
 
-    // todo - move webserver as a component here from the metrics lib and use giraffe
-    let showStateOnWebServerAsync instance customMetrics (settings: WebServerPart list) route =
-        let route =
-            route
-            |> MetricsRoute.value
-
-        let getMetrics =
-            instance
-            |> getFormattedMetricsForPrometheus customMetrics
-
-        settings
-        |> WebServer.runStateAsync route getMetrics
+    let getMetricsState instance customMetrics =
+        instance
+        |> getFormattedMetricsForPrometheus customMetrics

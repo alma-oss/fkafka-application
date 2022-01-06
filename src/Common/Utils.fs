@@ -1,6 +1,14 @@
 namespace Lmc.KafkaApplication
 
+open Lmc.ApplicationStatus
+
 type Serialize = Serialize of (obj -> string)
+
+type Git = {
+    Branch: GitBranch option
+    Commit: GitCommit option
+    Repository: GitRepository option
+}
 
 [<AutoOpen>]
 module internal Utils =
@@ -80,44 +88,100 @@ module LoggerFactory =
     }
 
 [<RequireQualifiedAccess>]
-module AppRootStatus =
-    open System
-    open Suave
-    open Suave.Filters
-    open Suave.Operators
-    open Suave.Successful
-    open Lmc.ApplicationStatus
+module internal AppRootStatus =
     open Lmc.ErrorHandling
     open Lmc.Environment
 
-    let status instance environment dockerImageVersion =
-        let valueOrNA = Option.defaultValue "N/A"
+    let private mapDockerImageVersion onEmpty (Lmc.Kafka.MetaData.DockerImageVersion version) =
+        match version with
+        | null | "" -> onEmpty
+        | version -> version
+        |> DockerImageVersion
 
-        let dockerImageVersion = dockerImageVersion |> valueOrNA |> DockerImageVersion
-        let nomadJobName = "NOMAD_JOB_NAME" |> Envs.tryResolve |> valueOrNA |> NomadJobName
-        let nomadAllocId = "NOMAD_ALLOC_ID" |> Envs.tryResolve |> valueOrNA |> NomadAllocationId
+    let status instance currentEnvironment (git: Git) dockerImageVersion =
+        let dockerImageVersion =
+            match dockerImageVersion with
+            | Some version -> version |> mapDockerImageVersion "N/A"
+            | _ -> DockerImageVersion "N/A"
 
-        ApplicationStatus.create {
-            new ApplicationStatusFeature.ICurrentApplication with
-                member __.Instance = instance
-                member __.Environment = environment
+        let nomad = maybe {
+            let! nomadJobName = "NOMAD_JOB_NAME" |> Envs.tryResolve
+            let! nomadAllocId = "NOMAD_ALLOC_ID" |> Envs.tryResolve
 
-            interface ApplicationStatusFeature.IAssemblyInformation with
-                member __.GitBranch = GitBranch AssemblyVersionInformation.AssemblyMetadata_gitbranch
-                member __.GitCommit = GitCommit AssemblyVersionInformation.AssemblyMetadata_gitcommit
-                member __.GitRepository = GitRepository.empty
-
-            interface ApplicationStatusFeature.IDockerApplication with
-                member __.DockerImageVersion = dockerImageVersion
-
-            interface ApplicationStatusFeature.INomadApplication with
-                member __.NomadJobName = nomadJobName
-                member __.NomadAllocationId = nomadAllocId
+            return NomadJobName nomadJobName, NomadAllocationId nomadAllocId
         }
 
-    // todo - use giraffe nad Lmc.WebApplication
-    let route status: Http.HttpContext -> Async<Http.HttpContext option> =
-        GET >=> choose [
-            path "/appRoot/status"
-                >=> request ((fun _ -> status) >> OK)
-        ]
+        match nomad with
+        | Some (nomadJobName, nomadAllocId) ->
+            ApplicationStatus.create {
+                new ApplicationStatusFeature.ICurrentApplication with
+                    member __.Instance = instance
+                    member __.Environment = currentEnvironment
+
+                interface ApplicationStatusFeature.IAssemblyInformation with
+                    member __.GitBranch = git.Branch |> Option.defaultValue GitBranch.empty
+                    member __.GitCommit = git.Commit |> Option.defaultValue GitCommit.empty
+                    member __.GitRepository = git.Repository |> Option.defaultValue GitRepository.empty
+
+                interface ApplicationStatusFeature.IDockerApplication with
+                    member __.DockerImageVersion = dockerImageVersion
+
+                interface ApplicationStatusFeature.INomadApplication with
+                    member __.NomadJobName = nomadJobName
+                    member __.NomadAllocationId = nomadAllocId
+            }
+        | _ ->
+            ApplicationStatus.create {
+                new ApplicationStatusFeature.ICurrentApplication with
+                    member __.Instance = instance
+                    member __.Environment = currentEnvironment
+
+                interface ApplicationStatusFeature.IAssemblyInformation with
+                    member __.GitBranch = git.Branch |> Option.defaultValue GitBranch.empty
+                    member __.GitCommit = git.Commit |> Option.defaultValue GitCommit.empty
+                    member __.GitRepository = git.Repository |> Option.defaultValue GitRepository.empty
+
+                interface ApplicationStatusFeature.IDockerApplication with
+                    member __.DockerImageVersion = dockerImageVersion
+            }
+
+[<RequireQualifiedAccess>]
+module internal WebServer =
+    open Microsoft.Extensions.DependencyInjection
+    open Microsoft.Extensions.Logging
+
+    open Giraffe
+    open Saturn
+
+    open Lmc.WebApplication
+
+    type Show<'Data> = (unit -> 'Data) option
+
+    let web (loggerFactory: ILoggerFactory) (showMetrics: Show<string>) (showStatus: Show<ApplicationStatus>) (httpHandlers: HttpHandler list) =
+        application {
+            url "http://0.0.0.0:8080/"
+            use_router (choose [
+                Handler.healthCheck Handler.accessDeniedJson
+
+                match showMetrics with
+                | Some metrics -> Handler.metrics (fun _ -> metrics())
+                | _ -> ()
+
+                match showStatus with
+                | Some status -> Handler.appRootStatus (fun _ -> status())
+                | _ -> ()
+
+                yield! httpHandlers
+
+                Handler.resourceNotFound
+            ])
+            memory_cache
+            use_gzip
+
+            service_config (fun services ->
+                services
+                    .AddSingleton(loggerFactory)
+                    .AddLogging()
+                    .AddGiraffe()
+            )
+        }

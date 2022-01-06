@@ -1,6 +1,8 @@
 FSharp.Core
 FSharp.Data
 Newtonsoft.Json
+Giraffe
+Saturn
 Lmc.ApplicationStatus
 Lmc.Environment
 Lmc.EnvironmentModel
@@ -10,3 +12,4 @@ Lmc.Logging
 Lmc.Metrics
 Lmc.ServiceIdentification
 Lmc.Tracing
+Lmc.WebApplication
