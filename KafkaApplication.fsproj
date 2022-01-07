@@ -5,7 +5,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Lmc.KafkaApplication</PackageId>
-    <Version>16.0.0</Version>
+    <Version>17.0.0</Version>
     <RepositoryUrl>https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse</RepositoryUrl>
   </PropertyGroup>
 

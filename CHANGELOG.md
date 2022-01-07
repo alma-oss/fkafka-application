@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 17.0.0 - 2022-01-07
 - [**BC**] Require `CurrentEnvironment` in all kafka applications
 - Add `ApplicationStatus`
 - Update dependencies
