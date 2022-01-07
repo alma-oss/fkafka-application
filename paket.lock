@@ -566,11 +566,11 @@ NUGET
       System.Threading.Tasks.Extensions (>= 4.4)
       System.ValueTuple (>= 4.4)
   remote: paket-files/git_bitbucket.lmc.cz7999/archi/nuget-server/nuget
-    Lmc.ApplicationStatus (1.0.0)
-      FSharp.Core (>= 5.0.2)
-      FSharp.Data (>= 4.2.5)
-      Lmc.EnvironmentModel (>= 3.2.1)
-      Lmc.ServiceIdentification (>= 5.5)
+    Lmc.ApplicationStatus (2.0.0)
+      FSharp.Core (>= 6.0.1)
+      FSharp.Data (>= 4.2.7)
+      Lmc.EnvironmentModel (>= 4.0)
+      Lmc.ServiceIdentification (>= 6.0)
     Lmc.Environment (7.0.0)
       FSharp.Core (>= 6.0.1)
       Lmc.ErrorHandling (>= 6.0)
@@ -631,14 +631,14 @@ NUGET
       Lmc.Logging (>= 6.0)
       Lmc.State (>= 5.0)
       Microsoft.Extensions.Logging (>= 6.0)
-    Lmc.WebApplication (2.0.0)
-      FSharp.Core (>= 5.0.2)
-      FSharp.Data (>= 4.2.5)
-      Giraffe (>= 5.0)
-      Lmc.JsonApi (>= 2.6)
+    Lmc.WebApplication (3.0.0)
+      FSharp.Core (>= 6.0.1)
+      FSharp.Data (>= 4.2.7)
+      Giraffe (>= 6.0.0-alpha-2)
+      Lmc.JsonApi (>= 3.0)
 GIT
   remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
-     (218529aaf08478e5193d60c8327b869fa55bfbdc)
+     (ef6181ea45085c4ba3768a0c6c83a01e7e713115)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
