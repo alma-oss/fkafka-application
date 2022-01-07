@@ -201,9 +201,22 @@ module internal ApplicationRunner =
 
             application |> checkResources
 
-            application.MetricsRoute
-            |> Option.map (ApplicationMetrics.showStateOnWebServerAsync instance application.CustomMetrics application.WebServerSettings)
-            |> Option.iter Async.Start
+            async {
+                let showStatus: WebServer.Show<Lmc.ApplicationStatus.ApplicationStatus> =
+                    if application.ShowAppRootStatus
+                    then Some (fun () -> AppRootStatus.status instance application.CurrentEnvironment application.Git application.DockerImageVersion)
+                    else None
+
+                let showMetrics: WebServer.Show<string> =
+                    if application.ShowMetrics
+                    then Some (fun () -> ApplicationMetrics.getMetricsState instance application.CustomMetrics)
+                    else None
+
+                application.HttpHandlers
+                |> WebServer.web application.LoggerFactory showMetrics showStatus
+                |> Saturn.Application.run
+            }
+            |> Async.Start
 
             applicationLogger.LogDebug "Connect producers ..."
             let connectedProducers =

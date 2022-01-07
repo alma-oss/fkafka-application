@@ -2,6 +2,14 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Require `CurrentEnvironment` in all kafka applications
+- Add `ApplicationStatus`
+- Update dependencies
+- [**BC**] Use `Giraffe` and `Saturn` instead of `Suave` and use internal `WebServer` instead of Metrics webserver
+- [**BC**] Change `showMetricsOn` to `showMetrics` use default `/metrics` route statically
+- [**BC**] Change `addRoute` to `addHttpHandler`
+- [**BC**] Change `useGitCommit` to `useGit`
+- [**BC**] Remove `gitCommit` from `environment` computation expression
 
 ## 16.0.0 - 2021-12-17
 - [**BC**] Require `Instance` in common `LoggerFactory`

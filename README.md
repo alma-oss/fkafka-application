@@ -73,7 +73,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 
 | Function | Arguments | Description |
 | --- | --- | --- |
-| addRoute | `route: Suave.Http.HttpContext -> Async<Suave.Http.HttpContext option>` | It will register additional route to the Metrics WebServer. See example below. (_you still have to run a server by `showMetricsOn`_) |
+| addHttpHandler | `httpHandler: Giraffe.HttpHandler` | It will register additional HttpHandler to the WebServer. |
 | checkKafkaWith | `checker: Kafka.Checker` | It will register a checker, which will be passed to the Consumer Configuration and used by Kafka library to check resources. |
 | checkResourceInInterval | `checker: unit -> Metrics.ResourceStatus`, `ResourceAvailability`, `interval: int<second>` | It will register a resource which will be checked in runtime of the application in given interval. |
 | connect | `Kafka.ConnectionConfiguration` | It will register a default connection for Kafka. |
@@ -90,14 +90,14 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | parseEventWith | `ParseEvent<'InputEvent>` | It will register a parser for input events. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
-| registerCustomMetric | `CustomMetric` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
-| runCustomTask | `TaskErrorPolicy`, `CustomTaskRuntimeParts -> Async<unit>` | Register a CustomTask, which will be start with the application. |
-| showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetricsOn`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
+| registerCustomMetric | `CustomMetric` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
+| runCustomTask | `TaskErrorPolicy`, `CustomTaskRuntimeParts -> Async<unit>` | Register a CustomTask, which will be start with the application. |
+| showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | useDockerImageVersion | `DockerImageVersion` | |
-| useGitCommit | `GitCommit` | |
+| useGit | `Git` | |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |
 | useGroupIdFor | `connectionName: string`, `GroupId` | Set group id for connection. |
 | useCommitMessage | `CommitMessage` | It is optional with default `CommitMessage.Automatically`. |
@@ -123,19 +123,13 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 
 ### Add Route example
 ```fs
-open Suave
-open Suave.Filters
-open Suave.Operators
-open Suave.Successful
+open Giraffe
 open Lmc.KafkaApplication
 
 kafkaApplication {
-    showMetricsOn "/metrics"
-    addRoute (
-        GET >=> choose [
-            path "/my-new-route"
-                >=> request ((fun _ -> "Hello world!") >> OK)
-        ]
+    addHttpHandler (
+        route "/my-new-route"
+        >=> warbler (fun _ -> text "OK")
     )
 }
 ```
@@ -189,9 +183,8 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | connectTo | `connectionName: string`, `connection configuration: EnvironmentConnectionConfiguration` | It will register a named connection for Kafka. |
 | dockerImageVersion | `variable name: string` | It will parse DockerImageVersion from the environment variable. |
 | file | `paths: string list` | It will parse the first existing file and add variables to others defined Environment variables. If no file is parse, it will still reads all other environment variables. |
-| gitCommit | `variable name: string` | It will parse GitCommit from the environment variable. |
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
-| ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
+| ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
@@ -217,7 +210,11 @@ open Lmc.KafkaApplication
 let main argv =
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
-        useGitCommit (GitCommit "abc123")
+        useGit {
+            Commit = Some (GitCommit "abc123")
+            Branch = None
+            Repository = None
+        }
         useDockerImageVersion (DockerImageVersion "42-2019")
 
         connect {
@@ -259,7 +256,11 @@ let main argv =
 
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
-        useGitCommit (GitCommit "abc123")
+        useGit {
+            Commit = Some (GitCommit "abc123")
+            Branch = None
+            Repository = None
+        }
         useDockerImageVersion (DockerImageVersion "42-2019")
 
         useLoggerFactory loggerFactory

@@ -38,7 +38,12 @@ module ApplicationBuilder =
                         LoggerFactory = currentParts.LoggerFactory
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
-                        GitCommit = newParts.GitCommit <??> currentParts.GitCommit
+                        CurrentEnvironment = newParts.CurrentEnvironment <??> currentParts.CurrentEnvironment
+                        Git = {
+                            Branch = newParts.Git.Branch <??> currentParts.Git.Branch
+                            Commit = newParts.Git.Commit <??> currentParts.Git.Commit
+                            Repository = newParts.Git.Repository <??> currentParts.Git.Repository
+                        }
                         DockerImageVersion = newParts.DockerImageVersion <??> currentParts.DockerImageVersion
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
@@ -52,14 +57,15 @@ module ApplicationBuilder =
                         ProduceTo = currentParts.ProduceTo @ newParts.ProduceTo
                         ProducerErrorHandler = currentParts.ProducerErrorHandler <??> newParts.ProducerErrorHandler
                         FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
-                        MetricsRoute = newParts.MetricsRoute <??> currentParts.MetricsRoute
+                        ShowMetrics = newParts.ShowMetrics
+                        ShowAppRootStatus = newParts.ShowAppRootStatus
                         CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
                         IntervalResourceCheckers = currentParts.IntervalResourceCheckers @ newParts.IntervalResourceCheckers
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
                         CreateOutputEventKeys = newParts.CreateOutputEventKeys <??> currentParts.CreateOutputEventKeys
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
-                        WebServerSettings = currentParts.WebServerSettings @ newParts.WebServerSettings
+                        HttpHandlers = currentParts.HttpHandlers @ newParts.HttpHandlers
                     }
                 |> Configuration.result
 
@@ -210,6 +216,7 @@ module ApplicationBuilder =
                 // required parts
                 //
                 let! instance = configurationParts.Instance <?!> "Instance is required."
+                let! currentEnvironment = configurationParts.CurrentEnvironment <?!> "Current environment is required."
                 let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
                 let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
                 let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required."
@@ -237,7 +244,11 @@ module ApplicationBuilder =
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
                 let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo<later> - allow passing custom interval checker
 
-                let gitCommit = configurationParts.GitCommit <?=> GitCommit "unknown"
+                let gitCommit =
+                    configurationParts.Git.Commit
+                    |> Option.map (fun (Lmc.ApplicationStatus.GitCommit g) -> GitCommit g)
+                    <?=> GitCommit "unknown"
+
                 let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
 
                 //
@@ -269,7 +280,6 @@ module ApplicationBuilder =
                             {
                                 Connection = connection |> ConnectionConfiguration.toKafkaConnectionConfiguration
                                 GroupId = groupIds.TryFind name <?=> defaultGroupId
-                                Configure = None
                                 Logger = kafkaLogger runtimeConnection |> Some
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
@@ -364,18 +374,22 @@ module ApplicationBuilder =
                     LoggerFactory = loggerFactory
                     Environment = environment
                     Box = box
+                    CurrentEnvironment = currentEnvironment
+                    Git = configurationParts.Git
+                    DockerImageVersion = configurationParts.DockerImageVersion
                     ParseEvent = parseEvent
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
                     Producers = producers
                     ProducerErrorHandler = producerErrorHandler
                     ServiceStatus = serviceStatus
-                    MetricsRoute = configurationParts.MetricsRoute
+                    ShowMetrics = configurationParts.ShowMetrics
+                    ShowAppRootStatus = configurationParts.ShowAppRootStatus
                     CustomMetrics = configurationParts.CustomMetrics
                     IntervalResourceCheckers = configurationParts.IntervalResourceCheckers
                     PreparedRuntimeParts = preparedRuntimeParts
                     CustomTasks = customTasks
-                    WebServerSettings = configurationParts.WebServerSettings
+                    HttpHandlers = configurationParts.HttpHandlers
                 }
             }
             |> KafkaApplication
@@ -401,9 +415,9 @@ module ApplicationBuilder =
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Instance = Some instance }
 
-        [<CustomOperation("useGitCommit")>]
-        member __.GitCommit(state, gitCommit): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with GitCommit = Some gitCommit }
+        [<CustomOperation("useGit")>]
+        member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with Git = git }
 
         [<CustomOperation("useDockerImageVersion")>]
         member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
@@ -496,19 +510,10 @@ module ApplicationBuilder =
         member __.Merge(state, configuration): Configuration<'InputEvent, 'OutputEvent> =
             configuration |> mergeConfiguration state
 
-        /// Start an asynchronous web server on http://127.0.0.1:8080 and shows metrics for prometheus.
-        [<CustomOperation("showMetricsOn")>]
-        member __.ShowMetricsOn(state, route): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                result {
-                    let! route =
-                        route
-                        |> MetricsRoute.create
-                        |> Result.mapError InvalidRoute
-
-                    return { parts with MetricsRoute = Some route }
-                }
-                |> Result.mapError MetricsError
+        /// Show metrics for prometheus on the internal web server at http://127.0.0.1:8080/metrics.
+        [<CustomOperation("showMetrics")>]
+        member __.ShowMetrics(state): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with ShowMetrics = true }
 
         [<CustomOperation("showInputEventsWith")>]
         member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
@@ -519,8 +524,8 @@ module ApplicationBuilder =
             state |> addCreateOutputEventKeys createOutputEventKeys
 
         [<CustomOperation("showCustomMetric")>]
-        member __.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
+        member this.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent> =
+            this.ShowMetrics(state) >>= fun parts ->
                 result {
                     let! metricName =
                         name
@@ -556,6 +561,10 @@ module ApplicationBuilder =
         member __.RunCustomTask(state, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (restartPolicy, task) :: parts.CustomTasks }
 
-        [<CustomOperation("addRoute")>]
-        member __.AddRoute(state, route): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with WebServerSettings = route :: parts.WebServerSettings }
+        [<CustomOperation("addHttpHandler")>]
+        member __.AddHttpHandler(state, httpHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with HttpHandlers = httpHandler :: parts.HttpHandlers }
+
+        [<CustomOperation("showAppRootStatus")>]
+        member __.ShowAppRootStatus(state): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with ShowAppRootStatus = true }

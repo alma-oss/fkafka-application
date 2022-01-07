@@ -165,18 +165,6 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError InstanceError
 
-        [<CustomOperation("gitCommit")>]
-        member __.GitCommit(state, gitCommitVariableName): Configuration<'InputEvent, 'OutputEvent> =
-            state >>= fun parts ->
-                result {
-                    let! gitCommitString =
-                        gitCommitVariableName
-                        |> getEnvironmentValue parts id EnvironmentError.VariableNotFoundError
-
-                    return { parts with GitCommit = Some (GitCommit gitCommitString) }
-                }
-                |> Result.mapError EnvironmentError
-
         [<CustomOperation("dockerImageVersion")>]
         member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
             state >>= fun parts ->

@@ -2,12 +2,15 @@ namespace Lmc.KafkaApplication
 
 open System
 open Microsoft.Extensions.Logging
+open Giraffe
+
 open Lmc.Kafka
 open Lmc.Kafka.MetaData
 open Lmc.Metrics
 open Lmc.ServiceIdentification
 open Lmc.Logging
 open Lmc.Tracing
+open Lmc.ErrorHandling
 
 [<Measure>] type Second
 [<Measure>] type Attempt
@@ -253,8 +256,8 @@ module Event =
 type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Box: Box
-    GitCommit: GitCommit
-    DockerImageVersion: DockerImageVersion
+    GitCommit: MetaData.GitCommit
+    DockerImageVersion: MetaData.DockerImageVersion
     Environment: Map<string, string>
     Connections: Connections
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
@@ -409,8 +412,6 @@ module internal CustomTasks =
         preparedTasks
         |> List.map (CustomTask.prepare runtimeParts)
 
-type internal WebServerPart = Suave.Http.HttpContext -> Async<Suave.Http.HttpContext option>
-
 //
 // Configuration / Application
 //
@@ -419,7 +420,8 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
-    GitCommit: GitCommit option
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment option
+    Git: Git
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option
     GroupId: GroupId option
@@ -433,14 +435,15 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     ProduceTo: ConnectionName list
     ProducerErrorHandler: ProducerErrorHandler option
     FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
-    MetricsRoute: MetricsRoute option
+    ShowMetrics: bool
+    ShowAppRootStatus: bool
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
     CreateOutputEventKeys: CreateOutputEventKeys<'OutputEvent> option
     KafkaChecker: Checker option
     CustomTasks: PreparedCustomTask list
-    WebServerSettings: WebServerPart list
+    HttpHandlers: HttpHandler list
 }
 
 [<AutoOpen>]
@@ -456,7 +459,12 @@ module internal ConfigurationParts =
             LoggerFactory = defaultLoggerFactory
             Environment = Map.empty
             Instance = None
-            GitCommit = None
+            CurrentEnvironment = None
+            Git = {
+                Branch = None
+                Commit = None
+                Repository = None
+            }
             DockerImageVersion = None
             Spot = None
             GroupId = None
@@ -470,14 +478,15 @@ module internal ConfigurationParts =
             ProduceTo = []
             ProducerErrorHandler = None
             FromDomain = Map.empty
-            MetricsRoute = None
+            ShowMetrics = false
+            ShowAppRootStatus = false
             CustomMetrics = []
             IntervalResourceCheckers = []
             CreateInputEventKeys = None
             CreateOutputEventKeys = None
             KafkaChecker = None
             CustomTasks = []
-            WebServerSettings = []
+            HttpHandlers = []
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
@@ -497,18 +506,22 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Box: Box
+    Git: Git
+    DockerImageVersion: DockerImageVersion option
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     ParseEvent: ParseEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
     ServiceStatus: ServiceStatus.ServiceStatus
-    MetricsRoute: MetricsRoute option
+    ShowMetrics: bool
+    ShowAppRootStatus: bool
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
     CustomTasks: CustomTask list
-    WebServerSettings: WebServerPart list
+    HttpHandlers: HttpHandler list
 }
 
 type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
