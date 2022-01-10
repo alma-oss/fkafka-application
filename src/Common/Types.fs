@@ -161,6 +161,11 @@ type InstanceError =
     | InvalidFormatError of Lmc.ServiceIdentification.InstanceError
 
 [<RequireQualifiedAccess>]
+type CurrentEnvironmentError =
+    | VariableNotFoundError of string
+    | InvalidFormatError of Lmc.EnvironmentModel.EnvironmentError
+
+[<RequireQualifiedAccess>]
 type SpotError =
     | VariableNotFoundError of string
     | InvalidFormatError of Lmc.ServiceIdentification.SpotError
@@ -196,6 +201,7 @@ type LoggingError =
 type KafkaApplicationError =
     | KafkaApplicationError of ErrorMessage
     | InstanceError of InstanceError
+    | CurrentEnvironmentError of CurrentEnvironmentError
     | SpotError of SpotError
     | GroupIdError of GroupIdError
     | ConnectionConfigurationError of ConnectionConfigurationError
