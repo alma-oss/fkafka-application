@@ -9,6 +9,7 @@ module EnvironmentBuilder =
     open Lmc.Kafka.MetaData
     open Lmc.KafkaApplication
     open Lmc.Environment
+    open Lmc.EnvironmentModel
     open Lmc.ErrorHandling
     open Lmc.ErrorHandling.Option.Operators
 
@@ -164,6 +165,23 @@ module EnvironmentBuilder =
                     return { parts with Instance = Some instance }
                 }
                 |> Result.mapError InstanceError
+
+        [<CustomOperation("currentEnvironment")>]
+        member __.CurrentEnvironment(state, currentEnvironmentVariableName): Configuration<'InputEvent, 'OutputEvent> =
+            state >>= fun parts ->
+                result {
+                    let! currentEnvironmentString =
+                        currentEnvironmentVariableName
+                        |> getEnvironmentValue parts id CurrentEnvironmentError.VariableNotFoundError
+
+                    let! currentEnvironment =
+                        currentEnvironmentString
+                        |> Environment.parse
+                        |> Result.mapError CurrentEnvironmentError.InvalidFormatError
+
+                    return { parts with CurrentEnvironment = Some currentEnvironment }
+                }
+                |> Result.mapError CurrentEnvironmentError
 
         [<CustomOperation("dockerImageVersion")>]
         member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =

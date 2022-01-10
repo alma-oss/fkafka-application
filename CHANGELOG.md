@@ -2,6 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add missing keywords for `currentEnvironment`
+    - `useCurrentEnvironment` in `kafkaApplication` CE
+    - `currentEnvironment` in `environment` CE
 
 ## 17.1.0 - 2022-01-07
 - Update dependencies

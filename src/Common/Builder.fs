@@ -414,6 +414,10 @@ module ApplicationBuilder =
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Instance = Some instance }
+        
+        [<CustomOperation("useCurrentEnvironment")>]
+        member __.CurrentEnvironment(state, currentEnvironment): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CurrentEnvironment = Some currentEnvironment }
 
         [<CustomOperation("useGit")>]
         member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent> =

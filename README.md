@@ -102,6 +102,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useGroupIdFor | `connectionName: string`, `GroupId` | Set group id for connection. |
 | useCommitMessage | `CommitMessage` | It is optional with default `CommitMessage.Automatically`. |
 | useCommitMessageFor | `connectionName: string`, `CommitMessage` | Set commit message mode for connection. |
+| useCurrentEnvironment | `Environment` | |
 | useInstance | `Instance` | |
 | useLogger | `logger: Logger` | It is optional. |
 | useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |
@@ -109,6 +110,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 
 ### Mandatory
 - Instance of the application is required.
+- CurrentEnvironment of the application is required.
 - You have to define at least one consume handler and its connection.
 - You have to define `ParseEvent<'InputEvent>` function.
 
@@ -186,6 +188,7 @@ Environment computation expression returns `Configuration<'Event>` so you can `m
 | groupId | `variable name: string` | It will parse GroupId from the environment variable. |
 | ifSetDo | `variable name: string`, `action: string -> unit` | It will try to parse a variable and if it is defined, the `action` is called with the value. |
 | instance | `variable name: string` | It will parse Instance from the environment variable. (_Separator is `-`_) |
+| currentEnvironment | `variable name: string` | It will parse Environment alias from the environment variable. |
 | require | `variables: string list` | It will check whether all required variables are already defined. |
 | spot | `variable name: string` | It will parse Spot from the environment variable. (_Separator is `-`_) |
 | supervision | `connection configuration: EnvironmentConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
@@ -210,6 +213,7 @@ open Lmc.KafkaApplication
 let main argv =
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useCurrentEnvironment environment
         useGit {
             Commit = Some (GitCommit "abc123")
             Branch = None
@@ -256,6 +260,7 @@ let main argv =
 
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useCurrentEnvironment environment
         useGit {
             Commit = Some (GitCommit "abc123")
             Branch = None
@@ -293,6 +298,7 @@ let main argv =
 
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useCurrentEnvironment environment
 
         // this will create only default connection, which can be consumed by the default `consume` function only
         connect {
@@ -342,6 +348,7 @@ let main argv =
 
     kafkaApplication {
         useInstance { Domain = Domain "my"; Context = Context "simple"; Purpose = Purpose "example"; Version = Version "local" }
+        useCurrentEnvironment environment
 
         connect { BrokerList = brokerList; Topic = StreamName "my-input-stream" }   // default connection
         connectTo "application" { BrokerList = brokerList; Topic = StreamName "my-application-stream" }
