@@ -219,7 +219,7 @@ module ApplicationBuilder =
                 let! currentEnvironment = configurationParts.CurrentEnvironment <?!> "Current environment is required."
                 let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
                 let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
-                let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required."
+                let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required"
 
                 //
                 // optional parts
@@ -414,7 +414,7 @@ module ApplicationBuilder =
         [<CustomOperation("useInstance")>]
         member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with Instance = Some instance }
-        
+
         [<CustomOperation("useCurrentEnvironment")>]
         member __.CurrentEnvironment(state, currentEnvironment): Configuration<'InputEvent, 'OutputEvent> =
             state <!> fun parts -> { parts with CurrentEnvironment = Some currentEnvironment }
@@ -449,6 +449,10 @@ module ApplicationBuilder =
 
         [<CustomOperation("parseEventWith")>]
         member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent (fun _ -> parseEvent)
+
+        [<CustomOperation("parseEventAndUseApplicationWith")>]
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
             state |> addParseEvent parseEvent
 
         [<CustomOperation("checkKafkaWith")>]

@@ -88,6 +88,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
 | onProducerError | `ErrorHandler = Logger -> (errorMessage: string) -> ProducerErrorPolicy` | It will register an error handler, which will be called on error while connecting producers. And it determines what will happen next. |
 | parseEventWith | `ParseEvent<'InputEvent>` | It will register a parser for input events. |
+| parseEventAndUseApplicationWith | `ConsumeRuntimeParts -> ParseEvent<'InputEvent>` | It will register a parser for input events. The parser has access to consume runtime parts. |
 | produceTo | `connectionName: string`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function. |
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | registerCustomMetric | `CustomMetric` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
