@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 17.2.0 - 2022-01-12
 - Add `parseEventAndUseApplicationWith` keyword to `kafkaApplication` CE
 
 ## 17.1.1 - 2022-01-10
