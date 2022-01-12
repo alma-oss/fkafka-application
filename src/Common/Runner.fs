@@ -179,8 +179,8 @@ module internal ApplicationRunner =
             |> List.iter action
 
         let run<'InputEvent, 'OutputEvent>
-            (consumeEvents: ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
-            (consumeLastEvent: ConsumerConfiguration -> ParsedEventResult<'InputEvent> option)
+            (consumeEvents: ParseEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
+            (consumeLastEvent: ParseEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> option)
             connectProducer
             produceSingleMessage
             flushProducer
@@ -236,6 +236,10 @@ module internal ApplicationRunner =
 
             let flushAllProducers () = flushProducer |> doWithAllProducers
 
+            let parseEvent = application.ParseEvent runtimeParts
+            let consumeEvents = consumeEvents parseEvent
+            let consumeLastEvent = consumeLastEvent parseEvent
+
             try
                 application.ConsumeHandlers
                 |> List.rev
@@ -269,11 +273,11 @@ module internal ApplicationRunner =
             match application with
             | Ok app ->
                 try
-                    let consume configuration: ParsedEventResult<'InputEvent> seq =
-                        Consumer.consume configuration (Event.parse app.ParseEvent)
+                    let consume parseEvent configuration: ParsedEventResult<'InputEvent> seq =
+                        Consumer.consume configuration (Event.parse parseEvent)
 
-                    let consumeLast configuration: ParsedEventResult<'InputEvent> option =
-                        Consumer.consumeLast configuration (Event.parse app.ParseEvent)
+                    let consumeLast parseEvent configuration: ParsedEventResult<'InputEvent> option =
+                        Consumer.consumeLast configuration (Event.parse parseEvent)
 
                     app
                     |> tee beforeRun

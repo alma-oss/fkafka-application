@@ -434,7 +434,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     GroupIds: Map<ConnectionName, GroupId>
     CommitMessage: CommitMessage
     CommitMessages: Map<ConnectionName, CommitMessage>
-    ParseEvent: ParseEvent<'InputEvent> option
+    ParseEvent: (ConsumeRuntimeParts<'OutputEvent> -> ParseEvent<'InputEvent>) option
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
@@ -515,7 +515,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Git: Git
     DockerImageVersion: DockerImageVersion option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment
-    ParseEvent: ParseEvent<'InputEvent>
+    ParseEvent: ConsumeRuntimeParts<'OutputEvent> -> ParseEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
