@@ -24,7 +24,7 @@ type FilterConfiguration<'FilterValue> = {
     FilterValues: 'FilterValue list
 }
 
-type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> 'OutputEvent option
+type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> TracedEvent<'OutputEvent> option
 
 // Filter Application Configuration
 

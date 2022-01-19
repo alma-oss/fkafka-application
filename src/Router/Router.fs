@@ -59,13 +59,13 @@ module internal Router =
         open Lmc.KafkaApplication
         open Lmc.ErrorHandling.Option.Operators
 
-        let private sendToStream (logger: ILogger) produceTo (EventName eventType, eventToRoute: 'OutputEvent) (stream: StreamName) =
+        let private sendToStream (logger: ILogger) produceTo (EventName eventType, eventToRoute: TracedEvent<'OutputEvent>) (stream: StreamName) =
             logger.LogTrace("Route event {event} to stream {stream}", eventType, (stream |> StreamName.value))
 
             eventToRoute
             |> produceTo stream
 
-        let routeEvent logger getEventType produce router (eventToRoute: 'OutputEvent) =
+        let routeEvent logger getEventType produce router (eventToRoute: TracedEvent<'OutputEvent>) =
             let eventType = eventToRoute |> getEventType
 
             router

@@ -159,9 +159,9 @@ module ApplicationBuilder =
                 }
                 let incrementOutputCount = incrementOutputCount (OutputStreamName (connection.Topic |> StreamName.Instance))
 
-                let produceEvent producer event =
+                let produceEvent producer { Trace = trace; Event = event } =
                     event
-                    |> tee (fromDomain Serializer.toJson >> produceMessage producer)
+                    |> tee (fromDomain Serializer.toJson >> produceMessage producer trace)
                     |> incrementOutputCount
 
                 return {

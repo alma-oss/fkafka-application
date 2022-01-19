@@ -47,7 +47,7 @@ module ContentBasedRouterBuilder =
                     let produceRoutedEvent =
                         Router.Routing.routeEvent
                             (app.LoggerFactory.CreateLogger("KafkaApplication.Router"))
-                            (Output >> getCommonEvent >> CommonEvent.eventType)
+                            (TracedEvent.event >> Output >> getCommonEvent >> CommonEvent.eventType)
                             (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
 

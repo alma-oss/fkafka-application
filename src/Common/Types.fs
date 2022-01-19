@@ -213,6 +213,23 @@ type KafkaApplicationError =
     | LoggingError of LoggingError
 
 //
+// Events
+//
+
+type TracedEvent<'Event> =
+    {
+        Event: 'Event
+        Trace: Trace
+    }
+
+    member this.Finish() =
+        this.Trace |> Trace.finish
+
+    interface IDisposable with
+        member this.Dispose() =
+            this.Finish()
+
+//
 // Produce
 //
 
@@ -221,8 +238,8 @@ type ProducerSerializer<'OutputEvent> = ProducerSerializer of ('OutputEvent -> s
 type NotConnectedProducer = Producer.NotConnected
 type ConnectedProducer = Producer
 
-type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> 'OutputEvent -> unit
-type ProduceEvent<'OutputEvent> = 'OutputEvent -> unit
+type ProduceEvent<'OutputEvent> = TracedEvent<'OutputEvent> -> unit
+type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> ProduceEvent<'OutputEvent>
 
 type private PreparedProducer<'OutputEvent> = {
     Connection: ConnectionName
@@ -311,19 +328,6 @@ module internal PreparedConsumeRuntimeParts =
             EnableResource = preparedRuntimeParts.EnableResource
             DisableResource = preparedRuntimeParts.DisableResource
         }
-
-type TracedEvent<'Event> =
-    {
-        Event: 'Event
-        Trace: Trace
-    }
-
-    member this.Finish() =
-        this.Trace |> Trace.finish
-
-    interface IDisposable with
-        member this.Dispose() =
-            this.Finish()
 
 [<RequireQualifiedAccess>]
 module TracedEvent =
