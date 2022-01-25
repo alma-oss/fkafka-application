@@ -22,7 +22,7 @@ module ApplicationBuilder =
 
         let (>>=) (Configuration configuration) f =
             configuration
-            |> Result.bind ((tee traceConfiguration) >> f)
+            |> Result.bind (f >> (Result.tee traceConfiguration))
             |> Configuration
 
         let (<!>) state f =
@@ -48,7 +48,7 @@ module ApplicationBuilder =
                         Spot = newParts.Spot <??> currentParts.Spot
                         GroupId = newParts.GroupId <??> currentParts.GroupId
                         GroupIds = newParts.GroupIds |> Map.merge currentParts.GroupIds
-                        CommitMessage = newParts.CommitMessage
+                        CommitMessage = newParts.CommitMessage <??> currentParts.CommitMessage
                         CommitMessages = newParts.CommitMessages |> Map.merge currentParts.CommitMessages
                         ParseEvent = newParts.ParseEvent <??> currentParts.ParseEvent
                         Connections = newParts.Connections |> Map.merge currentParts.Connections
@@ -239,7 +239,7 @@ module ApplicationBuilder =
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
-                let defaultCommitMessage = configurationParts.CommitMessage
+                let defaultCommitMessage = configurationParts.CommitMessage <?=> CommitMessage.Automatically
                 let commitMessages = configurationParts.CommitMessages
                 let kafkaChecker = configurationParts.KafkaChecker <?=> Checker.defaultChecker
                 let kafkaIntervalChecker = IntervalChecker.defaultChecker   // todo<later> - allow passing custom interval checker
@@ -441,7 +441,7 @@ module ApplicationBuilder =
 
         [<CustomOperation("useCommitMessage")>]
         member __.CommitMessage(state, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with CommitMessage = commitMessage }
+            state <!> fun parts -> { parts with CommitMessage = Some commitMessage }
 
         [<CustomOperation("useCommitMessageFor")>]
         member __.CommitMessageFor(state, name, commitMessage): Configuration<'InputEvent, 'OutputEvent> =

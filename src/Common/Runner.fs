@@ -188,8 +188,8 @@ module internal ApplicationRunner =
             (application: KafkaApplicationParts<'InputEvent, 'OutputEvent>) =
 
             let applicationLogger = application.LoggerFactory.CreateLogger "KafkaApplication"
-            applicationLogger.LogTrace("Configuration: {configuration}", application)
-            applicationLogger.LogDebug "Starts ..."
+            applicationLogger.LogInformation "Starts ..."
+            applicationLogger.LogDebug("With configuration: {configuration}", application)
 
             let instance =
                 application.Box

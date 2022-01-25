@@ -11,6 +11,9 @@ COPY ./paket.lock /lib/
 COPY ./KafkaApplication.fsproj /lib/
 COPY ./src /lib/src
 
+# test
+COPY ./tests /lib/tests
+
 # others
 COPY ./.git /lib/.git
 COPY ./.config /lib/.config

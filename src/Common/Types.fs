@@ -436,7 +436,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     Spot: Spot option
     GroupId: GroupId option
     GroupIds: Map<ConnectionName, GroupId>
-    CommitMessage: CommitMessage
+    CommitMessage: CommitMessage option
     CommitMessages: Map<ConnectionName, CommitMessage>
     ParseEvent: (ConsumeRuntimeParts<'OutputEvent> -> ParseEvent<'InputEvent>) option
     Connections: Connections
@@ -479,7 +479,7 @@ module internal ConfigurationParts =
             Spot = None
             GroupId = None
             GroupIds = Map.empty
-            CommitMessage = CommitMessage.Automatically
+            CommitMessage = None
             CommitMessages = Map.empty
             ParseEvent = None
             Connections = Connections.empty
@@ -506,7 +506,7 @@ module internal ConfigurationParts =
         |> Result.ofOption (sprintf "Environment variable for \"%s\" is not set." name)
         |> Result.mapError error
 
-type Configuration<'InputEvent, 'OutputEvent> = private Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+type Configuration<'InputEvent, 'OutputEvent> = internal Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
 
 [<RequireQualifiedAccess>]
 module private Configuration =
