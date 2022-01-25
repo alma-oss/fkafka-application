@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../KafkaApplication.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="CommitMessageTest.fs" />
+    <Compile Include="Tests.fs" />
+  </ItemGroup>
+
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>

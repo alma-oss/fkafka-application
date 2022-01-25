@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Fix a commit message configuration option not to be overwritten by `merge`
 
 ## 17.3.0 - 2022-01-20
 - Normalize metric names

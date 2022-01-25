@@ -20,6 +20,9 @@ nuget Lmc.ServiceIdentification ~> 6.0
 nuget Lmc.Tracing ~> 3.0
 nuget Lmc.WebApplication ~> 3.0
 
+nuget Expecto
+nuget YoloDev.Expecto.TestSdk
+
 // [ FAKE GROUP ]
 group Build
     storage none
