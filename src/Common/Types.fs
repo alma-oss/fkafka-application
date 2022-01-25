@@ -248,7 +248,7 @@ type private PreparedProducer<'OutputEvent> = {
 }
 
 // Output events
-type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> string
+type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> MessageToProduce
 
 //
 // Consume handlers
@@ -363,17 +363,14 @@ module TracedEvent =
 
 type ConsumeHandler<'InputEvent, 'OutputEvent> =
     | Events of (ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit)
-    | LastEvent of (ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit)
 
 type RuntimeConsumeHandler<'InputEvent> =
     | Events of (TracedEvent<'InputEvent> -> unit)
-    | LastEvent of (TracedEvent<'InputEvent> -> unit)
 
 [<RequireQualifiedAccess>]
 module internal ConsumeHandler =
     let toRuntime runtimeParts = function
         | ConsumeHandler.Events eventsHandler -> eventsHandler runtimeParts |> RuntimeConsumeHandler.Events
-        | ConsumeHandler.LastEvent lastEventHandler -> lastEventHandler runtimeParts |> RuntimeConsumeHandler.LastEvent
 
 type ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: ConnectionName

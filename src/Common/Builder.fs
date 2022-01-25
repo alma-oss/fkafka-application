@@ -135,7 +135,7 @@ module ApplicationBuilder =
             checker
             markAsDisabled
             prepareProducer
-            produceMessage
+            (produceMessage: ConnectedProducer -> Lmc.Tracing.Trace -> MessageToProduce -> unit)
             (connections: Connections)
             fromDomain
             incrementOutputCount
@@ -482,14 +482,6 @@ module ApplicationBuilder =
         [<CustomOperation("consumeFrom")>]
         member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
             state |> addConsumeHandlerForConnection name consumeHandler
-
-        [<CustomOperation("consumeLast")>]
-        member __.ConsumeLast(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = Connections.Default; Handler = ConsumeHandler.LastEvent consumeHandler } :: parts.ConsumeHandlers }
-
-        [<CustomOperation("consumeLastFrom")>]
-        member __.ConsumeLastFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with ConsumeHandlers = { Connection = ConnectionName name; Handler = ConsumeHandler.LastEvent consumeHandler } :: parts.ConsumeHandlers }
 
         [<CustomOperation("onConsumeError")>]
         member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =

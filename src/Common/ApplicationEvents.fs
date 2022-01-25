@@ -1,18 +1,19 @@
 namespace Lmc.KafkaApplication
 
+open System
+open Lmc.Kafka
+open Lmc.ServiceIdentification
+open Lmc.Serializer
+
+type public InstanceStartedDtoMetaData = {
+    CreatedAt: string
+}
+
+type public EmptyDataDto = Map<unit, unit>
+
+type public InstanceStartedDto = EventWithoutResourceDto<EmptyDataDto, InstanceStartedDtoMetaData, EmptyDataDto>
+
 module internal ApplicationEvents =
-    open System
-    open Lmc.Kafka
-    open Lmc.ServiceIdentification
-    open Lmc.Serializer
-
-    //
-    // Constants
-    //
-
-    [<Literal>]
-    let InstanceStartedEventName = "instance_started"
-
     //
     // Events data
     //
@@ -25,54 +26,63 @@ module internal ApplicationEvents =
 
     type InstanceStartedEvent = InstanceStartedEvent of Event<EmptyData, MetaData, EmptyData>
 
-    //
-    // Transformation
-    //
+    [<RequireQualifiedAccess>]
+    module InstanceStartedEvent =
+        //
+        // Constants
+        //
 
-    let createInstanceStarted (box: Box) =
-        let id = Guid.NewGuid()
-        let now = DateTime.Now |> Serialize.dateTime
+        [<Literal>]
+        let InstanceStartedEventName = "instance_started"
 
-        InstanceStartedEvent {
-            Schema = 1
-            Id = EventId id
-            CorrelationId = CorrelationId id
-            CausationId = CausationId id
-            Timestamp = now
-            Event = EventName InstanceStartedEventName
-            Domain = box.Domain
-            Context = box.Context
-            Purpose = box.Purpose
-            Version = box.Version
-            Zone = box.Zone
-            Bucket = box.Bucket
-            MetaData = {
-                CreatedAt = now
+        //
+        // Transformation
+        //
+
+        let create (box: Box) =
+            let id = Guid.NewGuid()
+            let now = DateTime.Now |> Serialize.dateTime
+
+            InstanceStartedEvent {
+                Schema = 1
+                Id = EventId id
+                CorrelationId = CorrelationId id
+                CausationId = CausationId id
+                Timestamp = now
+                Event = EventName InstanceStartedEventName
+                Domain = box.Domain
+                Context = box.Context
+                Purpose = box.Purpose
+                Version = box.Version
+                Zone = box.Zone
+                Bucket = box.Bucket
+                MetaData = {
+                    CreatedAt = now
+                }
+                Resource = None
+                KeyData = EmptyData
+                DomainData = EmptyData
             }
-            Resource = None
-            KeyData = EmptyData
-            DomainData = EmptyData
-        }
 
-    type InstanceStartedDtoMetaData = {
-        CreatedAt: string
-    }
+        let fromDomain: FromDomain<InstanceStartedEvent> =
+            fun (Serialize serialize) (InstanceStartedEvent event) ->
+                let key = MessageKey.Delimited [
+                    event.Zone |> Zone.value
+                    event.Bucket |> Bucket.value
+                ]
 
-    type EmptyDataDto = Map<unit, unit>
+                let emptyData _ = Ok Map.empty
 
-    type InstanceStartedDto = EventWithoutResourceDto<EmptyDataDto, InstanceStartedDtoMetaData, EmptyDataDto>
+                let serialized =
+                    event
+                    |> Event.withoutResourceToDto
+                        (function
+                            | { Event = EventName InstanceStartedEventName } -> Ok ()
+                            | { Event = EventName wrong } -> Error (sprintf "Wrong event name given %A." wrong)
+                        )
+                        (fun meta -> Ok { CreatedAt = meta.CreatedAt })
+                        emptyData
+                        emptyData
+                    |> serialize
 
-    let fromDomain: FromDomain<InstanceStartedEvent> =
-        fun (Serialize serialize) (InstanceStartedEvent event) ->
-            let emptyData _ = Ok Map.empty
-
-            event
-            |> Event.withoutResourceToDto
-                (function
-                    | { Event = EventName InstanceStartedEventName } -> Ok ()
-                    | { Event = EventName wrong } -> Error (sprintf "Wrong event name given %A." wrong)
-                )
-                (fun meta -> Ok { CreatedAt = meta.CreatedAt })
-                emptyData
-                emptyData
-            |> serialize
+                MessageToProduce.create (key, serialized)
