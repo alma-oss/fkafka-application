@@ -12,6 +12,7 @@ module internal ApplicationRunner =
         open Lmc.Metrics
         open Lmc.Metrics.ServiceStatus
         open Lmc.Tracing
+        open Lmc.KafkaApplication.ApplicationEvents
 
         let private checkResources (application: KafkaApplicationParts<_, _>) =
             let instance = application.Box |> Box.instance
@@ -73,8 +74,8 @@ module internal ApplicationRunner =
 
         let private produceInstanceStarted produceSingleMessage (loggerFactory: ILoggerFactory) box (supervisionProducer: ConnectedProducer) =
             box
-            |> ApplicationEvents.createInstanceStarted
-            |> ApplicationEvents.fromDomain Serializer.toJson
+            |> InstanceStartedEvent.create
+            |> InstanceStartedEvent.fromDomain Serializer.toJson
             |> produceSingleMessage supervisionProducer
 
             loggerFactory
@@ -84,7 +85,6 @@ module internal ApplicationRunner =
         let private consume<'InputEvent>
             (logger: ILogger)
             (consumeEvents: ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
-            (consumeLastEvent: ConsumerConfiguration -> ParsedEventResult<'InputEvent> option)
             (incrementInputCount: 'InputEvent -> unit)
             (configuration: ConsumerConfiguration)
             : RuntimeConsumeHandler<'InputEvent> -> unit =
@@ -122,17 +122,11 @@ module internal ApplicationRunner =
                 |> consumeEvents
                 |> Seq.iter (handleEvent eventsHandler)
 
-            | LastEvent lastEventHandler ->
-                configuration
-                |> consumeLastEvent
-                |>! (handleEvent lastEventHandler)
-
         let private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
             (loggerFactory: ILoggerFactory)
             (runtimeParts: ConsumeRuntimeParts<'OutputEvent>)
             flushProducers
             (consumeEvents: ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
-            (consumeLastEvent: ConsumerConfiguration -> ParsedEventResult<'InputEvent> option)
             (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) =
             let logger = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
 
@@ -144,7 +138,7 @@ module internal ApplicationRunner =
 
                         consumeHandler.Handler
                         |> ConsumeHandler.toRuntime runtimeParts
-                        |> consume logger consumeEvents consumeLastEvent consumeHandler.IncrementInputCount consumeHandler.Configuration
+                        |> consume logger consumeEvents consumeHandler.IncrementInputCount consumeHandler.Configuration
                     with
                     | :? Confluent.Kafka.KafkaException as e ->
                         logger.LogError("Consume events ends with {error}", e)
@@ -180,7 +174,6 @@ module internal ApplicationRunner =
 
         let run<'InputEvent, 'OutputEvent>
             (consumeEvents: ParseEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
-            (consumeLastEvent: ParseEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> option)
             connectProducer
             produceSingleMessage
             flushProducer
@@ -238,12 +231,11 @@ module internal ApplicationRunner =
 
             let parseEvent = application.ParseEvent runtimeParts
             let consumeEvents = consumeEvents parseEvent
-            let consumeLastEvent = consumeLastEvent parseEvent
 
             try
                 application.ConsumeHandlers
                 |> List.rev
-                |> List.iter (consumeWithErrorHandling application.LoggerFactory runtimeParts flushAllProducers consumeEvents consumeLastEvent)
+                |> List.iter (consumeWithErrorHandling application.LoggerFactory runtimeParts flushAllProducers consumeEvents)
             finally
                 applicationLogger.LogDebug "Close producers ..."
                 closeProducer |> doWithAllProducers
@@ -276,15 +268,11 @@ module internal ApplicationRunner =
                     let consume parseEvent configuration: ParsedEventResult<'InputEvent> seq =
                         Consumer.consume configuration (Event.parse parseEvent)
 
-                    let consumeLast parseEvent configuration: ParsedEventResult<'InputEvent> option =
-                        Consumer.consumeLast configuration (Event.parse parseEvent)
-
                     app
                     |> tee beforeRun
                     |> tee KafkaApplicationRunner.runCustomTasks
                     |> KafkaApplicationRunner.run
                         consume
-                        consumeLast
                         Producer.connect
                         Producer.produceSingle
                         Producer.flush
