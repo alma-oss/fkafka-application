@@ -262,6 +262,13 @@ type internal OutputFromDomain<'OutputEvent> =
 //
 
 type ParseEvent<'InputEvent> = string -> 'InputEvent
+type ParseEventResult<'InputEvent> = string -> Result<'InputEvent, ErrorMessage>
+type ParseEventAsyncResult<'InputEvent> = string -> AsyncResult<'InputEvent, ErrorMessage>
+
+type internal ParseInputEvent<'InputEvent> =
+    | ParseEvent of ParseEvent<'InputEvent>
+    | ParseEventResult of ParseEventResult<'InputEvent>
+    | ParseEventAsyncResult of ParseEventAsyncResult<'InputEvent>
 
 type ParsedEvent<'InputEvent> = {
     Commit: ManualCommit
@@ -273,8 +280,14 @@ type ParsedEventResult<'InputEvent> = Consumer.ConsumedResult<ParsedEvent<'Input
 
 [<RequireQualifiedAccess>]
 module Event =
-    let parse (parseEvent: ParseEvent<'Event>): Consumer.ParseEvent<ParsedEvent<'Event>> =
+    let internal parse (parseEvent: ParseInputEvent<'Event>): Consumer.ParseEvent<ParsedEvent<'Event>> =
         fun tracedMessage ->
+            let parseEvent =
+                match parseEvent with
+                | ParseEvent parseEvent -> parseEvent
+                | ParseEventResult parseEvent -> parseEvent >> Result.orFail
+                | ParseEventAsyncResult parseEvent -> parseEvent >> Async.RunSynchronously >> Result.orFail
+
             {
                 Event = tracedMessage.Message |> parseEvent
                 ConsumeTrace = tracedMessage.Trace
@@ -442,7 +455,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     GroupIds: Map<ConnectionName, GroupId>
     CommitMessage: CommitMessage option
     CommitMessages: Map<ConnectionName, CommitMessage>
-    ParseEvent: (ConsumeRuntimeParts<'OutputEvent> -> ParseEvent<'InputEvent>) option
+    ParseEvent: (ConsumeRuntimeParts<'OutputEvent> -> ParseInputEvent<'InputEvent>) option
     Connections: Connections
     ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
@@ -523,7 +536,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     Git: Git
     DockerImageVersion: DockerImageVersion option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment
-    ParseEvent: ConsumeRuntimeParts<'OutputEvent> -> ParseEvent<'InputEvent>
+    ParseEvent: ConsumeRuntimeParts<'OutputEvent> -> ParseInputEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>

@@ -173,7 +173,7 @@ module internal ApplicationRunner =
             |> List.iter action
 
         let run<'InputEvent, 'OutputEvent>
-            (consumeEvents: ParseEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
+            (consumeEvents: ParseInputEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
             connectProducer
             produceSingleMessage
             flushProducer

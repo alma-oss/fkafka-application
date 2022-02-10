@@ -455,11 +455,27 @@ module ApplicationBuilder =
 
         [<CustomOperation("parseEventWith")>]
         member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addParseEvent (fun _ -> parseEvent)
+            state |> addParseEvent (fun _ -> (ParseEvent parseEvent))
+
+        [<CustomOperation("parseEventWith")>]
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent (fun _ -> (ParseEventResult parseEvent))
+
+        [<CustomOperation("parseEventWith")>]
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent (fun _ -> (ParseEventAsyncResult parseEvent))
 
         [<CustomOperation("parseEventAndUseApplicationWith")>]
         member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addParseEvent parseEvent
+            state |> addParseEvent (parseEvent >> ParseEvent)
+
+        [<CustomOperation("parseEventAndUseApplicationWith")>]
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent (parseEvent >> ParseEventResult)
+
+        [<CustomOperation("parseEventAndUseApplicationWith")>]
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addParseEvent (parseEvent >> ParseEventAsyncResult)
 
         [<CustomOperation("checkKafkaWith")>]
         member __.CheckKafkaWith(state, checker): Configuration<'InputEvent, 'OutputEvent> =

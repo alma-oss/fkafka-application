@@ -114,6 +114,10 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
     - `MessageToProduce`
     - `Result<MessageToProduce, string>`
     - `AsyncResult<MessageToProduce, string>`
+- `ParseEvent<'InputEvent>` could return one of following:
+    - `'InputEvent`
+    - `Result<'InputEvent, string>`
+    - `AsyncResult<'InputEvent, string>`
 
 ### Mandatory
 - Instance of the application is required.

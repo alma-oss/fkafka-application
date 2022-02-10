@@ -7,6 +7,8 @@
     - for `deriver` in `deriveTo` and `deriveToWithApplication`
     - for `filterContentFilter` in `filterTo`
     - for `contentBasedRouter` in `routeToBrokerFromEnv`
+- Allow generic `ParseEvent` function
+    - for `kafkaApplication` (and `partialKafkaApplication`) in `parseEventWith` and `parseEventAndUseApplicationWith`
 
 ## 18.0.0 - 2022-01-25
 - Fix a commit message configuration option not to be overwritten by `merge`
