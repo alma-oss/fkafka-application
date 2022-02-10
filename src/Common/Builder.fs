@@ -78,7 +78,7 @@ module ApplicationBuilder =
         let addConsumeHandlerForConnection<'InputEvent, 'OutputEvent> name consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
             ConnectionName name |> addConsumeHandler configuration consumeHandler
 
-        let addProduceTo<'InputEvent, 'OutputEvent> name fromDomain configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addProduceTo<'InputEvent, 'OutputEvent> name (fromDomain: OutputFromDomain<'OutputEvent>) configuration: Configuration<'InputEvent, 'OutputEvent> =
             configuration <!> fun parts ->
                 let connectionName = ConnectionName name
                 {
@@ -146,7 +146,7 @@ module ApplicationBuilder =
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingConnectionConfiguration name)
 
-                let! fromDomain =
+                let! (fromDomain: OutputFromDomain<'OutputEvent>) =
                     fromDomain
                     |> Map.tryFind name
                     |> Result.ofOption (ProduceError.MissingFromDomainConfiguration name)
@@ -158,6 +158,12 @@ module ApplicationBuilder =
                     MarkAsDisabled = markAsDisabled |> Some
                 }
                 let incrementOutputCount = incrementOutputCount (OutputStreamName (connection.Topic |> StreamName.Instance))
+
+                let fromDomain: FromDomain<'OutputEvent> = fun serialize event ->
+                    match fromDomain with
+                    | FromDomain fromDomain -> fromDomain serialize event
+                    | FromDomainResult fromDomain -> fromDomain serialize event |> Result.orFail
+                    | FromDomainAsyncResult fromDomain -> fromDomain serialize event |> Async.RunSynchronously |> Result.orFail
 
                 let produceEvent producer { Trace = trace; Event = event } =
                     event
@@ -493,11 +499,27 @@ module ApplicationBuilder =
 
         [<CustomOperation("produceTo")>]
         member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addProduceTo name fromDomain
+            state |> addProduceTo name (FromDomain fromDomain)
+
+        [<CustomOperation("produceTo")>]
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addProduceTo name (FromDomainResult fromDomain)
+
+        [<CustomOperation("produceTo")>]
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addProduceTo name (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("produceToMany")>]
         member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addProduceToMany topics fromDomain
+            state |> addProduceToMany topics (FromDomain fromDomain)
+
+        [<CustomOperation("produceToMany")>]
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addProduceToMany topics (FromDomainResult fromDomain)
+
+        [<CustomOperation("produceToMany")>]
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addProduceToMany topics (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("onProducerError")>]
         member __.OnProducerError(state, producerErrorHandler): Configuration<'InputEvent, 'OutputEvent> =

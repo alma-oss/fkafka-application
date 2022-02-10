@@ -2,6 +2,11 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Allow generic `FromDomain` function
+    - for `kafkaApplication` (and `partialKafkaApplication`) in `produceTo` and `produceToMany`
+    - for `deriver` in `deriveTo` and `deriveToWithApplication`
+    - for `filterContentFilter` in `filterTo`
+    - for `contentBasedRouter` in `routeToBrokerFromEnv`
 
 ## 18.0.0 - 2022-01-25
 - Fix a commit message configuration option not to be overwritten by `merge`

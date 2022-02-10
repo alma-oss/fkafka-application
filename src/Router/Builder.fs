@@ -17,7 +17,7 @@ module ContentBasedRouterBuilder =
             router
             routeToBrokerList
             (routeEventHandler: RouteEventHandler<'InputEvent, 'OutputEvent>)
-            (fromDomain: FromDomain<'OutputEvent>)
+            (fromDomain: OutputFromDomain<'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Result<Configuration<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError> =
@@ -106,6 +106,22 @@ module ContentBasedRouterBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
+        let routeToBroker state brokerListEnvironmentKey fromDomain =
+            state >>= fun routerParts ->
+                result {
+                    let! configuration = routerParts.Configuration <?!> ConfigurationNotSet <@> ApplicationConfigurationError
+
+                    let! configurationParts =
+                        configuration
+                        |> Configuration.result <@> (InvalidConfiguration >> ApplicationConfigurationError)
+
+                    let! brokerList =
+                        brokerListEnvironmentKey
+                        |> getEnvironmentValue configurationParts BrokerList ConnectionConfigurationError.VariableNotFoundError <@> ContentBasedRouterApplicationError.ConnectionConfigurationError
+
+                    return { routerParts with RouteToBrokerList = Some brokerList; FromDomain = Some fromDomain }
+                }
+
         member __.Yield (_): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
             RouterParts.defaultRouter
             |> Ok
@@ -137,20 +153,15 @@ module ContentBasedRouterBuilder =
 
         [<CustomOperation("routeToBrokerFromEnv")>]
         member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= fun routerParts ->
-                result {
-                    let! configuration = routerParts.Configuration <?!> ConfigurationNotSet <@> ApplicationConfigurationError
+            routeToBroker state brokerListEnvironmentKey (FromDomain fromDomain)
 
-                    let! configurationParts =
-                        configuration
-                        |> Configuration.result <@> (InvalidConfiguration >> ApplicationConfigurationError)
+        [<CustomOperation("routeToBrokerFromEnv")>]
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            routeToBroker state brokerListEnvironmentKey (FromDomainResult fromDomain)
 
-                    let! brokerList =
-                        brokerListEnvironmentKey
-                        |> getEnvironmentValue configurationParts BrokerList ConnectionConfigurationError.VariableNotFoundError <@> ContentBasedRouterApplicationError.ConnectionConfigurationError
-
-                    return { routerParts with RouteToBrokerList = Some brokerList; FromDomain = Some fromDomain }
-                }
+        [<CustomOperation("routeToBrokerFromEnv")>]
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            routeToBroker state brokerListEnvironmentKey (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("route")>]
         member __.Route(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =

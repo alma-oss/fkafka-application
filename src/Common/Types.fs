@@ -249,6 +249,13 @@ type private PreparedProducer<'OutputEvent> = {
 
 // Output events
 type FromDomain<'OutputEvent> = Serialize -> 'OutputEvent -> MessageToProduce
+type FromDomainResult<'OutputEvent> = Serialize -> 'OutputEvent -> Result<MessageToProduce, ErrorMessage>
+type FromDomainAsyncResult<'OutputEvent> = Serialize -> 'OutputEvent -> AsyncResult<MessageToProduce, ErrorMessage>
+
+type internal OutputFromDomain<'OutputEvent> =
+    | FromDomain of FromDomain<'OutputEvent>
+    | FromDomainResult of FromDomainResult<'OutputEvent>
+    | FromDomainAsyncResult of FromDomainAsyncResult<'OutputEvent>
 
 //
 // Consume handlers
@@ -441,7 +448,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
     ProduceTo: ConnectionName list
     ProducerErrorHandler: ProducerErrorHandler option
-    FromDomain: Map<ConnectionName, FromDomain<'OutputEvent>>
+    FromDomain: Map<ConnectionName, OutputFromDomain<'OutputEvent>>
     ShowMetrics: bool
     ShowAppRootStatus: bool
     CustomMetrics: CustomMetric list
