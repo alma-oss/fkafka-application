@@ -109,6 +109,16 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useSpot | `Spot` | It is optional with default `Zone = "common"; Bucket = "all"` |
 | useSupervision | `Kafka.ConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
+### Generic variants
+- `FromDomain<'OutputEvent>` could return one of following:
+    - `MessageToProduce`
+    - `Result<MessageToProduce, string>`
+    - `AsyncResult<MessageToProduce, string>`
+- `ParseEvent<'InputEvent>` could return one of following:
+    - `'InputEvent`
+    - `Result<'InputEvent, string>`
+    - `AsyncResult<'InputEvent, string>`
+
 ### Mandatory
 - Instance of the application is required.
 - CurrentEnvironment of the application is required.

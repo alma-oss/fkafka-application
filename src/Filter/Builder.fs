@@ -89,6 +89,22 @@ module FilterBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
+        let addFilterTo state name filterContent fromDomain =
+            state >>= fun filterParts ->
+                result {
+                    let! configuration =
+                        filterParts.Configuration
+                        |> Result.ofOption ConfigurationNotSet
+                        |> Result.mapError ApplicationConfigurationError
+
+                    return {
+                        filterParts with
+                            Configuration = Some (configuration |> addProduceTo name fromDomain)
+                            FilterTo = Some (ConnectionName name)
+                            FilterContent = Some filterContent
+                    }
+                }
+
         member __.Yield (_): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
             FilterParts.defaultFilter
             |> Ok
@@ -120,20 +136,15 @@ module FilterBuilder =
 
         [<CustomOperation("filterTo")>]
         member __.FilterTo(state, name, filterContent, fromDomain): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
-            state >>= fun filterParts ->
-                result {
-                    let! configuration =
-                        filterParts.Configuration
-                        |> Result.ofOption ConfigurationNotSet
-                        |> Result.mapError ApplicationConfigurationError
+            addFilterTo state name filterContent (FromDomain fromDomain)
 
-                    return {
-                        filterParts with
-                            Configuration = Some (configuration |> addProduceTo name fromDomain)
-                            FilterTo = Some (ConnectionName name)
-                            FilterContent = Some filterContent
-                    }
-                }
+        [<CustomOperation("filterTo")>]
+        member __.FilterTo(state, name, filterContent, fromDomain): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
+            addFilterTo state name filterContent (FromDomainResult fromDomain)
+
+        [<CustomOperation("filterTo")>]
+        member __.FilterTo(state, name, filterContent, fromDomain): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =
+            addFilterTo state name filterContent (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> =

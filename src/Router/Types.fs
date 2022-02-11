@@ -39,7 +39,7 @@ type internal RouterParts<'InputEvent, 'OutputEvent> = {
     RouterConfiguration: RouterConfiguration option
     RouteToBrokerList: BrokerList option
     RouteEvent: RouteEventHandler<'InputEvent, 'OutputEvent> option
-    FromDomain: FromDomain<'OutputEvent> option
+    FromDomain: OutputFromDomain<'OutputEvent> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }

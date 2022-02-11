@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Compile Include="CommitMessageTest.fs" />
+    <Compile Include="GenericApplicationTest.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
 
