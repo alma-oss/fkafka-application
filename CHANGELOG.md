@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 18.1.0 - 2022-02-11
 - Allow generic `FromDomain` function
     - for `kafkaApplication` (and `partialKafkaApplication`) in `produceTo` and `produceToMany`
     - for `deriver` in `deriveTo` and `deriveToWithApplication`
