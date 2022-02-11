@@ -118,6 +118,10 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
     - `'InputEvent`
     - `Result<'InputEvent, string>`
     - `AsyncResult<'InputEvent, string>`
+- `ConsumeHandler<'InputEvent, 'OutputEvent>` could return one of following:
+    - `unit`
+    - `Result<unit, string>`
+    - `AsyncResult<unit, string>`
 
 ### Mandatory
 - Instance of the application is required.

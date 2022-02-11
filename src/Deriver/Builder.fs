@@ -38,7 +38,7 @@ module DeriverBuilder =
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
             configuration
-            |> addDefaultConsumeHandler deriveEventHandler
+            |> addDefaultConsumeHandler (ConsumeEvents deriveEventHandler)
             |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
             |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 

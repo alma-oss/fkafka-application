@@ -29,7 +29,7 @@ module FilterBuilder =
                 |>! app.ProduceTo.[filterOutputStream]
 
             configuration
-            |> addDefaultConsumeHandler filterConsumeHandler
+            |> addDefaultConsumeHandler (ConsumeEvents filterConsumeHandler)
             |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
             |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 

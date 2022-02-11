@@ -381,23 +381,31 @@ module TracedEvent =
     let finish (event: TracedEvent<'Event>) =
         event.Finish()
 
-type ConsumeHandler<'InputEvent, 'OutputEvent> =
-    | Events of (ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit)
+type ConsumeEvents<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit
+type ConsumeEventsResult<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> Result<unit, ErrorMessage>
+type ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> AsyncResult<unit, ErrorMessage>
+
+type internal ConsumeHandler<'InputEvent, 'OutputEvent> =
+    | ConsumeEvents of ConsumeEvents<'InputEvent, 'OutputEvent>
+    | ConsumeEventsResult of ConsumeEventsResult<'InputEvent, 'OutputEvent>
+    | ConsumeEventsAsyncResult of ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent>
 
 type RuntimeConsumeHandler<'InputEvent> =
     | Events of (TracedEvent<'InputEvent> -> unit)
 
 [<RequireQualifiedAccess>]
 module internal ConsumeHandler =
-    let toRuntime runtimeParts = function
-        | ConsumeHandler.Events eventsHandler -> eventsHandler runtimeParts |> RuntimeConsumeHandler.Events
+    let toRuntime runtimeParts: ConsumeHandler<'InputEvent, 'OutputEvent> -> RuntimeConsumeHandler<'InputEvent> = function
+        | ConsumeEvents eventsHandler -> eventsHandler runtimeParts |> Events
+        | ConsumeEventsResult eventsHandler -> eventsHandler runtimeParts >> Result.orFail |> Events
+        | ConsumeEventsAsyncResult eventsHandler -> eventsHandler runtimeParts >> Async.RunSynchronously >> Result.orFail |> Events
 
-type ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
+type internal ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: ConnectionName
     Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
 }
 
-type RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
+type internal RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
     OnError: ConsumeErrorHandler

@@ -59,7 +59,7 @@ module ContentBasedRouterBuilder =
                     configuration
                     |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreamTopics }
                     |> addProduceToMany outputStreamNames fromDomain
-                    |> addDefaultConsumeHandler routerConsumeHandler
+                    |> addDefaultConsumeHandler (ConsumeEvents routerConsumeHandler)
                     |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
                     |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
             }
