@@ -70,7 +70,7 @@ module ApplicationBuilder =
                 |> Configuration.result
 
         let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
-            configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = ConsumeHandler.Events consumeHandler} :: parts.ConsumeHandlers }
+            configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = consumeHandler} :: parts.ConsumeHandlers }
 
         let addDefaultConsumeHandler<'InputEvent, 'OutputEvent> consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
             Connections.Default |> addConsumeHandler configuration consumeHandler
@@ -499,11 +499,27 @@ module ApplicationBuilder =
 
         [<CustomOperation("consume")>]
         member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addDefaultConsumeHandler consumeHandler
+            state |> addDefaultConsumeHandler (ConsumeEvents consumeHandler)
+
+        [<CustomOperation("consume")>]
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addDefaultConsumeHandler (ConsumeEventsResult consumeHandler)
+
+        [<CustomOperation("consume")>]
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addDefaultConsumeHandler (ConsumeEventsAsyncResult consumeHandler)
 
         [<CustomOperation("consumeFrom")>]
         member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
-            state |> addConsumeHandlerForConnection name consumeHandler
+            state |> addConsumeHandlerForConnection name (ConsumeEvents consumeHandler)
+
+        [<CustomOperation("consumeFrom")>]
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addConsumeHandlerForConnection name (ConsumeEventsResult consumeHandler)
+
+        [<CustomOperation("consumeFrom")>]
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+            state |> addConsumeHandlerForConnection name (ConsumeEventsAsyncResult consumeHandler)
 
         [<CustomOperation("onConsumeError")>]
         member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =

@@ -43,6 +43,16 @@ let commitMessageTest =
             ParseEventAsyncResult parseEventAsyncResult
         ]
 
+        let consumeEvents: ConsumeEvents<InputEvent, OutputEvent> = fun _parts _event -> ()
+        let consumeEventsResult: ConsumeEventsResult<InputEvent, OutputEvent> = fun _parts _event -> Ok ()
+        let consumeEventsAsyncResult: ConsumeEventsAsyncResult<InputEvent, OutputEvent> = fun _parts _event -> AsyncResult.ofSuccess ()
+
+        let consumeEventAlternatives = [
+            ConsumeEvents consumeEvents
+            ConsumeEventsResult consumeEventsResult
+            ConsumeEventsAsyncResult consumeEventsAsyncResult
+        ]
+
         testCase "should allow different form of FromDomain in base kafkaApplication produceTo" <| fun _ ->
             fromDomainAlternatives
             |> List.map (function
@@ -87,6 +97,28 @@ let commitMessageTest =
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
+        testCase "should allow different form of consume with application in base kafkaApplication" <| fun _ ->
+            consumeEventAlternatives
+            |> List.map (function
+                | ConsumeEvents consumeEvents -> kafkaApplication { consume consumeEvents }
+                | ConsumeEventsResult consumeEvents -> kafkaApplication { consume consumeEvents }
+                | ConsumeEventsAsyncResult consumeEvents -> kafkaApplication { consume consumeEvents }
+            )
+            |> ignore
+
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow different form of consumeFrom with application in base kafkaApplication" <| fun _ ->
+            consumeEventAlternatives
+            |> List.map (function
+                | ConsumeEvents consumeEvents -> kafkaApplication { consumeFrom "input" consumeEvents }
+                | ConsumeEventsResult consumeEvents -> kafkaApplication { consumeFrom "input" consumeEvents }
+                | ConsumeEventsAsyncResult consumeEvents -> kafkaApplication { consumeFrom "input" consumeEvents }
+            )
+            |> ignore
+
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
         testCase "should allow different form of DeriveTo and FromDomain in deriver pattern" <| fun _ ->
             let deriveEvent: DeriveEvent<InputEvent, OutputEvent> = fun _processedBy event -> [ event ]
             let deriveEventResult: DeriveEventResult<InputEvent, OutputEvent> = fun _processedBy event -> Ok [ event ]
@@ -112,6 +144,72 @@ let commitMessageTest =
                 | DeriveEventAsyncResult deriveEvent, FromDomain fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
                 | DeriveEventAsyncResult deriveEvent, FromDomainResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
                 | DeriveEventAsyncResult deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+            )
+            |> ignore
+
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow different form of DeriveTo and ParseEvent in deriver pattern" <| fun _ ->
+            let deriveEvent: DeriveEvent<InputEvent, OutputEvent> = fun _processedBy event -> [ event ]
+            let deriveEventResult: DeriveEventResult<InputEvent, OutputEvent> = fun _processedBy event -> Ok [ event ]
+            let deriveEventAsyncResult: DeriveEventAsyncResult<InputEvent, OutputEvent> = fun _processedBy event -> AsyncResult.ofSuccess [ event ]
+
+            let deriveAlternatives = [
+                DeriveEvent deriveEvent
+                DeriveEventResult deriveEventResult
+                DeriveEventAsyncResult deriveEventAsyncResult
+            ]
+
+            parseEventAlternatives
+            |> List.cartesian deriveAlternatives
+            |> List.map (function
+                | DeriveEvent deriveEvent, ParseEvent parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEvent deriveEvent, ParseEventResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEvent deriveEvent, ParseEventAsyncResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+
+                | DeriveEventResult deriveEvent, ParseEvent parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEventResult deriveEvent, ParseEventResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEventResult deriveEvent, ParseEventAsyncResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+
+                | DeriveEventAsyncResult deriveEvent, ParseEvent parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEventAsyncResult deriveEvent, ParseEventResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
+                | DeriveEventAsyncResult deriveEvent, ParseEventAsyncResult parseEvent ->
+                    deriver {
+                        from ( partialKafkaApplication { parseEventWith parseEvent } )
+                        deriveTo "output" deriveEvent fromDomain
+                    }
             )
             |> ignore
 
