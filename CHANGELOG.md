@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 18.3.0 - 2022-02-11
 - Allow generic `ConsumeHandler` function
     - for `kafkaApplication` (and `partialKafkaApplication`) in `consume` and `consumeFrom`
 - Make some intentionally internal types really `internal`
