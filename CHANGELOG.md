@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 18.2.0 - 2022-02-11
 - Allow generic `DeriveEvent` function
     - for `deriver` in `deriveTo` and `deriveToWithApplication`
 
