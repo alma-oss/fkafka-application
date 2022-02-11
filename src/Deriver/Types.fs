@@ -2,6 +2,7 @@ namespace Lmc.KafkaApplication.Deriver
 
 open Lmc.KafkaApplication
 open Lmc.Kafka.MetaData
+open Lmc.ErrorHandling
 
 // Errors
 
@@ -20,10 +21,17 @@ type DeriverApplicationError =
 // Deriver configuration
 
 type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> TracedEvent<'OutputEvent> list
+type DeriveEventResult<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> Result<TracedEvent<'OutputEvent> list, ErrorMessage>
+type DeriveEventAsyncResult<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> AsyncResult<TracedEvent<'OutputEvent> list, ErrorMessage>
+
+type internal DeriveInputToOutputEvent<'InputEvent, 'OutputEvent> =
+    | DeriveEvent of DeriveEvent<'InputEvent, 'OutputEvent>
+    | DeriveEventResult of DeriveEventResult<'InputEvent, 'OutputEvent>
+    | DeriveEventAsyncResult of DeriveEventAsyncResult<'InputEvent, 'OutputEvent>
 
 type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
-    | Simple of DeriveEvent<'InputEvent, 'OutputEvent>
-    | WithApplication of (PatternRuntimeParts -> DeriveEvent<'InputEvent, 'OutputEvent>)
+    | Simple of DeriveInputToOutputEvent<'InputEvent, 'OutputEvent>
+    | WithApplication of (PatternRuntimeParts -> DeriveInputToOutputEvent<'InputEvent, 'OutputEvent>)
 
 // Deriver Application Configuration
 

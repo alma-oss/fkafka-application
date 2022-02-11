@@ -1,6 +1,8 @@
 module Lmc.KafkaApplication.Test.GenericApplication
 
 open Expecto
+open Lmc.KafkaApplication.Test
+
 open Lmc.ServiceIdentification
 open Lmc.Kafka
 open Lmc.ErrorHandling
@@ -25,102 +27,147 @@ let commitMessageTest =
         let fromDomainResult: FromDomainResult<OutputEvent> = fun _serialize m -> MessageToProduce.create (MessageKey.Simple "", m) |> Ok
         let fromDomainAsyncResult: FromDomainAsyncResult<OutputEvent> = fun _serialize m -> asyncResult { return MessageToProduce.create (MessageKey.Simple "", m) }
 
+        let fromDomainAlternatives = [
+            FromDomain fromDomain
+            FromDomainResult fromDomainResult
+            FromDomainAsyncResult fromDomainAsyncResult
+        ]
+
         let parseEvent: ParseEvent<InputEvent> = id
         let parseEventResult: ParseEventResult<InputEvent> = Ok
         let parseEventAsyncResult: ParseEventAsyncResult<InputEvent> = AsyncResult.ofSuccess
 
-        testCase "should allow different form of FromDomain in base kafkaApplication" <| fun _ ->
-            let _app: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    produceTo "output" fromDomain
-                }
+        let parseEventAlternatives = [
+            ParseEvent parseEvent
+            ParseEventResult parseEventResult
+            ParseEventAsyncResult parseEventAsyncResult
+        ]
 
-            let _appWithResult: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    produceTo "output" fromDomainResult
-                }
+        testCase "should allow different form of FromDomain in base kafkaApplication produceTo" <| fun _ ->
+            fromDomainAlternatives
+            |> List.map (function
+                | FromDomain fromDomain -> kafkaApplication { produceTo "output" fromDomain }
+                | FromDomainResult fromDomain -> kafkaApplication { produceTo "output" fromDomain }
+                | FromDomainAsyncResult fromDomain -> kafkaApplication { produceTo "output" fromDomain }
+            )
+            |> ignore
 
-            let _appWithAsyncResult: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    produceTo "output" fromDomainAsyncResult
-                }
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow different form of FromDomain in base kafkaApplication produceToMany" <| fun _ ->
+            fromDomainAlternatives
+            |> List.map (function
+                | FromDomain fromDomain -> kafkaApplication { produceToMany [ "output" ] fromDomain }
+                | FromDomainResult fromDomain -> kafkaApplication { produceToMany [ "output" ] fromDomain }
+                | FromDomainAsyncResult fromDomain -> kafkaApplication { produceToMany [ "output" ] fromDomain }
+            )
+            |> ignore
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
         testCase "should allow different form of ParseEvent in base kafkaApplication" <| fun _ ->
-            let _app: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    parseEventWith parseEvent
-                }
-
-            let _appWithResult: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    parseEventWith parseEventResult
-                }
-
-            let _appWithAsyncResult: Application<InputEvent, OutputEvent, _> =
-                kafkaApplication {
-                    parseEventWith parseEventAsyncResult
-                }
+            parseEventAlternatives
+            |> List.map (function
+                | ParseEvent parseEvent -> kafkaApplication { parseEventWith parseEvent }
+                | ParseEventResult parseEvent -> kafkaApplication { parseEventWith parseEvent }
+                | ParseEventAsyncResult parseEvent -> kafkaApplication { parseEventWith parseEvent }
+            )
+            |> ignore
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
-        testCase "should allow different form of FromDomain in deriver pattern" <| fun _ ->
+        testCase "should allow different form of ParseEvent with application in base kafkaApplication" <| fun _ ->
+            parseEventAlternatives
+            |> List.map (function
+                | ParseEvent parseEvent -> kafkaApplication { parseEventAndUseApplicationWith (fun _app -> parseEvent) }
+                | ParseEventResult parseEvent -> kafkaApplication { parseEventAndUseApplicationWith (fun _app -> parseEvent) }
+                | ParseEventAsyncResult parseEvent -> kafkaApplication { parseEventAndUseApplicationWith (fun _app -> parseEvent) }
+            )
+            |> ignore
+
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow different form of DeriveTo and FromDomain in deriver pattern" <| fun _ ->
             let deriveEvent: DeriveEvent<InputEvent, OutputEvent> = fun _processedBy event -> [ event ]
+            let deriveEventResult: DeriveEventResult<InputEvent, OutputEvent> = fun _processedBy event -> Ok [ event ]
+            let deriveEventAsyncResult: DeriveEventAsyncResult<InputEvent, OutputEvent> = fun _processedBy event -> AsyncResult.ofSuccess [ event ]
 
-            let _app: Application<InputEvent, OutputEvent, _> =
-                deriver {
-                    deriveTo "output" deriveEvent fromDomain
-                }
+            let deriveAlternatives = [
+                DeriveEvent deriveEvent
+                DeriveEventResult deriveEventResult
+                DeriveEventAsyncResult deriveEventAsyncResult
+            ]
 
-            let _appWithResult: Application<InputEvent, OutputEvent, _> =
-                deriver {
-                    deriveTo "output" deriveEvent fromDomainResult
-                }
+            fromDomainAlternatives
+            |> List.cartesian deriveAlternatives
+            |> List.map (function
+                | DeriveEvent deriveEvent, FromDomain fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEvent deriveEvent, FromDomainResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEvent deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
 
-            let _appWithAsyncResult: Application<InputEvent, OutputEvent, _> =
-                deriver {
-                    deriveTo "output" deriveEvent fromDomainAsyncResult
-                }
+                | DeriveEventResult deriveEvent, FromDomain fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEventResult deriveEvent, FromDomainResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEventResult deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+
+                | DeriveEventAsyncResult deriveEvent, FromDomain fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEventAsyncResult deriveEvent, FromDomainResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+                | DeriveEventAsyncResult deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveTo "output" deriveEvent fromDomain }
+            )
+            |> ignore
+
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow different form of DeriveToWithApplication and FromDomain in deriver pattern" <| fun _ ->
+            let deriveEvent: DeriveEvent<InputEvent, OutputEvent> = fun _processedBy event -> [ event ]
+            let deriveEventResult: DeriveEventResult<InputEvent, OutputEvent> = fun _processedBy event -> Ok [ event ]
+            let deriveEventAsyncResult: DeriveEventAsyncResult<InputEvent, OutputEvent> = fun _processedBy event -> AsyncResult.ofSuccess [ event ]
+
+            let deriveAlternatives = [
+                DeriveEvent deriveEvent
+                DeriveEventResult deriveEventResult
+                DeriveEventAsyncResult deriveEventAsyncResult
+            ]
+
+            fromDomainAlternatives
+            |> List.cartesian deriveAlternatives
+            |> List.map (function
+                | DeriveEvent deriveEvent, FromDomain fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEvent deriveEvent, FromDomainResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEvent deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+
+                | DeriveEventResult deriveEvent, FromDomain fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEventResult deriveEvent, FromDomainResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEventResult deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+
+                | DeriveEventAsyncResult deriveEvent, FromDomain fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEventAsyncResult deriveEvent, FromDomainResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+                | DeriveEventAsyncResult deriveEvent, FromDomainAsyncResult fromDomain -> deriver { deriveToWithApplication "output" (fun _app -> deriveEvent) fromDomain }
+            )
+            |> ignore
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
         testCase "should allow different form of FromDomain in filter pattern" <| fun _ ->
             let filterContent: FilterContent<InputEvent, OutputEvent> = fun _processedBy event -> Some event
 
-            let _app: Application<InputEvent, OutputEvent, _> =
-                filterContentFilter {
-                    filterTo "output" filterContent fromDomain
-                }
-
-            let _appWithResult: Application<InputEvent, OutputEvent, _> =
-                filterContentFilter {
-                    filterTo "output" filterContent fromDomainResult
-                }
-
-            let _appWithAsyncResult: Application<InputEvent, OutputEvent, _> =
-                filterContentFilter {
-                    filterTo "output" filterContent fromDomainAsyncResult
-                }
+            fromDomainAlternatives
+            |> List.map (function
+                | FromDomain fromDomain -> filterContentFilter { filterTo "output" filterContent fromDomain }
+                | FromDomainResult fromDomain -> filterContentFilter { filterTo "output" filterContent fromDomain }
+                | FromDomainAsyncResult fromDomain -> filterContentFilter { filterTo "output" filterContent fromDomain }
+            )
+            |> ignore
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
         testCase "should allow different form of FromDomain in router pattern" <| fun _ ->
-            let _app: Application<InputEvent, OutputEvent, _> =
-                contentBasedRouter {
-                    routeToBrokerFromEnv "output" fromDomain
-                }
-
-            let _appWithResult: Application<InputEvent, OutputEvent, _> =
-                contentBasedRouter {
-                    routeToBrokerFromEnv "output" fromDomainResult
-                }
-
-            let _appWithAsyncResult: Application<InputEvent, OutputEvent, _> =
-                contentBasedRouter {
-                    routeToBrokerFromEnv "output" fromDomainAsyncResult
-                }
+            fromDomainAlternatives
+            |> List.map (function
+                | FromDomain fromDomain -> contentBasedRouter { routeToBrokerFromEnv "output" fromDomain }
+                | FromDomainResult fromDomain -> contentBasedRouter { routeToBrokerFromEnv "output" fromDomain }
+                | FromDomainAsyncResult fromDomain -> contentBasedRouter { routeToBrokerFromEnv "output" fromDomain }
+            )
+            |> ignore
 
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
-
     ]

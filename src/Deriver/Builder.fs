@@ -22,10 +22,16 @@ module DeriverBuilder =
             let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
                 use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
 
-                let deriveEvent =
-                    match deriveEventHandler with
-                    | Simple deriveEvent -> deriveEvent
-                    | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
+                let deriveEvent processedBy =
+                    let deriveEvent =
+                        match deriveEventHandler with
+                        | Simple deriveEvent -> deriveEvent
+                        | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
+
+                    match deriveEvent with
+                    | DeriveEvent deriveEvent -> deriveEvent processedBy
+                    | DeriveEventResult deriveEvent -> deriveEvent processedBy >> Result.orFail
+                    | DeriveEventAsyncResult deriveEvent -> deriveEvent processedBy >> Async.RunSynchronously >> Result.orFail
 
                 eventToDerive
                 |> deriveEvent app.ProcessedBy
@@ -115,30 +121,6 @@ module DeriverBuilder =
                 | None -> Ok { deriverParts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error
 
-        [<CustomOperation("deriveTo")>]
-        member __.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (Simple deriveEvent) (FromDomain fromDomain)
-
-        [<CustomOperation("deriveTo")>]
-        member __.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (Simple deriveEvent) (FromDomainResult fromDomain)
-
-        [<CustomOperation("deriveTo")>]
-        member __.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (Simple deriveEvent) (FromDomainAsyncResult fromDomain)
-
-        [<CustomOperation("deriveToWithApplication")>]
-        member __.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (WithApplication deriveEvent) (FromDomain fromDomain)
-
-        [<CustomOperation("deriveToWithApplication")>]
-        member __.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (WithApplication deriveEvent) (FromDomainResult fromDomain)
-
-        [<CustomOperation("deriveToWithApplication")>]
-        member __.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
-            state >>= addDeriveTo name (WithApplication deriveEvent) (FromDomainAsyncResult fromDomain)
-
         [<CustomOperation("getCommonEventBy")>]
         member __.GetCommonEventBy(state, getCommonEvent): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun deriverParts -> { deriverParts with GetCommonEvent = Some getCommonEvent }
@@ -146,3 +128,87 @@ module DeriverBuilder =
         [<CustomOperation("addCustomMetricValues")>]
         member __.AddCustomMetricValues(state, createCustomValues): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
             state <!> fun deriverParts -> { deriverParts with CreateCustomValues = Some createCustomValues }
+
+        /// Base method to add a generic deriveEvent and fromDomain functions
+        member internal __.AddDeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            state >>= addDeriveTo name deriveEvent fromDomain
+
+        // Derive to plain methods
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEvent deriveEvent), FromDomain fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEvent), FromDomain fromDomain)
+
+        // Derive to Result overloads
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventResult deriveEvent), FromDomain fromDomain)
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEvent deriveEvent), FromDomainResult fromDomain)
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventResult deriveEvent), FromDomainResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventResult), FromDomain fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEvent), FromDomainResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventResult), FromDomainResult fromDomain)
+
+        // Derive to AsyncResult overloads
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventAsyncResult deriveEvent), FromDomain fromDomain)
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEvent deriveEvent), FromDomainAsyncResult fromDomain)
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventAsyncResult deriveEvent), FromDomainAsyncResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventAsyncResult), FromDomain fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEvent), FromDomainAsyncResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventAsyncResult), FromDomainAsyncResult fromDomain)
+
+        // Derive to AsyncResult x Result overloads
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventResult deriveEvent), FromDomainAsyncResult fromDomain)
+
+        [<CustomOperation("deriveTo")>]
+        member this.DeriveTo(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, Simple (DeriveEventAsyncResult deriveEvent), FromDomainResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventResult), FromDomainAsyncResult fromDomain)
+
+        [<CustomOperation("deriveToWithApplication")>]
+        member this.DeriveToWithApp(state, name, deriveEvent, fromDomain): DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> =
+            this.AddDeriveTo(state, name, WithApplication (deriveEvent >> DeriveEventAsyncResult), FromDomainResult fromDomain)
