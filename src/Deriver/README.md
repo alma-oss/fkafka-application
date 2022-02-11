@@ -23,8 +23,14 @@ Deriver computation expression returns `Application of DeriverApplication<'Input
 ### DeriveEvent
 It is a function, which is responsible for deriving events.
 ```fs
-type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> 'InputEvent -> 'OutputEvent list
+type DeriveEvent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'InputEvent> -> TracedEvent<'OutputEvent> list
 ```
+
+#### Generic variants
+- `DeriveEvent<'InputEvent, 'OutputEvent>` could return one of following:
+    - `TracedEvent<'OutputEvent> list`
+    - `Result<TracedEvent<'OutputEvent> list, string>`
+    - `AsyncResult<TracedEvent<'OutputEvent> list, string>`
 
 ## Deriver Configuration
 

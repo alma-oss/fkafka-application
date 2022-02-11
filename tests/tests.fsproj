@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Utils.fs" />
     <Compile Include="CommitMessageTest.fs" />
     <Compile Include="GenericApplicationTest.fs" />
     <Compile Include="Tests.fs" />
