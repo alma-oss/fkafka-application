@@ -2,6 +2,12 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Change internal runner to be async instead of messing with current thread
+- Catch and trace the error in the consumer handler function
+- Fix problem with Kafka.Consumer state when on retry the consume
+- Catch all `exceptions` in the consuming events instead of just a `KafkaException`
+- [**BC**] Change `ProducerErrorHandler` to take an `exception` instead of just message
+- [**BC**] Change `ConsumeErrorHandler` to take an `exception` instead of just message
 
 ## 18.3.0 - 2022-02-11
 - Allow generic `ConsumeHandler` function

@@ -3,17 +3,22 @@
 open Microsoft.Extensions.Logging
 open Lmc.Logging
 open Lmc.KafkaApplication
+open Lmc.ErrorHandling
 
 [<EntryPoint>]
 let main argv =
-    use loggerFactory = LoggerFactory.create [
-        LoggerOption.UseLevel LogLevel.Trace
+    let envFiles = [ "./.env" ]
 
-        LoggerOption.LogToSerilog [
-            SerilogOption.LogToConsole
-            SerilogOption.AddMeta ("facility", "kafka-app-example")
-        ]
-    ]
+    use loggerFactory =
+        envFiles
+        |> LoggerFactory.common {
+            Instance = "INSTANCE"
+            LogTo = "LOG_TO"
+            Verbosity = "VERBOSITY"
+            LoggerTags = "LOGGER_TAGS"
+            EnableTraceProvider = true
+        }
+        |> Result.orFail
 
-    RealLifeExample.Program.run loggerFactory
+    RealLifeExample.Program.run envFiles loggerFactory
     |> ApplicationShutdown.withStatusCodeAndLogResult loggerFactory
