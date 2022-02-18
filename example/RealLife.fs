@@ -1,109 +1,95 @@
 namespace RealLifeExample
 
+[<RequireQualifiedAccess>]
+module Dice =
+    let roll () = System.Random().Next(0, 6)
+    let isRollOver i = roll() >= i
+
 module Program =
+    open Microsoft.Extensions.Logging
+    open Lmc.ServiceIdentification
+    open Lmc.Tracing
     open Lmc.Kafka
     open Lmc.KafkaApplication
 
-    open Suave
-    open Suave.Filters
-    open Suave.Operators
-    open Suave.Successful
+    type InputEvent = string
+    type OutputEvent = string
 
-    let createInputKeys (InputStreamName inputStream) (event: RawEvent) =
+    (* let createInputKeys (InputStreamName inputStream) (event: InputEvent) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
             ("input_stream", inputStream |> StreamName.value)
         ]
 
-    let createOutputKeys (OutputStreamName outputStream) (event: RawEvent) =
+    let createOutputKeys (OutputStreamName outputStream) (event: OutputEvent) =
         SimpleDataSetKeys [
             ("event", event.Event |> EventName.value)
             ("output_stream", outputStream |> StreamName.value)
-        ]
+        ] *)
 
-    let run loggerFactory =
+    let run envFiles loggerFactory =
         //
         // pattern
         //
 
-        let isActivatedContracts (event: RawEvent) =
-            event.Event = EventName "contract_activated"
+        let parseEvent: ParseEvent<InputEvent> =
+            id
 
-        let filterDomainData (event: RawEvent) =
-            { event with DomainData = None }
-
-        let fromDomain: FromDomain<RawEvent> =
+        (* let fromDomain: FromDomain<OutputEvent> =
             fun (Serialize serialize) event ->
-                serialize event
+                let common = event |> RawEvent.toCommon
+                MessageToProduce.create (
+                    MessageKey.Delimited [ common.Zone |> Zone.value; common.Bucket |> Bucket.value ],
+                    serialize event
+                ) *)
 
         //
         // run simple app
         //
 
+        run<InputEvent, OutputEvent, _> <|
         kafkaApplication {
             useLoggerFactory loggerFactory
+            useCommitMessage (CommitMessage.Manually FailOnNotCommittedMessage.WithException)
 
             merge (environment {
-                file [".env"]
+                file envFiles
 
                 instance "INSTANCE"
+                currentEnvironment "ENVIRONMENT"
 
                 connect {
-                    BrokerList = "BROKER_LIST"
+                    BrokerList = "KAFKA_BROKER"
                     Topic = "INPUT_STREAM"
                 }
 
-                connectTo "contracts" {
-                    BrokerList = "BROKER_LIST"
-                    Topic = "CONTRACTS_STREAM"
-                }
-
-                connectTo "outputStream" {
-                    BrokerList = "BROKER_LIST"
-                    Topic = "OUTPUT_STREAM"
-                }
-
-                supervision {
-                    BrokerList = "BROKER_LIST"
-                    Topic = "SUPERVISION_STREAM"
-                }
+                groupId "GROUP_ID"
             })
 
-            parseEventWith RawEvent.parse
+            parseEventWith parseEvent
 
-            merge (partialKafkaApplication {
-                produceTo "outputStream" fromDomain
+            showMetrics
+            showAppRootStatus
 
-                consume (fun app ->
-                    let produce = app.ProduceTo.["outputStream"]
+            consume (fun app { Event = event; Trace = trace } ->
+                printfn "------------------------------------------------------"
+                let logger = app.LoggerFactory.CreateLogger("Consume")
+                logger |> Consumer.logLastMessageManuallyCommittedState
 
-                    fun { Event = event } ->
-                        event
-                        |> filterDomainData
-                        |> produce
-                )
-            })
+                app.Connections[Connections.Default]
+                |> printfn "Connection:\n%A\n"
+                |> ignore
 
-            consumeFrom "contracts" (fun app ->
-                let produce = app.ProduceTo.["outputStream"]
+                logger.LogInformation("Start consuming event: {event} ({trace})", event, (trace |> Trace.id))
 
-                fun { Event = contractEvent } ->
-                    if contractEvent |> isActivatedContracts then
-                        contractEvent
-                        |> filterDomainData
-                        |> produce
+                if Dice.isRollOver 2 then
+                    // simulation of error, which leads to skip the commit
+                    logger.LogInformation("SKIP event: {event}", event)
+                    failwithf "SKIP event"
+
+                logger.LogInformation("Consumed and processed event: {event}", event)
+
+                printfn "------------------------------------------------------"
+                ()
             )
-
-            showMetricsOn "/metrics"
-
-            addRoute (
-                GET >=> choose [
-                    path "/my-new-route"
-                        >=> request ((fun _ -> "Hello world!") >> OK)
-                ]
-            )
-
-            showInputEventsWith createInputKeys
-            showOutputEventsWith createOutputKeys
         }
-        |> run

@@ -135,7 +135,7 @@ type ProducerErrorPolicy =
     | Retry
     | RetryIn of int<Second>
 
-type ProducerErrorHandler = ILogger -> ErrorMessage -> ProducerErrorPolicy
+type ProducerErrorHandler = ILogger -> exn -> ProducerErrorPolicy
 
 type ConsumeErrorPolicy =
     | Shutdown
@@ -144,7 +144,7 @@ type ConsumeErrorPolicy =
     | RetryIn of int<Second>
     | Continue
 
-type ConsumeErrorHandler = ILogger -> ErrorMessage -> ConsumeErrorPolicy
+type ConsumeErrorHandler = ILogger -> exn -> ConsumeErrorPolicy
 
 // Error types
 
