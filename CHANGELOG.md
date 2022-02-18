@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 19.0.0 - 2022-02-18
 - Change internal runner to be async instead of messing with current thread
 - Catch and trace the error in the consumer handler function
 - Fix problem with Kafka.Consumer state when on retry the consume
