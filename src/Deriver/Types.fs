@@ -11,7 +11,6 @@ type DeriverConfigurationError =
     | NotSet
     | MissingOutputStream
     | MissingDeriveEvent
-    | MissingGetCommonEvent
 
 type DeriverApplicationError =
     | ApplicationConfigurationError of ApplicationConfigurationError

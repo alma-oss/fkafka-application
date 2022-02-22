@@ -62,7 +62,7 @@ deriver {
             }
         })
 
-        showMetricsOn "/metrics"
+        showMetrics
         parseEventWith Parser.parseInputEvent
     })
 
