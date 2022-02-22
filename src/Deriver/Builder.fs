@@ -16,7 +16,7 @@ module DeriverBuilder =
             (ConnectionName deriverOutputStream)
             (deriveEventHandler: DeriveEventHandler<'InputEvent, 'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
-            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
+            (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
             let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
@@ -37,10 +37,17 @@ module DeriverBuilder =
                 |> deriveEvent app.ProcessedBy
                 |> Seq.iter app.ProduceTo.[deriverOutputStream]
 
-            configuration
-            |> addDefaultConsumeHandler (ConsumeEvents deriveEventHandler)
-            |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
-            |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
+            let configuration =
+                configuration
+                |> addDefaultConsumeHandler (ConsumeEvents deriveEventHandler)
+
+            match getCommonEvent with
+            | Some getCommonEvent ->
+                configuration
+                |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
+                |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
+            | _ ->
+                configuration
 
         let addDeriveTo<'InputEvent, 'OutputEvent> name deriveEventHandler fromDomain (parts: DeriverParts<'InputEvent, 'OutputEvent>) =
             result {
@@ -71,10 +78,8 @@ module DeriverBuilder =
 
                 let createCustomValues = deriverParts.CreateCustomValues <?=> (fun _ -> [])
 
-                let! getCommonEvent =
+                let getCommonEvent =
                     deriverParts.GetCommonEvent
-                    |> Result.ofOption MissingGetCommonEvent
-                    |> Result.mapError DeriverConfigurationError
 
                 let! deriveEvent =
                     deriverParts.DeriveEvent

@@ -110,7 +110,7 @@ filterContentFilter {
             }
         })
 
-        showMetricsOn "/metrics"
+        showMetrics
         parseEventWith Parser.parseInputEvent
     })
 

@@ -76,7 +76,7 @@ contentBasedRouter {
             }
         })
 
-        showMetricsOn "/metrics"
+        showMetrics
         parseEventWith InputEvent.parse
     })
 
