@@ -2,6 +2,8 @@ namespace Lmc.KafkaApplication
 
 [<AutoOpen>]
 module KafkaApplication =
+    open System
+    open Microsoft.Extensions.Logging
     open Lmc.Kafka
     open ApplicationBuilder
     open ApplicationRunner
@@ -21,6 +23,16 @@ module KafkaApplication =
         | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue>
         | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent>
         | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
+
+        with
+            member this.Logger
+                with get () =
+                    match this with
+                    | CustomApplication app -> app.LoggerFactory.CreateLogger "CustomApplication"
+                    | FilterContentFilter (FilterApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "FilterContentFilter"
+                    | ContentBasedRouter (ContentBasedRouterApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "ContentBasedRouter"
+                    | Deriver (DeriverApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "Deriver"
+                    | _ -> defaultLoggerFactory.CreateLogger("Application")
 
     //
     // Application builders
@@ -54,8 +66,12 @@ module KafkaApplication =
     //
 
     let run<'InputEvent, 'OutputEvent, 'FilterValue> (application: Application<'InputEvent, 'OutputEvent, 'FilterValue>) =
-        match application with
-        | CustomApplication kafkaApplication -> runKafkaApplication ignore kafkaApplication
-        | FilterContentFilter filterApplication -> FilterRunner.runFilter runKafkaApplication filterApplication
-        | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter runKafkaApplication routerApplication
-        | Deriver deriverApplication -> DeriverRunner.runDeriver runKafkaApplication deriverApplication
+        try
+            match application with
+            | CustomApplication kafkaApplication -> startKafkaApplication ignore kafkaApplication
+            | FilterContentFilter filterApplication -> FilterRunner.runFilter startKafkaApplication filterApplication
+            | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter startKafkaApplication routerApplication
+            | Deriver deriverApplication -> DeriverRunner.runDeriver startKafkaApplication deriverApplication
+        finally
+            ApplicationState.finish application.Logger
+            System.Threading.Thread.Sleep(TimeSpan.FromSeconds 2.) // Main thread waits till logger logs error message

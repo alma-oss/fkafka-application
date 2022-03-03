@@ -2,6 +2,7 @@ namespace Lmc.KafkaApplication
 
 module ApplicationBuilder =
     open System
+    open System.Threading
     open Microsoft.Extensions.Logging
     open Lmc.Kafka
     open Lmc.Kafka.MetaData
@@ -11,6 +12,7 @@ module ApplicationBuilder =
     open Lmc.ServiceIdentification
     open Lmc.Environment
     open Lmc.ErrorHandling
+    open Lmc.ErrorHandling.AsyncResult.Operators
     open Lmc.ErrorHandling.Option.Operators
 
     [<AutoOpen>]
@@ -130,7 +132,7 @@ module ApplicationBuilder =
             if collection |> Seq.isEmpty then Error (KafkaApplicationError error)
             else Ok collection
 
-        let private prepareProducer
+        let private prepareProducer<'OutputEvent>
             logger
             checker
             markAsDisabled
@@ -138,8 +140,8 @@ module ApplicationBuilder =
             (produceMessage: ConnectedProducer -> Lmc.Tracing.Trace -> MessageToProduce -> unit)
             (connections: Connections)
             fromDomain
-            incrementOutputCount
-            name =
+            (incrementOutputCount: OutputStreamName -> 'OutputEvent -> unit)
+            name: Result<PreparedProducer<'OutputEvent>, ProduceError> =
             result {
                 let! connection =
                     connections
@@ -159,16 +161,23 @@ module ApplicationBuilder =
                 }
                 let incrementOutputCount = incrementOutputCount (OutputStreamName (connection.Topic |> StreamName.Instance))
 
-                let fromDomain: FromDomain<'OutputEvent> = fun serialize event ->
+                let fromDomain: FromDomainAsyncResult<'OutputEvent> = fun serialize event ->
                     match fromDomain with
-                    | FromDomain fromDomain -> fromDomain serialize event
-                    | FromDomainResult fromDomain -> fromDomain serialize event |> Result.orFail
-                    | FromDomainAsyncResult fromDomain -> fromDomain serialize event |> Async.RunSynchronously |> Result.orFail
+                    | FromDomain fromDomain -> fromDomain serialize event |> AsyncResult.ofSuccess
+                    | FromDomainResult fromDomain -> fromDomain serialize event |> AsyncResult.ofResult
+                    | FromDomainAsyncResult fromDomain -> fromDomain serialize event
 
-                let produceEvent producer { Trace = trace; Event = event } =
+                let produceEvent producer { Trace = trace; Event = event } = asyncResult {
+                    let! serializedEvent =
+                        event
+                        |> fromDomain Serializer.toJson
+
+                    serializedEvent
+                    |> produceMessage producer trace
+
                     event
-                    |> tee (fromDomain Serializer.toJson >> produceMessage producer trace)
                     |> incrementOutputCount
+                }
 
                 return {
                     Connection = name
@@ -213,18 +222,22 @@ module ApplicationBuilder =
         let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent> =
             /// Overriden Result.ofOption operator to return a KafkaApplicationError instead of generic error
             let inline (<?!>) o errorMessage =
-                o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> KafkaApplicationError)
+                o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> ErrorMessage |> KafkaApplicationError)
 
             result {
                 let! configurationParts = configuration
+
+                let loggerFactory = configurationParts.LoggerFactory
+                let logger = loggerFactory.CreateLogger("KafkaApplication.Build")
+                ApplicationState.build logger
 
                 //
                 // required parts
                 //
                 let! instance = configurationParts.Instance <?!> "Instance is required."
                 let! currentEnvironment = configurationParts.CurrentEnvironment <?!> "Current environment is required."
-                let! connections = configurationParts.Connections |> assertNotEmpty "At least one connection configuration is required."
-                let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty "At least one consume handler is required."
+                let! connections = configurationParts.Connections |> assertNotEmpty (ErrorMessage "At least one connection configuration is required.")
+                let! consumeHandlers = configurationParts.ConsumeHandlers |> assertNotEmpty (ErrorMessage "At least one consume handler is required.")
                 let! parseEvent = configurationParts.ParseEvent <?!> "Parse event is required."
 
                 //
@@ -241,7 +254,6 @@ module ApplicationBuilder =
                 let spot = configurationParts.Spot <?=> { Zone = Zone "all"; Bucket = Bucket "common" }
                 let box = Create.Box(instance, spot)
 
-                let loggerFactory = configurationParts.LoggerFactory
                 let environment = configurationParts.Environment
                 let defaultGroupId = configurationParts.GroupId <?=> GroupId.Random
                 let groupIds = configurationParts.GroupIds
@@ -260,6 +272,11 @@ module ApplicationBuilder =
                 //
                 // composed parts
                 //
+
+                let cancellation = {
+                    Main = new CancellationTokenSource()
+                    Children = new CancellationTokenSource()
+                }
 
                 // kafka parts
                 let kafkaLogger runtimeConnection = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" runtimeConnection)
@@ -290,6 +307,7 @@ module ApplicationBuilder =
                                 Checker = kafkaChecker connection.BrokerList |> Some
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
+                                Cancellation = Some cancellation.Children.Token
                                 CommitMessage = commitMessages.TryFind name <?=> defaultCommitMessage
                             }
                         )
@@ -318,7 +336,7 @@ module ApplicationBuilder =
                 let (producers, produces) =
                     preparedProducers
                     |> List.fold (fun (producers: Map<RuntimeConnectionName, NotConnectedProducer>, produces: Map<RuntimeConnectionName, PreparedProduceEvent<'OutputEvent>>) preparedProducer ->
-                        let { Connection = (ConnectionName connection); Producer = producer; Produce = produce} = preparedProducer
+                        let { Connection = (ConnectionName connection); Producer = producer; Produce = produce } = preparedProducer
 
                         ( producers.Add(connection, producer), produces.Add(connection, produce) )
                     ) (Map.empty, Map.empty)
@@ -364,6 +382,12 @@ module ApplicationBuilder =
                     |> Validation.ofResults
                     |> Result.mapError ConsumeHandlerError
 
+                let consume: RuntimeConsumeEvents<'InputEvent, 'OutputEvent> =
+                    fun runtimeParts ->
+                        let parseEvent = Event.parse (parseEvent runtimeParts)
+                        fun configuration ->
+                            Consumer.consumeAsync configuration parseEvent
+
                 let customTasks =
                     configurationParts.CustomTasks
                     |> CustomTasks.prepare {
@@ -378,14 +402,15 @@ module ApplicationBuilder =
 
                 return {
                     LoggerFactory = loggerFactory
+                    Cancellation = cancellation
                     Environment = environment
                     Box = box
                     CurrentEnvironment = currentEnvironment
                     Git = configurationParts.Git
                     DockerImageVersion = configurationParts.DockerImageVersion
-                    ParseEvent = parseEvent
                     ConsumerConfigurations = runtimeConsumerConfigurations
                     ConsumeHandlers = runtimeConsumeHandlers
+                    ConsumeEvents = consume
                     Producers = producers
                     ProducerErrorHandler = producerErrorHandler
                     ServiceStatus = serviceStatus
@@ -612,8 +637,8 @@ module ApplicationBuilder =
                 { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
 
         [<CustomOperation("runCustomTask")>]
-        member __.RunCustomTask(state, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
-            state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (restartPolicy, task) :: parts.CustomTasks }
+        member __.RunCustomTask(state, name, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
+            state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (CustomTaskName name, restartPolicy, task) :: parts.CustomTasks }
 
         [<CustomOperation("addHttpHandler")>]
         member __.AddHttpHandler(state, httpHandler): Configuration<'InputEvent, 'OutputEvent> =

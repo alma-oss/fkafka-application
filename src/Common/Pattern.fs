@@ -67,6 +67,7 @@ module internal PatternRunner =
         | Error error ->
             error
             |> sprintf "[Critical Error] %s Application cannot start because of %A" pattern
+            |> ErrorMessage
             |> WithCriticalError
 
 // Build Patterns

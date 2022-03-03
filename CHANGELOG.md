@@ -2,6 +2,11 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Require name for a custom task
+- Add in-build graceful shutdown
+- Add internal Application State
+- [**BC**] Change `ErrorMessage` to be more usable
+    - Add cases `ErrorMessage`, `RuntimeError` and `Errors`
 
 ## 19.1.0 - 2022-02-22
 - Update dependencies

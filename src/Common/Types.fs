@@ -1,6 +1,7 @@
 namespace Lmc.KafkaApplication
 
 open System
+open System.Threading
 open Microsoft.Extensions.Logging
 open Giraffe
 
@@ -127,7 +128,28 @@ module Connections =
 
 // Handlers and policies
 
-type ErrorMessage = string
+type ErrorMessage =
+    | ErrorMessage of string
+    | RuntimeError of exn
+    | Errors of ErrorMessage list
+
+[<RequireQualifiedAccess>]
+module ErrorMessage =
+    let rec value = function
+        | ErrorMessage message -> [ message ]
+        | RuntimeError error -> [ sprintf "%A" error ]
+        | Errors [] -> []
+        | Errors errors -> errors |> List.collect value
+
+type internal IO<'Data> = AsyncResult<'Data, ErrorMessage>
+
+[<RequireQualifiedAccess>]
+module internal IO =
+    let runList (io: IO<unit> list): IO<unit> =
+        io
+        |> AsyncResult.ofSequentialAsyncResults RuntimeError
+        |> AsyncResult.mapError Errors
+        |> AsyncResult.ignore
 
 type ProducerErrorPolicy =
     | Shutdown
@@ -238,7 +260,7 @@ type ProducerSerializer<'OutputEvent> = ProducerSerializer of ('OutputEvent -> s
 type NotConnectedProducer = Producer.NotConnected
 type ConnectedProducer = Producer
 
-type ProduceEvent<'OutputEvent> = TracedEvent<'OutputEvent> -> unit
+type ProduceEvent<'OutputEvent> = TracedEvent<'OutputEvent> -> IO<unit>
 type PreparedProduceEvent<'OutputEvent> = ConnectedProducer -> ProduceEvent<'OutputEvent>
 
 type private PreparedProducer<'OutputEvent> = {
@@ -276,23 +298,40 @@ type ParsedEvent<'InputEvent> = {
     ConsumeTrace: Trace
 }
 
-type ParsedEventResult<'InputEvent> = Consumer.ConsumedResult<ParsedEvent<'InputEvent>>
+type ParsedEventAsyncResult<'InputEvent> = Consumer.ConsumedAsyncResult<ParsedEvent<'InputEvent>>
+
+type internal ConsumeEventsWithConfiguration<'InputEvent> = ConsumerConfiguration -> ParsedEventAsyncResult<'InputEvent> seq
 
 [<RequireQualifiedAccess>]
 module Event =
-    let internal parse (parseEvent: ParseInputEvent<'Event>): Consumer.ParseEvent<ParsedEvent<'Event>> =
-        fun tracedMessage ->
+    open Lmc.ErrorHandling.AsyncResult.Operators
+
+    let private errorToConsumeError = function
+        | RuntimeError error -> ConsumeError.RuntimeException error
+        | error ->
+            error
+            |> ErrorMessage.value
+            |> String.concat "\n"
+            |> ConsumeError.RuntimeError
+
+    let internal parse<'Event> (parseEvent: ParseInputEvent<'Event>): Consumer.ParseEventAsyncResult<ParsedEvent<'Event>> =
+        fun tracedMessage -> asyncResult {
             let parseEvent =
                 match parseEvent with
-                | ParseEvent parseEvent -> parseEvent
-                | ParseEventResult parseEvent -> parseEvent >> Result.orFail
-                | ParseEventAsyncResult parseEvent -> parseEvent >> Async.RunSynchronously >> Result.orFail
+                | ParseEvent parseEvent -> parseEvent >> AsyncResult.ofSuccess
+                | ParseEventResult parseEvent -> parseEvent >> AsyncResult.ofResult
+                | ParseEventAsyncResult parseEvent -> parseEvent
 
-            {
-                Event = tracedMessage.Message |> parseEvent
+            let! parsedEvent =
+                tracedMessage.Message
+                |> parseEvent <@> errorToConsumeError
+
+            return {
+                Event = parsedEvent
                 ConsumeTrace = tracedMessage.Trace
                 Commit = tracedMessage.Commit
             }
+        }
 
     let event ({ Event = event }: ParsedEvent<'Event>) = event
 
@@ -325,6 +364,8 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }
+
+type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> ConsumerConfiguration -> ParsedEventAsyncResult<'InputEvent> seq
 
 [<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =
@@ -391,14 +432,14 @@ type internal ConsumeHandler<'InputEvent, 'OutputEvent> =
     | ConsumeEventsAsyncResult of ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent>
 
 type RuntimeConsumeHandler<'InputEvent> =
-    | Events of (TracedEvent<'InputEvent> -> unit)
+    | Events of (TracedEvent<'InputEvent> -> IO<unit>)
 
 [<RequireQualifiedAccess>]
 module internal ConsumeHandler =
     let toRuntime runtimeParts: ConsumeHandler<'InputEvent, 'OutputEvent> -> RuntimeConsumeHandler<'InputEvent> = function
-        | ConsumeEvents eventsHandler -> eventsHandler runtimeParts |> Events
-        | ConsumeEventsResult eventsHandler -> eventsHandler runtimeParts >> Result.orFail |> Events
-        | ConsumeEventsAsyncResult eventsHandler -> eventsHandler runtimeParts >> Async.RunSynchronously >> Result.orFail |> Events
+        | ConsumeEvents eventsHandler -> eventsHandler runtimeParts >> AsyncResult.ofSuccess |> Events
+        | ConsumeEventsResult eventsHandler -> eventsHandler runtimeParts >> AsyncResult.ofResult |> Events
+        | ConsumeEventsAsyncResult eventsHandler -> eventsHandler runtimeParts |> Events
 
 type internal ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
     Connection: ConnectionName
@@ -433,13 +474,14 @@ type CustomTaskRuntimeParts = {
     DisableResource: ResourceAvailability -> unit
 }
 
-type internal PreparedCustomTask = PreparedCustomTask of TaskErrorPolicy * (CustomTaskRuntimeParts -> Async<unit>)
-type internal CustomTask = private CustomTask of TaskErrorPolicy * Async<unit>
+type CustomTaskName = CustomTaskName of string
+type internal PreparedCustomTask = PreparedCustomTask of CustomTaskName * TaskErrorPolicy * (CustomTaskRuntimeParts -> Async<unit>)
+type internal CustomTask = private CustomTask of CustomTaskName * TaskErrorPolicy * Async<unit>
 
 [<RequireQualifiedAccess>]
 module internal CustomTask =
-    let prepare runtimeParts (PreparedCustomTask (policy, prepareTask)) =
-        CustomTask (policy, prepareTask runtimeParts)
+    let prepare runtimeParts (PreparedCustomTask (name, policy, prepareTask)) =
+        CustomTask (name, policy, prepareTask runtimeParts)
 
 [<RequireQualifiedAccess>]
 module internal CustomTasks =
@@ -539,14 +581,15 @@ module private Configuration =
 
 type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     LoggerFactory: ILoggerFactory
+    Cancellation: Cancellations
     Environment: Map<string, string>
     Box: Box
     Git: Git
     DockerImageVersion: DockerImageVersion option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment
-    ParseEvent: ConsumeRuntimeParts<'OutputEvent> -> ParseInputEvent<'InputEvent>
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
+    ConsumeEvents: RuntimeConsumeEvents<'InputEvent, 'OutputEvent>
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
     ServiceStatus: ServiceStatus.ServiceStatus
@@ -559,7 +602,15 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     HttpHandlers: HttpHandler list
 }
 
-type KafkaApplication<'InputEvent, 'OutputEvent> = internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+type KafkaApplication<'InputEvent, 'OutputEvent> =
+    internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+
+    with
+        member this.LoggerFactory
+            with get () =
+                match this with
+                | KafkaApplication (Ok app) -> app.LoggerFactory
+                | _ -> defaultLoggerFactory
 
 //
 // Application types

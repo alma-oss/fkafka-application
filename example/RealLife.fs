@@ -12,7 +12,7 @@ type OutputEvent = string
 
 [<RequireQualifiedAccess>]
 module Dice =
-    let roll () = System.Random().Next(0, 6)
+    let roll () = System.Random().Next(1, 7)
     let isRollOver i =
         use rollTrace = "Dice rool" |> Trace.ChildOf.startFromActive
         printfn "[Dice] roll with trace: %A" (rollTrace |> Trace.id)
@@ -129,7 +129,11 @@ module App =
 
             logger.LogInformation("Start deriving event: {event} ({trace})", event, (deriveTrace |> Trace.id))
 
-            if Dice.isRollOver 6 then
+            for _ in [ 0 .. 4 ] do
+                logger.LogInformation(" -> Deriving the event {event} ...", event)
+                do! AsyncResult.sleep 2000
+
+            if Dice.isRollOver 5 then
                 // simulation of error, which leads to skip the commit
                 logger.LogInformation("SKIP event: {event}", event)
                 deriveTrace |> Trace.addTags [ "skip", "true" ] |> finish

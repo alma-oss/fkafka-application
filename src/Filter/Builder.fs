@@ -20,16 +20,21 @@ module FilterBuilder =
             (getFilterValue: GetFilterValue<'InputEvent, 'FilterValue>)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
-            let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+            let filterConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) = asyncResult {
                 use eventToFilter = event |> TracedEvent.continueAs "Filter" "Filter event"
 
-                eventToFilter
-                |> Filter.Filtering.filterByConfiguration app.LoggerFactory getCommonEvent getFilterValue filterConfiguration
-                >>= filterContentFromInputEvent app.ProcessedBy
-                |>! app.ProduceTo.[filterOutputStream]
+                let outputEvent =
+                    eventToFilter
+                    |> Filter.Filtering.filterByConfiguration app.LoggerFactory getCommonEvent getFilterValue filterConfiguration
+                    >>= filterContentFromInputEvent app.ProcessedBy
+
+                match outputEvent with
+                | Some event -> do! event |> app.ProduceTo.[filterOutputStream]
+                | _ -> ()
+            }
 
             configuration
-            |> addDefaultConsumeHandler (ConsumeEvents filterConsumeHandler)
+            |> addDefaultConsumeHandler (ConsumeEventsAsyncResult filterConsumeHandler)
             |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
             |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
 

@@ -36,7 +36,7 @@ module ContentBasedRouterBuilder =
                     outputStreams
                     |> List.map StreamName.value
 
-                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) = asyncResult {
                     use eventToRoute = event |> TracedEvent.continueAs "Router" "Route event"
 
                     let routeEvent =
@@ -51,15 +51,20 @@ module ContentBasedRouterBuilder =
                             (fun stream -> app.ProduceTo.[stream |> StreamName.value])
                             router
 
-                    eventToRoute
-                    |> routeEvent app.ProcessedBy
-                    |> Option.iter produceRoutedEvent
+                    let outputEvent =
+                        eventToRoute
+                        |> routeEvent app.ProcessedBy
+
+                    match outputEvent with
+                    | Some outputEvent -> do! outputEvent |> produceRoutedEvent
+                    | _ -> ()
+                }
 
                 return
                     configuration
                     |> addConnectToMany { BrokerList = routeToBrokerList; Topics = outputStreamTopics }
                     |> addProduceToMany outputStreamNames fromDomain
-                    |> addDefaultConsumeHandler (ConsumeEvents routerConsumeHandler)
+                    |> addDefaultConsumeHandler (ConsumeEventsAsyncResult routerConsumeHandler)
                     |> addCreateInputEventKeys (createKeysForInputEvent createCustomValues getCommonEvent)
                     |> addCreateOutputEventKeys (createKeysForOutputEvent createCustomValues getCommonEvent)
             }
