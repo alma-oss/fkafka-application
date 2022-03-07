@@ -57,17 +57,15 @@ module internal Router =
     module Routing =
         open Microsoft.Extensions.Logging
         open Lmc.KafkaApplication
-        open Lmc.ErrorHandling.Option.Operators
 
-        let private sendToStream (logger: ILogger) produceTo (EventName eventType, eventToRoute: TracedEvent<'OutputEvent>) (stream: StreamName) =
-            logger.LogTrace("Route event {event} to stream {stream}", eventType, (stream |> StreamName.value))
-
-            eventToRoute
-            |> produceTo stream
-
-        let routeEvent logger getEventType produce router (eventToRoute: TracedEvent<'OutputEvent>) =
+        let routeEvent (logger: ILogger) getEventType (produce: StreamName -> TracedEvent<'OutputEvent> -> IO<unit>) router (eventToRoute: TracedEvent<'OutputEvent>): IO<unit> = asyncResult {
             let eventType = eventToRoute |> getEventType
 
-            router
-            |> Configuration.getStreamFor eventType
-            |>! (sendToStream logger produce (eventType, eventToRoute))
+            match router |> Configuration.getStreamFor eventType with
+            | Some stream ->
+                logger.LogTrace("Route event {event} to stream {stream}", (eventType |> EventName.value), (stream |> StreamName.value))
+                do! eventToRoute |> produce stream
+
+            | _ ->
+                logger.LogTrace("Route event {event} -> ignore, there is no defined stream for this event type.", eventType)
+        }

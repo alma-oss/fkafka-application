@@ -1,9 +1,14 @@
 // Learn more about F# at http://fsharp.org
 
+open System
 open Microsoft.Extensions.Logging
 open Lmc.Logging
 open Lmc.KafkaApplication
 open Lmc.ErrorHandling
+
+let tee f a =
+    f a
+    a
 
 [<EntryPoint>]
 let main argv =

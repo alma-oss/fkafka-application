@@ -40,12 +40,12 @@ Lmc.KafkaApplication
                    │                            └─> Shutdown ──────────────────────────────────────<Ends with the RuntimeError>────┐  │
                    │                            └─> ShutdownIn X seconds ──────────────────────────<Ends with the RuntimeError>────┐  │
                    ├─> Produce instance_started event to the [Supervision stream]     (only if supervision stream is registered)   │  │
-                   ├─> Consume all registered Consume Handlers, one by one <───────────────────────┐                               │  │
-                   │     └─<On Error>───> Consume Error Handler   (Default - RetryIn 60 seconds)   │                               │  │
-                   │     │                   └─> One of Following:                                 │                               │  │
-          <All consumed> │                       └─> Continue (with next Consume Handler) ─────────┘                               │  │
-                   │     │                       └─> Retry ────────────────────────────────────────┘                               │  │
-                   │     │                       └─> RetryIn X seconds ────────────────────────────┘                               │  │
+                   ├─> Consume all registered Consume Handlers, one by one (set service_status to 1) <───┐                         │  │
+                   │     └─<On Error>───> Consume Error Handler   (Default - RetryIn 60 seconds)         │                         │  │
+                   │     │                   └─> One of Following:                                       │                         │  │
+          <All consumed> │                       └─> Continue (with next Consume Handler) ───────────────┘                         │  │
+                   │     │                       └─> Retry ──────────────────────────────────────────────┘                         │  │
+                   │     │                       └─> RetryIn X seconds ──────────────────────────────────┘                         │  │
                    │     │                       └─> Shutdown ─────────────────────────────────────<Ends with the RuntimeError>────┐  │
                    │     │                       └─> ShutdownIn X seconds ─────────────────────────<Ends with the RuntimeError>────┐  │
                    │     └─<On Success>─> Flush all Producers                                                                      │  │

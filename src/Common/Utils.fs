@@ -1,6 +1,7 @@
 namespace Lmc.KafkaApplication
 
 open Lmc.ApplicationStatus
+open Microsoft.Extensions.Logging
 
 type Serialize = Serialize of (obj -> string)
 
@@ -45,10 +46,155 @@ module internal Utils =
 
         let toJson = Serialize Serialize.toJson
 
+    type ApplicationState =
+        | Off
+        | Building
+        | Starting
+        | Running
+        | Retrying
+        | Stopping
+        | ShuttingDown
+
+    type ChangeApplicationState = ILogger -> unit
+    type IsApplicationState = ILogger -> unit -> bool
+    type IsOneOfApplicationStates = ILogger -> ApplicationState list -> bool
+
+    [<RequireQualifiedAccess>]
+    module ApplicationState =
+        let mutable private applicationState = Off
+
+        let private changeTo (state: ApplicationState) (logger: ILogger) =
+            match applicationState, state with
+            | oldState, newState when oldState = newState ->
+                logger.LogDebug("Application state is not changed, it is already {state}", applicationState)
+
+            | Off, Building
+            | Building, Starting
+            | Starting, Running
+            | Retrying, Running
+            | Running, Retrying
+            | _, Stopping
+            | _, ShuttingDown
+            | ShuttingDown, Off ->
+                applicationState <- state
+                logger.LogDebug("Application state changed to {state}", applicationState)
+
+            | _ ->
+                logger.LogWarning("Application state is {state} and cannot be changed to {newState}", applicationState, state)
+
+        let build: ChangeApplicationState = changeTo Building
+        let start: ChangeApplicationState = changeTo Starting
+        let run: ChangeApplicationState = changeTo Running
+        let retry: ChangeApplicationState = changeTo Retrying
+        let stop: ChangeApplicationState = changeTo Stopping
+        let shutDown: ChangeApplicationState = changeTo ShuttingDown
+        let finish: ChangeApplicationState = changeTo Off
+
+        let private is state (logger: ILogger) () =
+            let result = applicationState = state
+
+            logger.LogDebug("Application state is {applicationState} and asking for {state} -> {result}", applicationState, state, result)
+            result
+
+        let isBuilding: IsApplicationState = is Building
+        let isStarting: IsApplicationState = is Starting
+        let isRunning: IsApplicationState = is Running
+        let isRetrying: IsApplicationState = is Retrying
+        let isStopping: IsApplicationState = is Stopping
+        let isShuttingDown: IsApplicationState = is ShuttingDown
+
+        let isOneOf: IsOneOfApplicationStates = fun logger states ->
+            let result = states |> List.contains applicationState
+
+            logger.LogDebug("Application state is {applicationState} and asking for {states} -> {result}", applicationState, (states |> List.map string |> String.concat ", "), result)
+            result
+
+    [<AutoOpen>]
+    module GracefulShutdownHandlers =
+        open System
+        open System.Threading
+        open System.Runtime.InteropServices
+
+        type Cancellations =
+            {
+                Main: CancellationTokenSource
+                Children: CancellationTokenSource
+            }
+
+            interface IDisposable with
+                member this.Dispose() =
+                    this.Children.Dispose()
+                    this.Main.Dispose()
+
+        /// GracefulShutdown handler, it will unregister all handlers upon dispose
+        type GracefulShutdown =
+            private {
+                Logger: ILogger
+                SignalHandler: PosixSignalRegistration
+                ConsoleCancelEventHandler: ConsoleCancelEventHandler
+            }
+
+            interface IDisposable with
+                member this.Dispose () =
+                    this.Logger.LogDebug("Disposing graceful shutdown handlers ...")
+                    this.SignalHandler.Dispose()
+                    Console.CancelKeyPress.RemoveHandler(this.ConsoleCancelEventHandler)
+
+        [<RequireQualifiedAccess>]
+        module GracefulShutdown =
+            type private Stop = {
+                Gracefully: unit -> unit
+                Immediately: unit -> unit
+            }
+
+            let private handler (logger: ILogger) cancellations stop =
+                if ApplicationState.isOneOf logger [ Retrying; Stopping; ShuttingDown ]
+                then
+                    logger.LogInformation("Immediately stopping the application ...")
+                    ApplicationState.shutDown logger
+
+                    cancellations.Children.Cancel()
+                    cancellations.Main.Cancel()
+
+                    stop.Immediately()
+                else
+                    logger.LogInformation("Gracefully stopping the application ...")
+                    ApplicationState.stop logger
+
+                    cancellations.Children.Cancel()
+                    stop.Gracefully()
+
+            let private enableSignalHandler (logger: ILogger) cancellations =
+                PosixSignalRegistration.Create(PosixSignal.SIGTERM, fun arg ->
+                    logger.LogDebug("PosixSignal {signal}", arg.Signal)
+
+                    handler logger cancellations {
+                        Gracefully = fun () -> arg.Cancel <- true
+                        Immediately = fun () -> arg.Cancel <- false
+                    }
+                )
+
+            let private enableConsoleKeyPressHandler (logger: ILogger) cancellations =
+                ConsoleCancelEventHandler (fun _ arg ->
+                    logger.LogDebug("CancelKeyPress {key}", arg.SpecialKey)
+
+                    handler logger cancellations {
+                        Gracefully = fun () -> arg.Cancel <- true
+                        Immediately = fun () -> arg.Cancel <- false
+                    }
+                )
+                |> tee Console.CancelKeyPress.AddHandler
+
+            let enable logger cancellations =
+                {
+                    Logger = logger
+                    SignalHandler = enableSignalHandler logger cancellations
+                    ConsoleCancelEventHandler = enableConsoleKeyPressHandler logger cancellations
+                }
+
 [<RequireQualifiedAccess>]
 module LoggerFactory =
     open System.IO
-    open Microsoft.Extensions.Logging
     open Lmc.Environment
     open Lmc.ServiceIdentification
     open Lmc.Logging
@@ -148,7 +294,6 @@ module internal AppRootStatus =
 [<RequireQualifiedAccess>]
 module internal WebServer =
     open Microsoft.Extensions.DependencyInjection
-    open Microsoft.Extensions.Logging
 
     open Giraffe
     open Saturn
@@ -185,3 +330,19 @@ module internal WebServer =
                     .AddGiraffe()
             )
         }
+
+[<RequireQualifiedAccess>]
+module internal Async =
+    open System.Threading
+
+    let startAndAllowCancellation (logger: ILogger) (name: string) (cancellation: CancellationTokenSource) xA =
+        logger.LogDebug("Start {name} in the background.", name)
+        Async.Start(xA, cancellationToken = cancellation.Token)
+
+    let runSynchronouslyAndAllowCancellation (logger: ILogger) (name: string) (cancellation: CancellationTokenSource) xA =
+        logger.LogDebug("Run {name} synchronously.", name)
+        Async.RunSynchronously(xA, cancellationToken = cancellation.Token)
+
+    let runSynchronouslyAndFinishTheTask (logger: ILogger) (name: string) xA =
+        logger.LogDebug("Run {name} synchronously.", name)
+        Async.RunSynchronously(xA)

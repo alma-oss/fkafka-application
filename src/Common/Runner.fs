@@ -1,6 +1,8 @@
 namespace Lmc.KafkaApplication
 
 module internal ApplicationRunner =
+    open System
+    open System.Threading
     open Microsoft.Extensions.Logging
     open Lmc.Kafka
     open Lmc.ServiceIdentification
@@ -19,20 +21,20 @@ module internal ApplicationRunner =
             let enable = ResourceAvailability.enable instance >> ignore
             let disable = ResourceAvailability.disable instance >> ignore
 
-            let resourceLogger = application.LoggerFactory.CreateLogger "KafkaApplication.Resource"
-            let debugResourceResult resource = sprintf "Checked %A with %A" resource >> resourceLogger.LogTrace
+            let logger = application.LoggerFactory.CreateLogger "KafkaApplication.Resource"
+            let debugResourceResult resource = sprintf "Checked %A with %A" resource >> logger.LogTrace
 
             application.IntervalResourceCheckers
             |> List.rev
             |> List.map (fun { Resource = resource; Interval = interval; Checker = checker } ->
-                async {
+                resource, async {
                     let intervalInMilliseconds = (int interval) * 1000
-                    resourceLogger.LogDebug("Start checking for {resource} in interval of {interval}s", resource, interval)
+                    logger.LogDebug("Start checking for {resource} in interval of {interval}s", resource, interval)
 
                     while true do
-                        resourceLogger.LogTrace("Check {resource}", resource)
+                        logger.LogTrace("Check {resource}", resource)
                         let result = checker()
-                        resourceLogger.LogTrace("Checked {resource} with {result}", resource, result)
+                        logger.LogTrace("Checked {resource} with {result}", resource, result)
 
                         match result with
                         | Up -> enable resource
@@ -41,7 +43,10 @@ module internal ApplicationRunner =
                         do! Async.Sleep intervalInMilliseconds
                 }
             )
-            |> List.iter Async.Start
+            |> List.iter (fun (resource, check) ->
+                check
+                |> Async.startAndAllowCancellation logger $"Check resource {resource}" application.Cancellation.Children
+            )
 
         let internal wait (seconds: int<Lmc.KafkaApplication.Second>) =
             Async.Sleep(TimeSpan.FromSeconds (float seconds))
@@ -51,25 +56,36 @@ module internal ApplicationRunner =
                 return application.Producers |> Map.map (fun _ -> connectProducer)
             with
             | e ->
-                let applicationLogger = application.LoggerFactory.CreateLogger "KafkaApplication.ConnectProducers"
+                let logger = application.LoggerFactory.CreateLogger "KafkaApplication.ConnectProducers"
 
-                applicationLogger.LogError("Producer error: {error}", e)
-                let log = applicationLogger.LogInformation
+                logger.LogError("Producer error: {error}", e)
+                let log = logger.LogInformation
+                let isApplicationRunning = ApplicationState.isRunning logger ()
 
-                match application.ProducerErrorHandler applicationLogger e with
+                match application.ProducerErrorHandler logger e with
+                | ProducerErrorPolicy.Retry | ProducerErrorPolicy.RetryIn _ when not isApplicationRunning ->
+                    log "Application is not running, so retry is not possible."
+                    return raise e
+
                 | ProducerErrorPolicy.Shutdown ->
                     log "Producer could not connect, application will shutdown."
                     return failwithf "Producer could not connect due to:\n\t%A" e.Message
+
                 | ProducerErrorPolicy.ShutdownIn seconds ->
                     log <| sprintf "Producer could not connect, application will shutdown in %i seconds." seconds
+                    ApplicationState.shutDown logger
                     do! wait seconds
                     return failwithf "Producer could not connect due to:\n\t%A" e.Message
+
                 | ProducerErrorPolicy.Retry ->
                     log "Producer could not connect, try again."
                     return! connectProducersWithErrorHandling connectProducer application
+
                 | ProducerErrorPolicy.RetryIn seconds ->
                     log <| sprintf "Producer could not connect, try again in %i seconds." seconds
+                    ApplicationState.retry logger
                     do! wait seconds
+                    ApplicationState.run logger
                     return! connectProducersWithErrorHandling connectProducer application
         }
 
@@ -84,27 +100,35 @@ module internal ApplicationRunner =
                 .LogDebug "Instance started produced."
 
         let private consume<'InputEvent>
+            cancellation
             (logger: ILogger)
-            (consumeEvents: ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
+            (consumeEvents: ConsumeEventsWithConfiguration<'InputEvent>)
             (incrementInputCount: 'InputEvent -> unit)
             (configuration: ConsumerConfiguration)
             : RuntimeConsumeHandler<'InputEvent> -> unit =
 
-            let handleEvent handle (event: ParsedEventResult<'InputEvent>): unit =
-                match event with
+            let handleEvent (handle: TracedEvent<'InputEvent> -> IO<unit>) (event: ParsedEventAsyncResult<'InputEvent>): Async<unit> = async {
+                match! event with
                 | Ok event ->
                     use handledEvent =
                         event.Message
                         |> TracedEvent.startHandle
                         |> tee (TracedEvent.event >> incrementInputCount)
-                        |> tee (fun event ->
-                            try handle event
-                            with e ->
-                                event.Trace
-                                |> Trace.addError (TracedError.ofExn e)
-                                |> Trace.finish
-                                raise e
-                        )
+
+                    try
+                        match! handle handledEvent with
+                        | Ok () -> ()
+                        | Error (RuntimeError e) -> raise e
+                        | Error error ->
+                            error
+                            |> ErrorMessage.value
+                            |> String.concat "\n"
+                            |> failwithf "Handle event failed on error: %s"
+                    with e ->
+                        handledEvent.Trace
+                        |> Trace.addError (TracedError.ofExn e)
+                        |> Trace.finish
+                        raise e
 
                     match event.Commit |> ManualCommit.execute with
                     | Ok () -> ()
@@ -123,18 +147,24 @@ module internal ApplicationRunner =
                     raise (Confluent.Kafka.KafkaException(Confluent.Kafka.Error(Confluent.Kafka.ErrorCode.Local_Fail, "PreviousMessageWasNotCommited")))
                 | Error (ConsumeError.KafkaException e) -> raise e
                 | Error e -> failwithf "%A" e
+            }
 
             function
             | Events eventsHandler ->
+                let topic = configuration.Connection.Topic |> StreamName.value
+                logger.LogDebug("Starting to consume events from {topic}", topic)
+
                 configuration
                 |> consumeEvents
-                |> Seq.iter (handleEvent eventsHandler)
+                |> Seq.takeWhile (ignore >> ApplicationState.isRunning logger)
+                |> Seq.iter (handleEvent eventsHandler >> Async.runSynchronouslyAndFinishTheTask logger $"Consume events from {topic}")
 
         let rec private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
+            cancellation
             (loggerFactory: ILoggerFactory)
             (runtimeParts: ConsumeRuntimeParts<'OutputEvent>)
             flushProducers
-            (consumeEvents: ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
+            consumeEvents
             (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) = async {
 
             let logger = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
@@ -142,31 +172,42 @@ module internal ApplicationRunner =
                 try
                     consumeHandler.Handler
                     |> ConsumeHandler.toRuntime runtimeParts
-                    |> consume logger consumeEvents consumeHandler.IncrementInputCount consumeHandler.Configuration
+                    |> consume cancellation logger (consumeEvents runtimeParts) consumeHandler.IncrementInputCount consumeHandler.Configuration
                 with
                 | e ->
                     logger.LogError("Consume events ends with {error}", e)
                     let log = logger.LogInformation
+                    let isApplicationRunning = ApplicationState.isRunning logger ()
 
                     match consumeHandler.OnError logger e with
+                    | Retry | RetryIn _ when not isApplicationRunning ->
+                        log "Application is not running, so retry is not possible."
+
+                    | Continue when not isApplicationRunning ->
+                        log "Application is not running, so retry is not possible."
+
                     | Retry ->
                         log "Retry current consume ..."
-                        return! consumeWithErrorHandling loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
+                        return! consumeWithErrorHandling cancellation loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
 
                     | RetryIn seconds ->
                         log <| sprintf "Retry current consume in %i seconds ..." seconds
+                        ApplicationState.retry logger
                         do! wait seconds
-                        return! consumeWithErrorHandling loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
+                        ApplicationState.run logger
+                        return! consumeWithErrorHandling cancellation loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
 
                     | Continue ->
                         log "Continue to next consume ..."
 
                     | Shutdown ->
                         log "Shutting down the application ..."
+                        ApplicationState.shutDown logger
                         raise e
 
                     | ShutdownIn seconds ->
                         log <| sprintf "Shutting down the application in %i seconds ..." seconds
+                        ApplicationState.shutDown logger
                         do! wait seconds
                         raise e
             finally
@@ -181,15 +222,14 @@ module internal ApplicationRunner =
             |> List.iter action
 
         let run<'InputEvent, 'OutputEvent>
-            (consumeEvents: ParseInputEvent<'InputEvent> -> ConsumerConfiguration -> ParsedEventResult<'InputEvent> seq)
             connectProducer
             produceSingleMessage
             flushProducer
             closeProducer
             (application: KafkaApplicationParts<'InputEvent, 'OutputEvent>) = asyncResult {
-                let applicationLogger = application.LoggerFactory.CreateLogger "KafkaApplication"
-                applicationLogger.LogInformation "Starts ..."
-                applicationLogger.LogDebug("With configuration: {configuration}", application)
+                let logger = application.LoggerFactory.CreateLogger "KafkaApplication"
+                ApplicationState.run logger
+                logger.LogDebug("With configuration: {configuration}", application)
 
                 let instance =
                     application.Box
@@ -216,14 +256,14 @@ module internal ApplicationRunner =
                     |> WebServer.web application.LoggerFactory showMetrics showStatus
                     |> Saturn.Application.run
                 }
-                |> Async.Start
+                |> Async.startAndAllowCancellation logger "WebServer" application.Cancellation.Children
 
-                applicationLogger.LogDebug "Connect producers ..."
+                logger.LogDebug "Connect producers ..."
                 let! connectedProducers =
                     application
                     |> connectProducersWithErrorHandling connectProducer
                     |> AsyncResult.ofAsyncCatch List.singleton
-                applicationLogger.LogDebug "All producers are connected."
+                logger.LogDebug "All producers are connected."
 
                 let doWithAllProducers = doWithAllProducers connectedProducers
 
@@ -237,74 +277,76 @@ module internal ApplicationRunner =
 
                 let flushAllProducers () = flushProducer |> doWithAllProducers
 
-                let parseEvent = application.ParseEvent runtimeParts
-                let consumeEvents = consumeEvents parseEvent
-
                 try
                     do!
                         application.ConsumeHandlers
                         |> List.rev
-                        |> List.map (consumeWithErrorHandling application.LoggerFactory runtimeParts flushAllProducers consumeEvents)
+                        |> List.map (consumeWithErrorHandling application.Cancellation.Children application.LoggerFactory runtimeParts flushAllProducers application.ConsumeEvents)
                         |> AsyncResult.ofSequentialAsyncs id
                         |> AsyncResult.ignore
                 finally
-                    applicationLogger.LogDebug "Close producers ..."
+                    ApplicationState.shutDown logger
+                    logger.LogDebug "Close producers ..."
                     closeProducer |> doWithAllProducers
         }
 
         let runCustomTasks (app: KafkaApplicationParts<_,_>) =
-            let customTaskLogger = app.LoggerFactory.CreateLogger "KafkaApplication.CustomTask"
+            let logger = app.LoggerFactory.CreateLogger "KafkaApplication.CustomTask"
 
-            let rec runSafely (CustomTask (restartPolicy, task)) =
+            let rec runSafely (CustomTask (CustomTaskName name, restartPolicy, task) as currentTask) =
                 let onError (error: exn) =
-                    customTaskLogger.LogError("Custom task ends with {error}", error)
+                    logger.LogError("Custom task ends with {error}", error)
 
                     match restartPolicy with
                     | TaskErrorPolicy.Ignore -> ()
-                    | TaskErrorPolicy.Restart -> CustomTask (restartPolicy, task) |> runSafely
+                    | TaskErrorPolicy.Restart -> currentTask |> runSafely
 
                 task
                 |> AsyncResult.ofAsyncCatch id
                 |> AsyncResult.teeError onError
                 |> Async.Ignore
-                |> Async.Start
+                |> Async.startAndAllowCancellation logger $"Custom Task {name}" app.Cancellation.Children
 
             app.CustomTasks
             |> List.iter runSafely
 
-    let runKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
+    let startKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
         fun beforeRun (KafkaApplication application) ->
             match application with
             | Ok app ->
+                let logger = app.LoggerFactory.CreateLogger "KafkaApplication"
+
                 try
-                    let consume parseEvent configuration: ParsedEventResult<'InputEvent> seq =
-                        Consumer.consume configuration (Event.parse parseEvent)
+                    use cancellation = app.Cancellation
+
+                    use _ = GracefulShutdown.enable logger cancellation
+                    ApplicationState.start logger
 
                     app
                     |> tee beforeRun
                     |> tee KafkaApplicationRunner.runCustomTasks
                     |> KafkaApplicationRunner.run
-                        consume
                         Producer.connect
                         Producer.produceSingle
                         Producer.flush
                         Producer.close
-                    |> Async.RunSynchronously
+                    |> Async.runSynchronouslyAndAllowCancellation logger "Application Run" cancellation.Main
                     |> Result.orFail
 
                     Successfully
                 with
                 | error ->
-                    let logger = app.LoggerFactory.CreateLogger "KafkaApplication"
                     error
-                    |> sprintf "Exception:\n%A"
-                    |> tee (logger.LogError >> fun _ ->
-                        logger.LogInformation "Shutting down with runtime error ..."
-                        System.Threading.Thread.Sleep 2 // Main thread waits till logger logs error message
+                    |> tee (
+                        sprintf "Exception:\n%A"
+                        >> logger.LogError
+                        >> fun _ -> logger.LogInformation "Shutting down with runtime error ..."
                     )
+                    |> RuntimeError
                     |> WithRuntimeError
 
             | Error error ->
                 error
                 |> sprintf "[Critical Error] Application cannot start because of %A"
+                |> ErrorMessage
                 |> WithCriticalError

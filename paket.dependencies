@@ -12,13 +12,13 @@ git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nug
 # LMC Nuget dependencies:
 nuget Lmc.ApplicationStatus ~> 2.0
 nuget Lmc.Environment ~> 7.0
-nuget Lmc.ErrorHandling ~> 6.0
-nuget Lmc.Kafka ~> 20.2
+nuget Lmc.ErrorHandling ~> 6.1
+nuget Lmc.Kafka ~> 21.0
 nuget Lmc.Logging ~> 6.0
 nuget Lmc.Metrics ~> 6.1
 nuget Lmc.ServiceIdentification ~> 6.0
-nuget Lmc.Tracing ~> 4.0
-nuget Lmc.WebApplication ~> 3.1
+nuget Lmc.Tracing ~> 5.0
+nuget Lmc.WebApplication ~> 3.2
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk

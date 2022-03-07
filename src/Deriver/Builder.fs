@@ -19,7 +19,7 @@ module DeriverBuilder =
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option)
             (configuration: Configuration<'InputEvent, 'OutputEvent>): Configuration<'InputEvent, 'OutputEvent> =
 
-            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) =
+            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) = asyncResult {
                 use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
 
                 let deriveEvent processedBy =
@@ -29,17 +29,23 @@ module DeriverBuilder =
                         | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
                     match deriveEvent with
-                    | DeriveEvent deriveEvent -> deriveEvent processedBy
-                    | DeriveEventResult deriveEvent -> deriveEvent processedBy >> Result.orFail
-                    | DeriveEventAsyncResult deriveEvent -> deriveEvent processedBy >> Async.RunSynchronously >> Result.orFail
+                    | DeriveEvent deriveEvent -> deriveEvent processedBy >> AsyncResult.ofSuccess
+                    | DeriveEventResult deriveEvent -> deriveEvent processedBy >> AsyncResult.ofResult
+                    | DeriveEventAsyncResult deriveEvent -> deriveEvent processedBy
 
-                eventToDerive
-                |> deriveEvent app.ProcessedBy
-                |> Seq.iter app.ProduceTo.[deriverOutputStream]
+                let! outputEvents =
+                    eventToDerive
+                    |> deriveEvent app.ProcessedBy
+
+                do!
+                    outputEvents
+                    |> List.map app.ProduceTo.[deriverOutputStream]
+                    |> IO.runList
+            }
 
             let configuration =
                 configuration
-                |> addDefaultConsumeHandler (ConsumeEvents deriveEventHandler)
+                |> addDefaultConsumeHandler (ConsumeEventsAsyncResult deriveEventHandler)
 
             match getCommonEvent with
             | Some getCommonEvent ->
