@@ -5,8 +5,8 @@ source https://api.nuget.org/v3/index.json
 nuget FSharp.Core ~> 6.0
 nuget FSharp.Data ~> 4.0
 nuget Newtonsoft.Json ~> 13.0
-nuget Giraffe 6.0.0-alpha-2
-nuget Saturn ~> 0.15
+nuget Giraffe ~> 6.0
+nuget Saturn ~> 0.16
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
@@ -18,7 +18,7 @@ nuget Lmc.Logging ~> 6.0
 nuget Lmc.Metrics ~> 6.1
 nuget Lmc.ServiceIdentification ~> 6.0
 nuget Lmc.Tracing ~> 5.0
-nuget Lmc.WebApplication ~> 3.2
+nuget Lmc.WebApplication ~> 3.3
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk
