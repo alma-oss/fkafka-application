@@ -14,7 +14,7 @@ let tee f a =
 let main argv =
     let envFiles = [ "./.env" ]
 
-    use loggerFactory =
+    let loggerFactory =
         envFiles
         |> LoggerFactory.common {
             Instance = "INSTANCE"
@@ -24,6 +24,9 @@ let main argv =
             EnableTraceProvider = true
         }
         |> Result.orFail
+
+    printfn "Wait 20s before start ..."
+    System.Threading.Thread.Sleep 20_000
 
     RealLifeExample.Program.run envFiles loggerFactory
     |> ApplicationShutdown.withStatusCodeAndLogResult loggerFactory

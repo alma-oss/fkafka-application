@@ -630,13 +630,11 @@ module ApplicationShutdown =
     let withStatusCodeAndLogResult (loggerFactory: ILoggerFactory) = function
         | Successfully -> 0
         | WithCriticalError error ->
-            loggerFactory
-                .CreateLogger("KafkaApplication")
+            (LoggerFactory.createLogger loggerFactory "KafkaApplication")
                 .LogCritical("Application shutdown with critical error: {error}", error)
             1
         | WithRuntimeError error ->
-            loggerFactory
-                .CreateLogger("KafkaApplication")
+            (LoggerFactory.createLogger loggerFactory "KafkaApplication")
                 .LogCritical("Application shutdown with runtime error: {error}", error)
             1
 

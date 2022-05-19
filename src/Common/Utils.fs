@@ -233,6 +233,9 @@ module LoggerFactory =
         ]
     }
 
+    let internal createLogger (loggerFactory: ILoggerFactory) name =
+        loggerFactory.CreateLogger(name)
+
 [<RequireQualifiedAccess>]
 module internal AppRootStatus =
     open Lmc.ErrorHandling

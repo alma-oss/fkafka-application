@@ -35,7 +35,7 @@ type PatternRuntimeParts = {
 [<AutoOpen>]
 module internal PatternUtils =
     let patternLogger (PatternName name) (loggerFactory: ILoggerFactory) =
-        loggerFactory.CreateLogger($"KafkaApplication.Pattern<{name}>")
+        LoggerFactory.createLogger loggerFactory ($"KafkaApplication.Pattern<{name}>")
 
 [<RequireQualifiedAccess>]
 module internal PatternRuntimeParts =

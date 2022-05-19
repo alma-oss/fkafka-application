@@ -73,7 +73,7 @@ module internal Filter =
             (configuration: FilterConfiguration<'FilterValue>)
             (tracedEvent: TracedEvent<'InputEvent>) =
 
-            let logger = loggerFactory.CreateLogger("FilterEvent")
+            let logger = LoggerFactory.createLogger loggerFactory "FilterEvent"
             let inputEvent = tracedEvent |> TracedEvent.event
 
             let commonEvent: CommonEvent =
