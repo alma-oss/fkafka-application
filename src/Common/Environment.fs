@@ -14,7 +14,7 @@ module EnvironmentBuilder =
     open Lmc.ErrorHandling.Option.Operators
 
     type EnvironmentBuilder internal (loggerFactory: ILoggerFactory) =
-        let logger = loggerFactory.CreateLogger "KafkaApplication.Environment"
+        let logger = LoggerFactory.createLogger loggerFactory "KafkaApplication.Environment"
 
         let debugConfiguration (parts: ConfigurationParts<_, _>) =
             logger.LogTrace("Configuration: {configuration}", parts)

@@ -227,8 +227,7 @@ module ApplicationBuilder =
             result {
                 let! configurationParts = configuration
 
-                let loggerFactory = configurationParts.LoggerFactory
-                let logger = loggerFactory.CreateLogger("KafkaApplication.Build")
+                let logger = LoggerFactory.createLogger configurationParts.LoggerFactory "KafkaApplication.Build"
                 ApplicationState.build logger
 
                 //
@@ -279,7 +278,7 @@ module ApplicationBuilder =
                 }
 
                 // kafka parts
-                let kafkaLogger runtimeConnection = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" runtimeConnection)
+                let kafkaLogger runtimeConnection = LoggerFactory.createLogger configurationParts.LoggerFactory (sprintf "KafkaApplication.Kafka<%s>" runtimeConnection)
                 let kafkaChecker brokerList = kafkaChecker |> ResourceChecker.updateResourceStatusOnCheck instance brokerList
                 let kafkaIntervalChecker brokerList = kafkaIntervalChecker |> ResourceChecker.updateResourceStatusOnIntervalCheck instance brokerList
 
@@ -360,7 +359,7 @@ module ApplicationBuilder =
                 let setMetric = ApplicationMetrics.setCustomMetricValue instance
 
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
-                    LoggerFactory = loggerFactory
+                    LoggerFactory = configurationParts.LoggerFactory
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
                     Box = box
@@ -391,7 +390,7 @@ module ApplicationBuilder =
                 let customTasks =
                     configurationParts.CustomTasks
                     |> CustomTasks.prepare {
-                        LoggerFactory = loggerFactory
+                        LoggerFactory = configurationParts.LoggerFactory
                         Box = box
                         Environment = environment
                         IncrementMetric = incrementMetric
@@ -401,7 +400,7 @@ module ApplicationBuilder =
                     }
 
                 return {
-                    LoggerFactory = loggerFactory
+                    LoggerFactory = configurationParts.LoggerFactory
                     Cancellation = cancellation
                     Environment = environment
                     Box = box

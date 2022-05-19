@@ -21,7 +21,7 @@ module internal ApplicationRunner =
             let enable = ResourceAvailability.enable instance >> ignore
             let disable = ResourceAvailability.disable instance >> ignore
 
-            let logger = application.LoggerFactory.CreateLogger "KafkaApplication.Resource"
+            let logger = LoggerFactory.createLogger application.LoggerFactory "KafkaApplication.Resource"
             let debugResourceResult resource = sprintf "Checked %A with %A" resource >> logger.LogTrace
 
             application.IntervalResourceCheckers
@@ -56,7 +56,7 @@ module internal ApplicationRunner =
                 return application.Producers |> Map.map (fun _ -> connectProducer)
             with
             | e ->
-                let logger = application.LoggerFactory.CreateLogger "KafkaApplication.ConnectProducers"
+                let logger = LoggerFactory.createLogger application.LoggerFactory "KafkaApplication.ConnectProducers"
 
                 logger.LogError("Producer error: {error}", e)
                 let log = logger.LogInformation
@@ -95,12 +95,10 @@ module internal ApplicationRunner =
             |> InstanceStartedEvent.fromDomain Serializer.toJson
             |> produceSingleMessage supervisionProducer
 
-            loggerFactory
-                .CreateLogger("KafkaApplication.Supervision")
+            (LoggerFactory.createLogger loggerFactory "KafkaApplication.Supervision")
                 .LogDebug "Instance started produced."
 
         let private consume<'InputEvent>
-            cancellation
             (logger: ILogger)
             (consumeEvents: ConsumeEventsWithConfiguration<'InputEvent>)
             (incrementInputCount: 'InputEvent -> unit)
@@ -110,38 +108,39 @@ module internal ApplicationRunner =
             let handleEvent (handle: TracedEvent<'InputEvent> -> IO<unit>) (event: ParsedEventAsyncResult<'InputEvent>): Async<unit> = async {
                 match! event with
                 | Ok event ->
-                    use handledEvent =
+                    let handledEvent =
                         event.Message
                         |> TracedEvent.startHandle
                         |> tee (TracedEvent.event >> incrementInputCount)
 
                     try
                         match! handle handledEvent with
-                        | Ok () -> ()
+                        | Ok () ->
+                            match event.Commit |> ManualCommit.execute with
+                            | Ok () -> handledEvent.Finish()
+                            | Error commitError ->
+                                logger.LogError("Event was handled but manual commit failed with {manualCommitError}", commitError)
+
+                                handledEvent.Trace
+                                |> Trace.addError (TracedError.ofError (sprintf "%A") commitError)
+                                |> Trace.finish
+
+                                match commitError with
+                                | ManualCommitError.KafkaException e -> raise e
+                                | e -> failwithf "%A" e
+
                         | Error (RuntimeError e) -> raise e
                         | Error error ->
                             error
                             |> ErrorMessage.value
                             |> String.concat "\n"
                             |> failwithf "Handle event failed on error: %s"
+
                     with e ->
                         handledEvent.Trace
                         |> Trace.addError (TracedError.ofExn e)
                         |> Trace.finish
                         raise e
-
-                    match event.Commit |> ManualCommit.execute with
-                    | Ok () -> ()
-                    | Error commitError ->
-                        logger.LogError("Event was handled but manual commit failed with {manualCommitError}", commitError)
-
-                        handledEvent.Trace
-                        |> Trace.addError (TracedError.ofError (sprintf "%A") commitError)
-                        |> ignore
-
-                        match commitError with
-                        | ManualCommitError.KafkaException e -> raise e
-                        | e -> failwithf "%A" e
 
                 | Error ConsumeError.PreviousMessageWasNotCommited ->
                     raise (Confluent.Kafka.KafkaException(Confluent.Kafka.Error(Confluent.Kafka.ErrorCode.Local_Fail, "PreviousMessageWasNotCommited")))
@@ -160,19 +159,18 @@ module internal ApplicationRunner =
                 |> Seq.iter (handleEvent eventsHandler >> Async.runSynchronouslyAndFinishTheTask logger $"Consume events from {topic}")
 
         let rec private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
-            cancellation
             (loggerFactory: ILoggerFactory)
             (runtimeParts: ConsumeRuntimeParts<'OutputEvent>)
             flushProducers
             consumeEvents
             (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) = async {
 
-            let logger = loggerFactory.CreateLogger (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
+            let logger = LoggerFactory.createLogger loggerFactory (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
             try
                 try
                     consumeHandler.Handler
                     |> ConsumeHandler.toRuntime runtimeParts
-                    |> consume cancellation logger (consumeEvents runtimeParts) consumeHandler.IncrementInputCount consumeHandler.Configuration
+                    |> consume logger (consumeEvents runtimeParts) consumeHandler.IncrementInputCount consumeHandler.Configuration
                 with
                 | e ->
                     logger.LogError("Consume events ends with {error}", e)
@@ -188,14 +186,14 @@ module internal ApplicationRunner =
 
                     | Retry ->
                         log "Retry current consume ..."
-                        return! consumeWithErrorHandling cancellation loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
+                        return! consumeWithErrorHandling loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
 
                     | RetryIn seconds ->
                         log <| sprintf "Retry current consume in %i seconds ..." seconds
                         ApplicationState.retry logger
                         do! wait seconds
                         ApplicationState.run logger
-                        return! consumeWithErrorHandling cancellation loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
+                        return! consumeWithErrorHandling loggerFactory runtimeParts flushProducers consumeEvents consumeHandler
 
                     | Continue ->
                         log "Continue to next consume ..."
@@ -227,7 +225,7 @@ module internal ApplicationRunner =
             flushProducer
             closeProducer
             (application: KafkaApplicationParts<'InputEvent, 'OutputEvent>) = asyncResult {
-                let logger = application.LoggerFactory.CreateLogger "KafkaApplication"
+                let logger = LoggerFactory.createLogger application.LoggerFactory "KafkaApplication"
                 ApplicationState.run logger
                 logger.LogDebug("With configuration: {configuration}", application)
 
@@ -281,7 +279,7 @@ module internal ApplicationRunner =
                     do!
                         application.ConsumeHandlers
                         |> List.rev
-                        |> List.map (consumeWithErrorHandling application.Cancellation.Children application.LoggerFactory runtimeParts flushAllProducers application.ConsumeEvents)
+                        |> List.map (consumeWithErrorHandling application.LoggerFactory runtimeParts flushAllProducers application.ConsumeEvents)
                         |> AsyncResult.ofSequentialAsyncs id
                         |> AsyncResult.ignore
                 finally
@@ -291,7 +289,7 @@ module internal ApplicationRunner =
         }
 
         let runCustomTasks (app: KafkaApplicationParts<_,_>) =
-            let logger = app.LoggerFactory.CreateLogger "KafkaApplication.CustomTask"
+            let logger = LoggerFactory.createLogger app.LoggerFactory "KafkaApplication.CustomTask"
 
             let rec runSafely (CustomTask (CustomTaskName name, restartPolicy, task) as currentTask) =
                 let onError (error: exn) =
@@ -314,7 +312,7 @@ module internal ApplicationRunner =
         fun beforeRun (KafkaApplication application) ->
             match application with
             | Ok app ->
-                let logger = app.LoggerFactory.CreateLogger "KafkaApplication"
+                let logger = LoggerFactory.createLogger app.LoggerFactory "KafkaApplication"
 
                 try
                     use cancellation = app.Cancellation

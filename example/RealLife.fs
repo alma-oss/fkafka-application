@@ -57,6 +57,9 @@ module App =
             ("output_stream", outputStream |> StreamName.value)
         ] *)
 
+    if Tracer.Check.isTracerAvailable() |> not then
+        failwithf "Tracer is not available\n%A" <| Tracer.Check.environment()
+
     let kafkaApplicationExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _> =
         kafkaApplication {
             useLoggerFactory loggerFactory
@@ -82,33 +85,34 @@ module App =
             showAppRootStatus
 
             consume (fun app { Event = event; Trace = trace } -> asyncResult {
-                printfn "------------------------------------------------------"
-                let consumeTrace =
-                    "consume event in example"
+                printfn ">-----------------------------------------------------"
+                let logger = app.LoggerFactory.CreateLogger("Consume")
+
+                logger.LogInformation("Start consuming event: {event} ({trace})", event, (trace |> Trace.id))
+                use consumeTrace =
+                    "handle event in example"
                     |> Trace.ChildOf.start trace
 
-                let logger = app.LoggerFactory.CreateLogger("Consume")
                 logger |> Consumer.logLastMessageManuallyCommittedState
 
                 app.Connections[Connections.Default]
                 |> printfn "Connection:\n%A\n"
-                |> ignore
 
-                logger.LogInformation("Start consuming event: {event} ({trace})", event, (consumeTrace |> Trace.id))
+                logger.LogInformation("Start handling event: {event} ({trace})", event, (consumeTrace |> Trace.id))
 
-                if Dice.isRollOver 5 then
-                    // simulation of error, which leads to skip the commit
-                    logger.LogInformation("SKIP event: {event}", event)
-                    consumeTrace |> Trace.addTags [ "skip", "true" ] |> ignore
-                    failwithf "SKIP event"
+                // if Dice.isRollOver 5 then
+                //     // simulation of error, which leads to skip the commit
+                //     logger.LogInformation("SKIP event: {event}", event)
+                //     consumeTrace |> Trace.addTags [ "skip", "true" ] |> ignore
+                //     failwithf "SKIP event"
 
                 logger.LogInformation("Consumed and processing event: {event} ...", event)
-                do! AsyncResult.sleep 2000
+                do! AsyncResult.sleep 100
 
                 logger.LogInformation("Consumed and processed event: {event}", event)
-                consumeTrace |> Trace.addTags [ "skip", "false" ] |> ignore
+                //consumeTrace |> Trace.addTags [ "skip", "false" ] |> ignore
 
-                printfn "------------------------------------------------------"
+                printfn "-----------------------------------------------------<"
                 return ()
             })
         }
@@ -187,8 +191,8 @@ module App =
 
 module Program =
     let run envFiles loggerFactory =
-        // App.kafkaApplicationExample
-        App.deriverExample
+        App.kafkaApplicationExample
+        // App.deriverExample
             envFiles
             loggerFactory
         |> run

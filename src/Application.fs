@@ -5,6 +5,7 @@ module KafkaApplication =
     open System
     open Microsoft.Extensions.Logging
     open Lmc.Kafka
+    open Lmc.Tracing
     open ApplicationBuilder
     open ApplicationRunner
     open Lmc.KafkaApplication.Filter
@@ -28,11 +29,11 @@ module KafkaApplication =
             member this.Logger
                 with get () =
                     match this with
-                    | CustomApplication app -> app.LoggerFactory.CreateLogger "CustomApplication"
-                    | FilterContentFilter (FilterApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "FilterContentFilter"
-                    | ContentBasedRouter (ContentBasedRouterApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "ContentBasedRouter"
-                    | Deriver (DeriverApplication (Ok { Application = app })) -> app.LoggerFactory.CreateLogger "Deriver"
-                    | _ -> defaultLoggerFactory.CreateLogger("Application")
+                    | CustomApplication app -> LoggerFactory.createLogger app.LoggerFactory "CustomApplication"
+                    | FilterContentFilter (FilterApplication (Ok { Application = app })) -> LoggerFactory.createLogger app.LoggerFactory "FilterContentFilter"
+                    | ContentBasedRouter (ContentBasedRouterApplication (Ok { Application = app })) -> LoggerFactory.createLogger app.LoggerFactory "ContentBasedRouter"
+                    | Deriver (DeriverApplication (Ok { Application = app })) -> LoggerFactory.createLogger app.LoggerFactory "Deriver"
+                    | _ -> LoggerFactory.createLogger defaultLoggerFactory "Application"
 
     //
     // Application builders
@@ -74,4 +75,5 @@ module KafkaApplication =
             | Deriver deriverApplication -> DeriverRunner.runDeriver startKafkaApplication deriverApplication
         finally
             ApplicationState.finish application.Logger
+            Tracer.finishTracerProvider()
             System.Threading.Thread.Sleep(TimeSpan.FromSeconds 2.) // Main thread waits till logger logs error message

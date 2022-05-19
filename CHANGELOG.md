@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update dependencies
+    - [**BC**] Use `OpenTelemetry` tracing
 
 ## 20.1.0 - 2022-04-27
 - Update dependencies
