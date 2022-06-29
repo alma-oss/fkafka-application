@@ -17,8 +17,8 @@ nuget Lmc.Kafka ~> 22.0
 nuget Lmc.Logging ~> 6.0
 nuget Lmc.Metrics ~> 6.1
 nuget Lmc.ServiceIdentification ~> 6.0
-nuget Lmc.Tracing ~> 6.2
-nuget Lmc.WebApplication ~> 4.0
+nuget Lmc.Tracing ~> 6.5
+nuget Lmc.WebApplication ~> 4.1
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk
