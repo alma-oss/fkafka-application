@@ -307,6 +307,7 @@ module ApplicationBuilder =
                                 IntervalChecker = kafkaIntervalChecker connection.BrokerList |> Some
                                 ServiceStatus = serviceStatus |> Some
                                 Cancellation = Some cancellation.Children.Token
+                                CountLag = false
                                 CommitMessage = commitMessages.TryFind name <?=> defaultCommitMessage
                             }
                         )
