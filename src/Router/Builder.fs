@@ -16,7 +16,7 @@ module ContentBasedRouterBuilder =
         let private addRouterConfiguration<'InputEvent, 'OutputEvent, 'Dependencies>
             router
             routeToBrokerList
-            (routeEventHandler: RouteEventHandler<'InputEvent, 'OutputEvent>)
+            (routeEventHandler: RouteEventHandler<'InputEvent, 'OutputEvent, 'Dependencies>)
             (fromDomain: OutputFromDomain<'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)

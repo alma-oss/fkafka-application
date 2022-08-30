@@ -22,7 +22,7 @@ type internal PatternName = PatternName of string
 type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent, 'Dependencies> = RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> -> 'Pattern -> ApplicationShutdown
 
 /// Application pattern parts exposed in handlers
-type PatternRuntimeParts = {
+type PatternRuntimeParts<'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
     Environment: Map<string, string>
@@ -30,6 +30,7 @@ type PatternRuntimeParts = {
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
+    Dependencies: 'Dependencies option
 }
 
 [<AutoOpen>]
@@ -48,6 +49,7 @@ module internal PatternRuntimeParts =
             SetMetric = consumeRuntimeParts.SetMetric
             EnableResource = consumeRuntimeParts.EnableResource
             DisableResource = consumeRuntimeParts.DisableResource
+            Dependencies = consumeRuntimeParts.Dependencies
         }
 
 [<RequireQualifiedAccess>]
