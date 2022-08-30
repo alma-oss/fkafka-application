@@ -16,7 +16,7 @@ module EnvironmentBuilder =
     type EnvironmentBuilder internal (loggerFactory: ILoggerFactory) =
         let logger = LoggerFactory.createLogger loggerFactory "KafkaApplication.Environment"
 
-        let debugConfiguration (parts: ConfigurationParts<_, _>) =
+        let debugConfiguration (parts: ConfigurationParts<_, _, _>) =
             logger.LogTrace("Configuration: {configuration}", parts)
 
         let (>>=) (Configuration configuration) f =
@@ -27,7 +27,7 @@ module EnvironmentBuilder =
         let (<!>) state f =
             state >>= (f >> Ok)
 
-        let connectTo state connectionName (connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        let connectTo state connectionName (connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! brokerList =
@@ -51,7 +51,7 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError ConnectionConfigurationError
 
-        let connectManyTo state (connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        let connectManyTo state (connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! brokerList =
@@ -81,7 +81,7 @@ module EnvironmentBuilder =
                 }
                 |> Result.mapError ConnectionConfigurationError
 
-        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             { defaultParts
                 with
                     LoggerFactory = loggerFactory
@@ -90,11 +90,11 @@ module EnvironmentBuilder =
             |> Ok
             |> Configuration
 
-        member __.Run(state): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Run(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state
 
         [<CustomOperation("file")>]
-        member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent> =
+        member __.File(state, envFileLocations): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     do!
@@ -119,7 +119,7 @@ module EnvironmentBuilder =
                 |> Result.mapError EnvironmentError
 
         [<CustomOperation("check")>]
-        member __.Check(state, name, checker): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Check(state, name, checker): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! value =
@@ -138,7 +138,7 @@ module EnvironmentBuilder =
 
         /// Define required environment variables, all values must be presented in currently loaded Environment
         [<CustomOperation("require")>]
-        member __.Require(state, names): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Require(state, names): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! _ =
@@ -151,7 +151,7 @@ module EnvironmentBuilder =
                 |> Result.mapError RequiredEnvironmentVariablesErrors
 
         [<CustomOperation("instance")>]
-        member __.Instance(state, instanceVariableName): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Instance(state, instanceVariableName): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! instanceString =
@@ -167,7 +167,7 @@ module EnvironmentBuilder =
                 |> Result.mapError InstanceError
 
         [<CustomOperation("currentEnvironment")>]
-        member __.CurrentEnvironment(state, currentEnvironmentVariableName): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CurrentEnvironment(state, currentEnvironmentVariableName): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! currentEnvironmentString =
@@ -184,7 +184,7 @@ module EnvironmentBuilder =
                 |> Result.mapError CurrentEnvironmentError
 
         [<CustomOperation("dockerImageVersion")>]
-        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
+        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! dockerImageVersionString =
@@ -196,7 +196,7 @@ module EnvironmentBuilder =
                 |> Result.mapError EnvironmentError
 
         [<CustomOperation("spot")>]
-        member __.Spot(state, spotVariableName): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Spot(state, spotVariableName): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! spotString =
@@ -212,7 +212,7 @@ module EnvironmentBuilder =
                 |> Result.mapError SpotError
 
         [<CustomOperation("groupId")>]
-        member __.GroupId(state, groupIdVariableName): Configuration<'InputEvent, 'OutputEvent> =
+        member __.GroupId(state, groupIdVariableName): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun parts ->
                 result {
                     let! groupId =
@@ -224,23 +224,23 @@ module EnvironmentBuilder =
                 |> Result.mapError GroupIdError
 
         [<CustomOperation("supervision")>]
-        member __.Supervision(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Supervision(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             connectTo state Connections.Supervision connectionConfiguration
 
         [<CustomOperation("connect")>]
-        member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Connect(state, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             connectTo state Connections.Default connectionConfiguration
 
         [<CustomOperation("connectTo")>]
-        member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConnectTo(state, name, connectionConfiguration: EnvironmentConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             connectTo state (ConnectionName name) connectionConfiguration
 
         [<CustomOperation("connectManyToBroker")>]
-        member __.ConnectManyToBroker(state, connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConnectManyToBroker(state, connectionConfiguration: EnvironmentManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             connectManyTo state connectionConfiguration
 
         [<CustomOperation("ifSetDo")>]
-        member __.IfSetDo(state, name, action): Configuration<'InputEvent, 'OutputEvent> =
+        member __.IfSetDo(state, name, action): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts ->
                 name
                 |> parts.Environment.TryFind

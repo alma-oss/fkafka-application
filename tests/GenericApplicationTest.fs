@@ -6,6 +6,7 @@ open Lmc.KafkaApplication.Test
 open Lmc.ServiceIdentification
 open Lmc.Kafka
 open Lmc.ErrorHandling
+open Lmc.EnvironmentModel
 open Lmc.KafkaApplication
 open Lmc.KafkaApplication.Deriver
 open Lmc.KafkaApplication.Filter
@@ -16,12 +17,22 @@ let okOrFail = function
     | Error error -> failtestf "Fail on %A" error
 
 let instance (value: string) = Create.Instance(value) |> okOrFail
+let environment = Environment.parse >> okOrFail
 
 type InputEvent = string
 type OutputEvent = string
+type NoDependencies = NoDependencies
+
+type Dependencies = {
+    ServiceOne: ServiceOne
+    ServiceTwo: ServiceTwo
+}
+
+and ServiceOne = ServiceOne of string
+and ServiceTwo = ServiceTwo of string
 
 [<Tests>]
-let commitMessageTest =
+let genericApplicationTest =
     testList "KafkaApplication - generic application" [
         let fromDomain: FromDomain<OutputEvent> = fun _serialize m -> MessageToProduce.create (MessageKey.Simple "", m)
         let fromDomainResult: FromDomainResult<OutputEvent> = fun _serialize m -> MessageToProduce.create (MessageKey.Simple "", m) |> Ok
@@ -43,9 +54,9 @@ let commitMessageTest =
             ParseEventAsyncResult parseEventAsyncResult
         ]
 
-        let consumeEvents: ConsumeEvents<InputEvent, OutputEvent> = fun _parts _event -> ()
-        let consumeEventsResult: ConsumeEventsResult<InputEvent, OutputEvent> = fun _parts _event -> Ok ()
-        let consumeEventsAsyncResult: ConsumeEventsAsyncResult<InputEvent, OutputEvent> = fun _parts _event -> AsyncResult.ofSuccess ()
+        let consumeEvents: ConsumeEvents<InputEvent, OutputEvent, NoDependencies> = fun _parts _event -> ()
+        let consumeEventsResult: ConsumeEventsResult<InputEvent, OutputEvent, NoDependencies> = fun _parts _event -> Ok ()
+        let consumeEventsAsyncResult: ConsumeEventsAsyncResult<InputEvent, OutputEvent, NoDependencies> = fun _parts _event -> AsyncResult.ofSuccess ()
 
         let consumeEventAlternatives = [
             ConsumeEvents consumeEvents
@@ -267,5 +278,25 @@ let commitMessageTest =
             )
             |> ignore
 
+            Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
+
+        testCase "should allow initialize function which defines application dependencies" <| fun _ ->
+            let dependencies: Dependencies = {
+                ServiceOne = ServiceOne "ServiceOne"
+                ServiceTwo = ServiceTwo "ServiceTwo"
+            }
+
+            let consumeEventsWithDependencies: ConsumeEvents<InputEvent, OutputEvent, Dependencies> = fun parts _event ->
+                // Note: the test will not come this far, since it doesn't have any connection, but it shows, how dependencies can be reached
+                Expect.equal parts.Dependencies (Some dependencies) "Application should have correct dependencies"
+
+            let app: Application<InputEvent, OutputEvent, Dependencies, _> = kafkaApplication {
+                initialize (fun app ->
+                    { app with Dependencies = Some dependencies }
+                )
+                consume consumeEventsWithDependencies
+            }
+
+            ignore app
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
     ]

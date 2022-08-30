@@ -13,14 +13,14 @@ module ContentBasedRouterBuilder =
     let internal pattern = PatternName "ContentBasedRouter"
 
     module internal ContentBasedRouterApplicationBuilder =
-        let private addRouterConfiguration<'InputEvent, 'OutputEvent>
+        let private addRouterConfiguration<'InputEvent, 'OutputEvent, 'Dependencies>
             router
             routeToBrokerList
             (routeEventHandler: RouteEventHandler<'InputEvent, 'OutputEvent>)
             (fromDomain: OutputFromDomain<'OutputEvent>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent>)
-            (configuration: Configuration<'InputEvent, 'OutputEvent>): Result<Configuration<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError> =
+            (configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies>): Result<Configuration<'InputEvent, 'OutputEvent, 'Dependencies>, ContentBasedRouterApplicationError> =
             result {
                 let outputStreams = router |> Router.Configuration.getOutputStreams
 
@@ -36,7 +36,7 @@ module ContentBasedRouterBuilder =
                     outputStreams
                     |> List.map StreamName.value
 
-                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent>) (event: TracedEvent<'InputEvent>) = asyncResult {
+                let routerConsumeHandler (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) (event: TracedEvent<'InputEvent>) = asyncResult {
                     use eventToRoute = event |> TracedEvent.continueAs "Router" "Route event"
 
                     let routeEvent =
@@ -71,8 +71,8 @@ module ContentBasedRouterBuilder =
             <@> RouterConfigurationError
 
         let build
-            (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent>)
-            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent>): ContentBasedRouterApplication<'InputEvent, 'OutputEvent> =
+            (buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>)
+            (ContentBasedRouterApplicationConfiguration state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies>): ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
 
             result {
                 let! routerParts = state
@@ -102,7 +102,7 @@ module ContentBasedRouterBuilder =
             }
             |> ContentBasedRouterApplication
 
-    type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> 'a) =
+    type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'a) =
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
             |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)
@@ -127,16 +127,16 @@ module ContentBasedRouterBuilder =
                     return { routerParts with RouteToBrokerList = Some brokerList; FromDomain = Some fromDomain }
                 }
 
-        member __.Yield (_): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.Yield (_): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             RouterParts.defaultRouter
             |> Ok
             |> ContentBasedRouterApplicationConfiguration
 
-        member __.Run(state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent>) =
+        member __.Run(state: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies>) =
             buildApplication state
 
         [<CustomOperation("parseConfiguration")>]
-        member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.ParseConfiguration(state, configurationPath): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun routerParts ->
                 result {
                     let! router =
@@ -150,36 +150,36 @@ module ContentBasedRouterBuilder =
                 <@> RouterConfigurationError
 
         [<CustomOperation("from")>]
-        member __.From(state, configuration): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.From(state, configuration): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state >>= fun routerParts ->
                 match routerParts.Configuration with
                 | None -> Ok { routerParts with Configuration = Some configuration }
                 | _ -> AlreadySetConfiguration |> ApplicationConfigurationError |> Error
 
         [<CustomOperation("routeToBrokerFromEnv")>]
-        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             routeToBroker state brokerListEnvironmentKey (FromDomain fromDomain)
 
         [<CustomOperation("routeToBrokerFromEnv")>]
-        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             routeToBroker state brokerListEnvironmentKey (FromDomainResult fromDomain)
 
         [<CustomOperation("routeToBrokerFromEnv")>]
-        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.RouteToBrokerFromEnv(state, brokerListEnvironmentKey, fromDomain): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             routeToBroker state brokerListEnvironmentKey (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("route")>]
-        member __.Route(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.Route(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun routerParts -> { routerParts with RouteEvent = Some (Simple routeEvent) }
 
         [<CustomOperation("routeWithApplication")>]
-        member __.RouteWithApp(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.RouteWithApp(state, routeEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun routerParts -> { routerParts with RouteEvent = Some (WithApplication routeEvent) }
 
         [<CustomOperation("getCommonEventBy")>]
-        member __.GetCommonEventBy(state, getCommonEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.GetCommonEventBy(state, getCommonEvent): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun routerParts -> { routerParts with GetCommonEvent = Some getCommonEvent }
 
         [<CustomOperation("addCustomMetricValues")>]
-        member __.AddCustomMetricValues(state, createCustomValues): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> =
+        member __.AddCustomMetricValues(state, createCustomValues): ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun routerParts -> { routerParts with CreateCustomValues = Some createCustomValues }

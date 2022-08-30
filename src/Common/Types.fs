@@ -351,7 +351,7 @@ type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
 }
 
 /// Application parts exposed in consume handlers
-type ConsumeRuntimeParts<'OutputEvent> = {
+type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
     ProcessedBy: ProcessedBy
@@ -363,13 +363,21 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
+    Dependencies: 'Dependencies option
 }
 
-type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> ConsumerConfiguration -> ParsedEventAsyncResult<'InputEvent> seq
+/// Application initialization - it allows to set up dependencies before any consuming starts
+type Initialization<'OutputEvent, 'Dependencies> =
+    ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
+
+type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
+    ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
+        -> ConsumerConfiguration
+        -> ParsedEventAsyncResult<'InputEvent> seq
 
 [<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =
-    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent> =
+    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent, 'Dependencies> =
         {
             LoggerFactory = preparedRuntimeParts.LoggerFactory
             Box = preparedRuntimeParts.Box
@@ -388,6 +396,7 @@ module internal PreparedConsumeRuntimeParts =
             SetMetric = preparedRuntimeParts.SetMetric
             EnableResource = preparedRuntimeParts.EnableResource
             DisableResource = preparedRuntimeParts.DisableResource
+            Dependencies = None
         }
 
 [<RequireQualifiedAccess>]
@@ -422,35 +431,35 @@ module TracedEvent =
     let finish (event: TracedEvent<'Event>) =
         event.Finish()
 
-type ConsumeEvents<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> unit
-type ConsumeEventsResult<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> Result<unit, ErrorMessage>
-type ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent> = ConsumeRuntimeParts<'OutputEvent> -> TracedEvent<'InputEvent> -> AsyncResult<unit, ErrorMessage>
+type ConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> TracedEvent<'InputEvent> -> unit
+type ConsumeEventsResult<'InputEvent, 'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> TracedEvent<'InputEvent> -> Result<unit, ErrorMessage>
+type ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> TracedEvent<'InputEvent> -> AsyncResult<unit, ErrorMessage>
 
-type internal ConsumeHandler<'InputEvent, 'OutputEvent> =
-    | ConsumeEvents of ConsumeEvents<'InputEvent, 'OutputEvent>
-    | ConsumeEventsResult of ConsumeEventsResult<'InputEvent, 'OutputEvent>
-    | ConsumeEventsAsyncResult of ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent>
+type internal ConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies> =
+    | ConsumeEvents of ConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies>
+    | ConsumeEventsResult of ConsumeEventsResult<'InputEvent, 'OutputEvent, 'Dependencies>
+    | ConsumeEventsAsyncResult of ConsumeEventsAsyncResult<'InputEvent, 'OutputEvent, 'Dependencies>
 
 type RuntimeConsumeHandler<'InputEvent> =
     | Events of (TracedEvent<'InputEvent> -> IO<unit>)
 
 [<RequireQualifiedAccess>]
 module internal ConsumeHandler =
-    let toRuntime runtimeParts: ConsumeHandler<'InputEvent, 'OutputEvent> -> RuntimeConsumeHandler<'InputEvent> = function
+    let toRuntime runtimeParts: ConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies> -> RuntimeConsumeHandler<'InputEvent> = function
         | ConsumeEvents eventsHandler -> eventsHandler runtimeParts >> AsyncResult.ofSuccess |> Events
         | ConsumeEventsResult eventsHandler -> eventsHandler runtimeParts >> AsyncResult.ofResult |> Events
         | ConsumeEventsAsyncResult eventsHandler -> eventsHandler runtimeParts |> Events
 
-type internal ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
+type internal ConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> = {
     Connection: ConnectionName
-    Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
+    Handler: ConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies>
 }
 
-type internal RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> = {
+type internal RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> = {
     Connection: RuntimeConnectionName
     Configuration: ConsumerConfiguration
     OnError: ConsumeErrorHandler
-    Handler: ConsumeHandler<'InputEvent, 'OutputEvent>
+    Handler: ConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies>
     IncrementInputCount: 'InputEvent -> unit
 }
 
@@ -493,11 +502,12 @@ module internal CustomTasks =
 // Configuration / Application
 //
 
-type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
+type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment option
+    Initialize: Initialization<'OutputEvent, 'Dependencies> option
     Git: Git
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option
@@ -505,9 +515,9 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent> = {
     GroupIds: Map<ConnectionName, GroupId>
     CommitMessage: CommitMessage option
     CommitMessages: Map<ConnectionName, CommitMessage>
-    ParseEvent: (ConsumeRuntimeParts<'OutputEvent> -> ParseInputEvent<'InputEvent>) option
+    ParseEvent: (ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ParseInputEvent<'InputEvent>) option
     Connections: Connections
-    ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
+    ConsumeHandlers: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> list
     OnConsumeErrorHandlers: Map<ConnectionName, ConsumeErrorHandler>
     ProduceTo: ConnectionName list
     ProducerErrorHandler: ProducerErrorHandler option
@@ -531,12 +541,13 @@ module internal ConfigurationParts =
             UseLevel LogLevel.Warning
         ]
 
-    let defaultParts: ConfigurationParts<'InputEvent, 'OutputEvent> =
+    let defaultParts: ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> =
         {
             LoggerFactory = defaultLoggerFactory
             Environment = Map.empty
             Instance = None
             CurrentEnvironment = None
+            Initialize = None
             Git = {
                 Branch = None
                 Commit = None
@@ -566,21 +577,23 @@ module internal ConfigurationParts =
             HttpHandlers = []
         }
 
-    let getEnvironmentValue (parts: ConfigurationParts<_, _>) success error name =
+    let getEnvironmentValue (parts: ConfigurationParts<_, _, _>) success error name =
         parts.Environment
         |> Map.tryFind name
         |> Option.map success
         |> Result.ofOption (sprintf "Environment variable for \"%s\" is not set." name)
         |> Result.mapError error
 
-type Configuration<'InputEvent, 'OutputEvent> = internal Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+type Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+    internal Configuration of Result<ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies>, KafkaApplicationError>
 
 [<RequireQualifiedAccess>]
 module private Configuration =
     let result (Configuration result) = result
 
-type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
+type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
+    Initialize: Initialization<'OutputEvent, 'Dependencies>
     Cancellation: Cancellations
     Environment: Map<string, string>
     Box: Box
@@ -588,8 +601,8 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     DockerImageVersion: DockerImageVersion option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
-    ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent> list
-    ConsumeEvents: RuntimeConsumeEvents<'InputEvent, 'OutputEvent>
+    ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> list
+    ConsumeEvents: RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies>
     Producers: Map<RuntimeConnectionName, NotConnectedProducer>
     ProducerErrorHandler: ProducerErrorHandler
     ServiceStatus: ServiceStatus.ServiceStatus
@@ -602,8 +615,8 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent> = {
     HttpHandlers: HttpHandler list
 }
 
-type KafkaApplication<'InputEvent, 'OutputEvent> =
-    internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent>, KafkaApplicationError>
+type KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
+    internal KafkaApplication of Result<KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>, KafkaApplicationError>
 
     with
         member this.LoggerFactory
@@ -638,7 +651,7 @@ module ApplicationShutdown =
                 .LogCritical("Application shutdown with runtime error: {error}", error)
             1
 
-type internal BeforeRun<'InputEvent, 'OutputEvent> = KafkaApplicationParts<'InputEvent, 'OutputEvent> -> unit
-type internal Run<'InputEvent, 'OutputEvent> = KafkaApplication<'InputEvent, 'OutputEvent> -> ApplicationShutdown
+type internal BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> -> unit
+type internal Run<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> -> ApplicationShutdown
 
-type internal RunKafkaApplication<'InputEvent, 'OutputEvent> = BeforeRun<'InputEvent, 'OutputEvent> -> Run<'InputEvent, 'OutputEvent>
+type internal RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> -> Run<'InputEvent, 'OutputEvent, 'Dependencies>

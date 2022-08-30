@@ -19,11 +19,11 @@ module KafkaApplication =
     // Applications
     //
 
-    type Application<'InputEvent, 'OutputEvent, 'FilterValue> =
-        | CustomApplication of KafkaApplication<'InputEvent, 'OutputEvent>
-        | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue>
-        | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent>
-        | Deriver of DeriverApplication<'InputEvent, 'OutputEvent>
+    type Application<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> =
+        | CustomApplication of KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>
+        | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>
+        | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies>
+        | Deriver of DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies>
 
         with
             member this.Logger
@@ -39,34 +39,34 @@ module KafkaApplication =
     // Application builders
     //
 
-    let kafkaApplication<'InputEvent, 'OutputEvent> =
-        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
+    let kafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
         KafkaApplicationBuilder(buildApplication >> CustomApplication)
 
-    let partialKafkaApplication<'InputEvent, 'OutputEvent> =
-        let id: Configuration<'InputEvent, 'OutputEvent> -> Configuration<'InputEvent, 'OutputEvent> = id
+    let partialKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
+        let id: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> Configuration<'InputEvent, 'OutputEvent, 'Dependencies> = id
         KafkaApplicationBuilder(id)
 
-    let filterContentFilter<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality> =
-        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
-        let buildFilter: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> -> FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue> = FilterApplicationBuilder.buildFilter buildApplication
+    let filterContentFilter<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue when 'FilterValue: equality> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
+        let buildFilter: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> -> FilterApplication<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> = FilterApplicationBuilder.buildFilter buildApplication
         FilterBuilder(buildFilter >> FilterContentFilter)
 
-    let contentBasedRouter<'InputEvent, 'OutputEvent> =
-        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
-        let buildRouter: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> -> ContentBasedRouterApplication<'InputEvent, 'OutputEvent> = ContentBasedRouterApplicationBuilder.build buildApplication
+    let contentBasedRouter<'InputEvent, 'OutputEvent, 'Dependencies> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
+        let buildRouter: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies> = ContentBasedRouterApplicationBuilder.build buildApplication
         ContentBasedRouterBuilder(buildRouter >> ContentBasedRouter)
 
-    let deriver<'InputEvent, 'OutputEvent> =
-        let buildApplication: Configuration<'InputEvent, 'OutputEvent> -> KafkaApplication<'InputEvent, 'OutputEvent> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
-        let buildDeriver: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> -> DeriverApplication<'InputEvent, 'OutputEvent> = DeriverApplicationBuilder.buildDeriver buildApplication
+    let deriver<'InputEvent, 'OutputEvent, 'Dependencies> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
+        let buildDeriver: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies> = DeriverApplicationBuilder.buildDeriver buildApplication
         DeriverBuilder(buildDeriver >> Deriver)
 
     //
     // Run applications
     //
 
-    let run<'InputEvent, 'OutputEvent, 'FilterValue> (application: Application<'InputEvent, 'OutputEvent, 'FilterValue>) =
+    let run<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> (application: Application<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>) =
         try
             match application with
             | CustomApplication kafkaApplication -> startKafkaApplication ignore kafkaApplication

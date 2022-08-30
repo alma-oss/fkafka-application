@@ -16,7 +16,7 @@ module internal ApplicationRunner =
         open Lmc.Tracing
         open Lmc.KafkaApplication.ApplicationEvents
 
-        let private checkResources (application: KafkaApplicationParts<_, _>) =
+        let private checkResources (application: KafkaApplicationParts<_, _, _>) =
             let instance = application.Box |> Box.instance
             let enable = ResourceAvailability.enable instance >> ignore
             let disable = ResourceAvailability.disable instance >> ignore
@@ -158,12 +158,12 @@ module internal ApplicationRunner =
                 |> Seq.takeWhile (ignore >> ApplicationState.isRunning logger)
                 |> Seq.iter (handleEvent eventsHandler >> Async.runSynchronouslyAndFinishTheTask logger $"Consume events from {topic}")
 
-        let rec private consumeWithErrorHandling<'InputEvent, 'OutputEvent>
+        let rec private consumeWithErrorHandling<'InputEvent, 'OutputEvent, 'Dependencies>
             (loggerFactory: ILoggerFactory)
-            (runtimeParts: ConsumeRuntimeParts<'OutputEvent>)
+            (runtimeParts: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>)
             flushProducers
             consumeEvents
-            (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) = async {
+            (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies>) = async {
 
             let logger = LoggerFactory.createLogger loggerFactory (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
             try
@@ -219,12 +219,12 @@ module internal ApplicationRunner =
             |> List.map snd
             |> List.iter action
 
-        let run<'InputEvent, 'OutputEvent>
+        let run<'InputEvent, 'OutputEvent, 'Dependencies>
             connectProducer
             produceSingleMessage
             flushProducer
             closeProducer
-            (application: KafkaApplicationParts<'InputEvent, 'OutputEvent>) = asyncResult {
+            (application: KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>) = asyncResult {
                 let logger = LoggerFactory.createLogger application.LoggerFactory "KafkaApplication"
                 ApplicationState.run logger
                 logger.LogDebug("With configuration: {configuration}", application)
@@ -268,6 +268,7 @@ module internal ApplicationRunner =
                 let runtimeParts =
                     application.PreparedRuntimeParts
                     |> PreparedConsumeRuntimeParts.toRuntimeParts connectedProducers
+                    |> application.Initialize
 
                 connectedProducers
                 |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
@@ -288,7 +289,7 @@ module internal ApplicationRunner =
                     closeProducer |> doWithAllProducers
         }
 
-        let runCustomTasks (app: KafkaApplicationParts<_,_>) =
+        let runCustomTasks (app: KafkaApplicationParts<_,_, _>) =
             let logger = LoggerFactory.createLogger app.LoggerFactory "KafkaApplication.CustomTask"
 
             let rec runSafely (CustomTask (CustomTaskName name, restartPolicy, task) as currentTask) =
@@ -308,7 +309,7 @@ module internal ApplicationRunner =
             app.CustomTasks
             |> List.iter runSafely
 
-    let startKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent> =
+    let startKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
         fun beforeRun (KafkaApplication application) ->
             match application with
             | Ok app ->

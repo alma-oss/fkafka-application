@@ -17,7 +17,7 @@ module ApplicationBuilder =
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
-        let private traceConfiguration (parts: ConfigurationParts<_, _>) =
+        let private traceConfiguration (parts: ConfigurationParts<_, _, _>) =
             parts.LoggerFactory
                 .CreateLogger("KafkaApplication.Configuration")
                 .LogTrace("Configuration: {configuration}", parts)
@@ -33,7 +33,7 @@ module ApplicationBuilder =
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
-        let mergeConfiguration<'InputEvent, 'OutputEvent> currentConfiguration newConfiguration: Configuration<'InputEvent, 'OutputEvent> =
+        let mergeConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> currentConfiguration newConfiguration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             currentConfiguration >>= fun currentParts ->
                 newConfiguration <!> fun newParts ->
                     {
@@ -41,6 +41,7 @@ module ApplicationBuilder =
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         CurrentEnvironment = newParts.CurrentEnvironment <??> currentParts.CurrentEnvironment
+                        Initialize = newParts.Initialize <??> newParts.Initialize
                         Git = {
                             Branch = newParts.Git.Branch <??> currentParts.Git.Branch
                             Commit = newParts.Git.Commit <??> currentParts.Git.Commit
@@ -71,16 +72,16 @@ module ApplicationBuilder =
                     }
                 |> Configuration.result
 
-        let private addConsumeHandler<'InputEvent, 'OutputEvent> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent> =
+        let private addConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies> configuration consumeHandler connectionName: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts -> { parts with ConsumeHandlers = { Connection = connectionName; Handler = consumeHandler} :: parts.ConsumeHandlers }
 
-        let addDefaultConsumeHandler<'InputEvent, 'OutputEvent> consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addDefaultConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies> consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             Connections.Default |> addConsumeHandler configuration consumeHandler
 
-        let addConsumeHandlerForConnection<'InputEvent, 'OutputEvent> name consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> name consumeHandler configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             ConnectionName name |> addConsumeHandler configuration consumeHandler
 
-        let addProduceTo<'InputEvent, 'OutputEvent> name (fromDomain: OutputFromDomain<'OutputEvent>) configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addProduceTo<'InputEvent, 'OutputEvent, 'Dependencies> name (fromDomain: OutputFromDomain<'OutputEvent>) configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts ->
                 let connectionName = ConnectionName name
                 {
@@ -89,7 +90,7 @@ module ApplicationBuilder =
                         FromDomain = parts.FromDomain.Add(connectionName, fromDomain)
                 }
 
-        let addProduceToMany<'InputEvent, 'OutputEvent> topics fromDomain configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addProduceToMany<'InputEvent, 'OutputEvent, 'Dependencies> topics fromDomain configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts ->
                 let connectionNames =
                     topics
@@ -106,16 +107,16 @@ module ApplicationBuilder =
                         FromDomain = parts.FromDomain |> Map.merge fromDomain
                 }
 
-        let addCreateInputEventKeys<'InputEvent, 'OutputEvent> createInputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addCreateInputEventKeys<'InputEvent, 'OutputEvent, 'Dependencies> createInputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts -> { parts with CreateInputEventKeys = Some (CreateInputEventKeys createInputEventKeys) }
 
-        let addCreateOutputEventKeys<'InputEvent, 'OutputEvent> createOutputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addCreateOutputEventKeys<'InputEvent, 'OutputEvent, 'Dependencies> createOutputEventKeys configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts -> { parts with CreateOutputEventKeys = Some (CreateOutputEventKeys createOutputEventKeys) }
 
-        let addParseEvent<'InputEvent, 'OutputEvent> parseEvent configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addParseEvent<'InputEvent, 'OutputEvent, 'Dependencies> parseEvent configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts -> { parts with ParseEvent = Some parseEvent }
 
-        let addConnectToMany<'InputEvent, 'OutputEvent> connectionConfigurations configuration: Configuration<'InputEvent, 'OutputEvent> =
+        let addConnectToMany<'InputEvent, 'OutputEvent, 'Dependencies> connectionConfigurations configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration <!> fun parts ->
                 let configurationConnections: Connections =
                     connectionConfigurations.Topics
@@ -194,11 +195,11 @@ module ApplicationBuilder =
                 MarkAsDisabled = markAsDisabled |> Some
             }
 
-        let private composeRuntimeConsumeHandlersForConnections<'InputEvent, 'OutputEvent>
+        let private composeRuntimeConsumeHandlersForConnections<'InputEvent, 'OutputEvent, 'Dependencies>
             runtimeConsumerConfigurations
             (getErrorHandler: ConnectionName -> ConsumeErrorHandler)
             incrementInputCount
-            ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent>) =
+            ({ Connection = connection; Handler = handler }: ConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies>) =
             result {
                 let runtimeConnectionName = connection |> ConnectionName.runtimeName
 
@@ -219,7 +220,7 @@ module ApplicationBuilder =
                 }
             }
 
-        let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent> =
+        let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
             /// Overriden Result.ofOption operator to return a KafkaApplicationError instead of generic error
             let inline (<?!>) o errorMessage =
                 o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> ErrorMessage |> KafkaApplicationError)
@@ -242,6 +243,7 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
+                let initialization = configurationParts.Initialize <?=> id
                 let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Lmc.KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
@@ -382,7 +384,7 @@ module ApplicationBuilder =
                     |> Validation.ofResults
                     |> Result.mapError ConsumeHandlerError
 
-                let consume: RuntimeConsumeEvents<'InputEvent, 'OutputEvent> =
+                let consume: RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
                     fun runtimeParts ->
                         let parseEvent = Event.parse (parseEvent runtimeParts)
                         fun configuration ->
@@ -402,6 +404,7 @@ module ApplicationBuilder =
 
                 return {
                     LoggerFactory = configurationParts.LoggerFactory
+                    Initialize = initialization
                     Cancellation = cancellation
                     Environment = environment
                     Box = box
@@ -429,181 +432,185 @@ module ApplicationBuilder =
     // Kafka Application Builder computation expression
     //
 
-    type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent> -> 'a) =
-        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent> =
+    type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'a) =
+        member __.Yield (_): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             defaultParts
             |> Ok
             |> Configuration
 
-        member __.Run(state: Configuration<'InputEvent, 'OutputEvent>) =
+        member __.Run(state: Configuration<'InputEvent, 'OutputEvent, 'Dependencies>) =
             buildApplication state
 
         [<CustomOperation("useLoggerFactory")>]
-        member __.Logger(state, loggerFactory: ILoggerFactory): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Logger(state, loggerFactory: ILoggerFactory): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with LoggerFactory = loggerFactory }
 
         [<CustomOperation("useInstance")>]
-        member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Instance(state, instance): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Instance = Some instance }
 
         [<CustomOperation("useCurrentEnvironment")>]
-        member __.CurrentEnvironment(state, currentEnvironment): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CurrentEnvironment(state, currentEnvironment): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CurrentEnvironment = Some currentEnvironment }
 
+        [<CustomOperation("initialize")>]
+        member __.Initialize(state, initialize): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with Initialize = Some initialize }
+
         [<CustomOperation("useGit")>]
-        member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Git = git }
 
         [<CustomOperation("useDockerImageVersion")>]
-        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent> =
+        member __.DockerImageVersion(state, dockerImageVersion): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with DockerImageVersion = Some dockerImageVersion }
 
         [<CustomOperation("useSpot")>]
-        member __.Spot(state, spot): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Spot(state, spot): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Spot = Some spot }
 
         [<CustomOperation("useGroupId")>]
-        member __.GroupId(state, groupId): Configuration<'InputEvent, 'OutputEvent> =
+        member __.GroupId(state, groupId): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with GroupId = Some groupId }
 
         [<CustomOperation("useGroupIdFor")>]
-        member __.GroupIdFor(state, name, groupId): Configuration<'InputEvent, 'OutputEvent> =
+        member __.GroupIdFor(state, name, groupId): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with GroupIds = parts.GroupIds.Add(ConnectionName name, groupId) }
 
         [<CustomOperation("useCommitMessage")>]
-        member __.CommitMessage(state, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CommitMessage(state, commitMessage): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CommitMessage = Some commitMessage }
 
         [<CustomOperation("useCommitMessageFor")>]
-        member __.CommitMessageFor(state, name, commitMessage): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CommitMessageFor(state, name, commitMessage): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CommitMessages = parts.CommitMessages.Add(ConnectionName name, commitMessage) }
 
         [<CustomOperation("parseEventWith")>]
-        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (fun _ -> (ParseEvent parseEvent))
 
         [<CustomOperation("parseEventWith")>]
-        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (fun _ -> (ParseEventResult parseEvent))
 
         [<CustomOperation("parseEventWith")>]
-        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (fun _ -> (ParseEventAsyncResult parseEvent))
 
         [<CustomOperation("parseEventAndUseApplicationWith")>]
-        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (parseEvent >> ParseEvent)
 
         [<CustomOperation("parseEventAndUseApplicationWith")>]
-        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (parseEvent >> ParseEventResult)
 
         [<CustomOperation("parseEventAndUseApplicationWith")>]
-        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ParseEventAndUseApplicationWith(state, parseEvent): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addParseEvent (parseEvent >> ParseEventAsyncResult)
 
         [<CustomOperation("checkKafkaWith")>]
-        member __.CheckKafkaWith(state, checker): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CheckKafkaWith(state, checker): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with KafkaChecker = Some checker }
 
         [<CustomOperation("connect")>]
-        member __.Connect(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Connect(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Default, connectionConfiguration) }
 
         [<CustomOperation("connectTo")>]
-        member __.ConnectTo(state, name, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConnectTo(state, name, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(ConnectionName name, connectionConfiguration) }
 
         [<CustomOperation("connectManyToBroker")>]
-        member __.ConnectManyToBroker(state, connectionConfigurations: ManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConnectManyToBroker(state, connectionConfigurations: ManyTopicsConnectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addConnectToMany connectionConfigurations
 
         [<CustomOperation("useSupervision")>]
-        member __.Supervision(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Supervision(state, connectionConfiguration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with Connections = parts.Connections.Add(Connections.Supervision, connectionConfiguration) }
 
         [<CustomOperation("consume")>]
-        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addDefaultConsumeHandler (ConsumeEvents consumeHandler)
 
         [<CustomOperation("consume")>]
-        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addDefaultConsumeHandler (ConsumeEventsResult consumeHandler)
 
         [<CustomOperation("consume")>]
-        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Consume(state, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addDefaultConsumeHandler (ConsumeEventsAsyncResult consumeHandler)
 
         [<CustomOperation("consumeFrom")>]
-        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addConsumeHandlerForConnection name (ConsumeEvents consumeHandler)
 
         [<CustomOperation("consumeFrom")>]
-        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addConsumeHandlerForConnection name (ConsumeEventsResult consumeHandler)
 
         [<CustomOperation("consumeFrom")>]
-        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ConsumeFrom(state, name, consumeHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addConsumeHandlerForConnection name (ConsumeEventsAsyncResult consumeHandler)
 
         [<CustomOperation("onConsumeError")>]
-        member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =
+        member __.OnConsumeError(state, onConsumeError): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(Connections.Default, onConsumeError) }
 
         [<CustomOperation("onConsumeErrorFor")>]
-        member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'InputEvent, 'OutputEvent> =
+        member __.OnConsumeErrorFor(state, name, onConsumeError): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with OnConsumeErrorHandlers = parts.OnConsumeErrorHandlers.Add(ConnectionName name, onConsumeError) }
 
         [<CustomOperation("produceTo")>]
-        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceTo name (FromDomain fromDomain)
 
         [<CustomOperation("produceTo")>]
-        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceTo name (FromDomainResult fromDomain)
 
         [<CustomOperation("produceTo")>]
-        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceTo(state, name, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceTo name (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("produceToMany")>]
-        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceToMany topics (FromDomain fromDomain)
 
         [<CustomOperation("produceToMany")>]
-        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceToMany topics (FromDomainResult fromDomain)
 
         [<CustomOperation("produceToMany")>]
-        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ProduceToMany(state, topics, fromDomain): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addProduceToMany topics (FromDomainAsyncResult fromDomain)
 
         [<CustomOperation("onProducerError")>]
-        member __.OnProducerError(state, producerErrorHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.OnProducerError(state, producerErrorHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with ProducerErrorHandler = Some producerErrorHandler }
 
         /// Add other configuration and merge it with current.
         /// New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values.
         /// (Except of logger)
         [<CustomOperation("merge")>]
-        member __.Merge(state, configuration): Configuration<'InputEvent, 'OutputEvent> =
+        member __.Merge(state, configuration): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             configuration |> mergeConfiguration state
 
         /// Show metrics for prometheus on the internal web server at http://127.0.0.1:8080/metrics.
         [<CustomOperation("showMetrics")>]
-        member __.ShowMetrics(state): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ShowMetrics(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with ShowMetrics = true }
 
         [<CustomOperation("showInputEventsWith")>]
-        member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addCreateInputEventKeys createInputEventKeys
 
         [<CustomOperation("showOutputEventsWith")>]
-        member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ShowOutputEventsWith(state, createOutputEventKeys): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> addCreateOutputEventKeys createOutputEventKeys
 
         [<CustomOperation("showCustomMetric")>]
-        member this.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent> =
+        member this.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             this.ShowMetrics(state) >>= fun parts ->
                 result {
                     let! metricName =
@@ -622,11 +629,11 @@ module ApplicationBuilder =
                 |> Result.mapError MetricsError
 
         [<CustomOperation("registerCustomMetric")>]
-        member __.RegisterCustomMetric(state, customMetric): Configuration<'InputEvent, 'OutputEvent> =
+        member __.RegisterCustomMetric(state, customMetric): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
 
         [<CustomOperation("checkResourceInInterval")>]
-        member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent> =
+        member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts ->
                 let resource = {
                     Resource = resource
@@ -637,13 +644,13 @@ module ApplicationBuilder =
                 { parts with IntervalResourceCheckers = resource :: parts.IntervalResourceCheckers }
 
         [<CustomOperation("runCustomTask")>]
-        member __.RunCustomTask(state, name, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent> =
+        member __.RunCustomTask(state, name, restartPolicy, task): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CustomTasks = PreparedCustomTask (CustomTaskName name, restartPolicy, task) :: parts.CustomTasks }
 
         [<CustomOperation("addHttpHandler")>]
-        member __.AddHttpHandler(state, httpHandler): Configuration<'InputEvent, 'OutputEvent> =
+        member __.AddHttpHandler(state, httpHandler): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with HttpHandlers = httpHandler :: parts.HttpHandlers }
 
         [<CustomOperation("showAppRootStatus")>]
-        member __.ShowAppRootStatus(state): Configuration<'InputEvent, 'OutputEvent> =
+        member __.ShowAppRootStatus(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with ShowAppRootStatus = true }

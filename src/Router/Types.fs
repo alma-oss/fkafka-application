@@ -34,8 +34,8 @@ type internal RouteEventHandler<'InputEvent, 'OutputEvent> =
     | Simple of RouteEvent<'InputEvent, 'OutputEvent>
     | WithApplication of (PatternRuntimeParts -> RouteEvent<'InputEvent, 'OutputEvent>)
 
-type internal RouterParts<'InputEvent, 'OutputEvent> = {
-    Configuration: Configuration<'InputEvent, 'OutputEvent> option
+type internal RouterParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
+    Configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> option
     RouterConfiguration: RouterConfiguration option
     RouteToBrokerList: BrokerList option
     RouteEvent: RouteEventHandler<'InputEvent, 'OutputEvent> option
@@ -56,14 +56,15 @@ module internal RouterParts =
         GetCommonEvent = None
     }
 
-type ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent> = private ContentBasedRouterApplicationConfiguration of Result<RouterParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
+type ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> = private ContentBasedRouterApplicationConfiguration of Result<RouterParts<'InputEvent, 'OutputEvent, 'Dependencies>, ContentBasedRouterApplicationError>
 
-type internal ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent> = {
-    Application: KafkaApplication<'InputEvent, 'OutputEvent>
+type internal ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
+    Application: KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>
     RouterConfiguration: RouterConfiguration
 }
 
-type ContentBasedRouterApplication<'InputEvent, 'OutputEvent> = internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent>, ContentBasedRouterApplicationError>
+type ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies> = 
+    internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>, ContentBasedRouterApplicationError>
 
 [<RequireQualifiedAccess>]
 module internal ContentBasedRouterApplication =

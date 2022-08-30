@@ -37,7 +37,7 @@ type TestableConfigurationParts = {
 }
 
 module internal TestableConfigurationParts =
-    let ofConfigurationParts (parts: ConfigurationParts<_, _>) =
+    let ofConfigurationParts (parts: ConfigurationParts<_, _, _>) =
         {
             LoggerFactory = parts.LoggerFactory
             Environment = parts.Environment
@@ -57,7 +57,7 @@ module internal TestableConfigurationParts =
             CustomMetrics = parts.CustomMetrics
         }
 
-    let ofValidConfiguration: Configuration<_, _> -> TestableConfigurationParts option = function
+    let ofValidConfiguration: Configuration<_, _, _> -> TestableConfigurationParts option = function
         | Configuration (Ok parts) -> Some (parts |> ofConfigurationParts)
         | _ -> None
 
