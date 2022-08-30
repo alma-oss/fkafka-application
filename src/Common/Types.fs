@@ -366,9 +366,22 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     Dependencies: 'Dependencies option
 }
 
+type Initialization<'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
+type InitializationResult<'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> Result<ConsumeRuntimeParts<'OutputEvent, 'Dependencies>, ErrorMessage>
+type InitializationAsyncResult<'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> AsyncResult<ConsumeRuntimeParts<'OutputEvent, 'Dependencies>, ErrorMessage>
+
 /// Application initialization - it allows to set up dependencies before any consuming starts
-type Initialization<'OutputEvent, 'Dependencies> =
-    ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
+type ApplicationInitialization<'OutputEvent, 'Dependencies> =
+    | Initialization of Initialization<'OutputEvent, 'Dependencies>
+    | InitializationResult of InitializationResult<'OutputEvent, 'Dependencies>
+    | InitializationAsyncResult of InitializationAsyncResult<'OutputEvent, 'Dependencies>
+
+[<RequireQualifiedAccess>]
+module internal ApplicationInitialization =
+    let initialize = function
+        | Initialization initialize -> initialize >> AsyncResult.ofSuccess
+        | InitializationResult initialize -> initialize >> AsyncResult.ofResult
+        | InitializationAsyncResult initialize -> initialize
 
 type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
     ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
@@ -507,7 +520,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     Environment: Map<string, string>
     Instance: Instance option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment option
-    Initialize: Initialization<'OutputEvent, 'Dependencies> option
+    Initialize: ApplicationInitialization<'OutputEvent, 'Dependencies> option
     Git: Git
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option
@@ -593,7 +606,7 @@ module private Configuration =
 
 type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
-    Initialize: Initialization<'OutputEvent, 'Dependencies>
+    Initialize: ApplicationInitialization<'OutputEvent, 'Dependencies>
     Cancellation: Cancellations
     Environment: Map<string, string>
     Box: Box

@@ -224,7 +224,7 @@ module internal ApplicationRunner =
             produceSingleMessage
             flushProducer
             closeProducer
-            (application: KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>) = asyncResult {
+            (application: KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>): AsyncResult<unit, ErrorMessage> = asyncResult {
                 let logger = LoggerFactory.createLogger application.LoggerFactory "KafkaApplication"
                 ApplicationState.run logger
                 logger.LogDebug("With configuration: {configuration}", application)
@@ -260,15 +260,15 @@ module internal ApplicationRunner =
                 let! connectedProducers =
                     application
                     |> connectProducersWithErrorHandling connectProducer
-                    |> AsyncResult.ofAsyncCatch List.singleton
+                    |> AsyncResult.ofAsyncCatch RuntimeError
                 logger.LogDebug "All producers are connected."
 
                 let doWithAllProducers = doWithAllProducers connectedProducers
 
-                let runtimeParts =
+                let! runtimeParts =
                     application.PreparedRuntimeParts
                     |> PreparedConsumeRuntimeParts.toRuntimeParts connectedProducers
-                    |> application.Initialize
+                    |> ApplicationInitialization.initialize application.Initialize
 
                 connectedProducers
                 |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
@@ -281,8 +281,9 @@ module internal ApplicationRunner =
                         application.ConsumeHandlers
                         |> List.rev
                         |> List.map (consumeWithErrorHandling application.LoggerFactory runtimeParts flushAllProducers application.ConsumeEvents)
-                        |> AsyncResult.ofSequentialAsyncs id
+                        |> AsyncResult.ofSequentialAsyncs RuntimeError
                         |> AsyncResult.ignore
+                        |> AsyncResult.mapError Errors
                 finally
                     ApplicationState.shutDown logger
                     logger.LogDebug "Close producers ..."
@@ -330,6 +331,7 @@ module internal ApplicationRunner =
                         Producer.flush
                         Producer.close
                     |> Async.runSynchronouslyAndAllowCancellation logger "Application Run" cancellation.Main
+                    |> Result.mapError ErrorMessage.value
                     |> Result.orFail
 
                     Successfully
