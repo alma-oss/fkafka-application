@@ -175,6 +175,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
+    Cancellation: System.Threading.CancellationTokenSource
 }
 ```
 
