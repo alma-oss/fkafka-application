@@ -28,16 +28,16 @@ type internal DeriveInputToOutputEvent<'InputEvent, 'OutputEvent> =
     | DeriveEventResult of DeriveEventResult<'InputEvent, 'OutputEvent>
     | DeriveEventAsyncResult of DeriveEventAsyncResult<'InputEvent, 'OutputEvent>
 
-type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
+type internal DeriveEventHandler<'InputEvent, 'OutputEvent, 'Dependencies> =
     | Simple of DeriveInputToOutputEvent<'InputEvent, 'OutputEvent>
-    | WithApplication of (PatternRuntimeParts -> DeriveInputToOutputEvent<'InputEvent, 'OutputEvent>)
+    | WithApplication of (PatternRuntimeParts<'Dependencies> -> DeriveInputToOutputEvent<'InputEvent, 'OutputEvent>)
 
 // Deriver Application Configuration
 
 type internal DeriverParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     Configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> option
     DeriveTo: ConnectionName option
-    DeriveEvent: DeriveEventHandler<'InputEvent, 'OutputEvent> option
+    DeriveEvent: DeriveEventHandler<'InputEvent, 'OutputEvent, 'Dependencies> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
     GetCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option
 }

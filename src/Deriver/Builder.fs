@@ -14,7 +14,7 @@ module DeriverBuilder =
     module internal DeriverApplicationBuilder =
         let addDeriverConfiguration<'InputEvent, 'OutputEvent, 'Dependencies>
             (ConnectionName deriverOutputStream)
-            (deriveEventHandler: DeriveEventHandler<'InputEvent, 'OutputEvent>)
+            (deriveEventHandler: DeriveEventHandler<'InputEvent, 'OutputEvent, 'Dependencies>)
             (createCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent>)
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option)
             (configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies>): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =

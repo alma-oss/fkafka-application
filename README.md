@@ -112,6 +112,10 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | useSupervision | `Kafka.ConnectionConfiguration` | It will register a supervision connection for Kafka. This connection will be used to produce a supervision events (like `instance_started`) |
 
 ### Generic variants
+- `Initialize<'OutputEvent, 'Dependencies>` could return one of following:
+    - `ConsumeRuntimeParts`
+    - `Result<ConsumeRuntimeParts, ErrorMessage>`
+    - `AsyncResult<ConsumeRuntimeParts, ErrorMessage>`
 - `FromDomain<'OutputEvent>` could return one of following:
     - `MessageToProduce`
     - `Result<MessageToProduce, string>`

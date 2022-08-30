@@ -243,7 +243,7 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
-                let initialization = configurationParts.Initialize <?=> id
+                let initialization = configurationParts.Initialize <?=> Initialization id
                 let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Lmc.KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
@@ -455,7 +455,15 @@ module ApplicationBuilder =
 
         [<CustomOperation("initialize")>]
         member __.Initialize(state, initialize): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
-            state <!> fun parts -> { parts with Initialize = Some initialize }
+            state <!> fun parts -> { parts with Initialize = Some (Initialization initialize) }
+
+        [<CustomOperation("initialize")>]
+        member __.Initialize(state, initialize): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with Initialize = Some (InitializationResult initialize) }
+
+        [<CustomOperation("initialize")>]
+        member __.Initialize(state, initialize): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with Initialize = Some (InitializationAsyncResult initialize) }
 
         [<CustomOperation("useGit")>]
         member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =

@@ -34,6 +34,21 @@ and ServiceTwo = ServiceTwo of string
 [<Tests>]
 let genericApplicationTest =
     testList "KafkaApplication - generic application" [
+        let dependencies: Dependencies = {
+            ServiceOne = ServiceOne "ServiceOne"
+            ServiceTwo = ServiceTwo "ServiceTwo"
+        }
+
+        let initialize: Initialization<OutputEvent, Dependencies> = fun app -> { app with Dependencies = Some dependencies }
+        let initializeResult: InitializationResult<OutputEvent, Dependencies> = fun app -> { app with Dependencies = Some dependencies } |> Ok
+        let initializeAsyncResult: InitializationAsyncResult<OutputEvent, Dependencies> = fun app -> asyncResult { return { app with Dependencies = Some dependencies } }
+
+        let initializationAlternatives = [
+            Initialization initialize
+            InitializationResult initializeResult
+            InitializationAsyncResult initializeAsyncResult
+        ]
+
         let fromDomain: FromDomain<OutputEvent> = fun _serialize m -> MessageToProduce.create (MessageKey.Simple "", m)
         let fromDomainResult: FromDomainResult<OutputEvent> = fun _serialize m -> MessageToProduce.create (MessageKey.Simple "", m) |> Ok
         let fromDomainAsyncResult: FromDomainAsyncResult<OutputEvent> = fun _serialize m -> asyncResult { return MessageToProduce.create (MessageKey.Simple "", m) }
@@ -281,22 +296,17 @@ let genericApplicationTest =
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
 
         testCase "should allow initialize function which defines application dependencies" <| fun _ ->
-            let dependencies: Dependencies = {
-                ServiceOne = ServiceOne "ServiceOne"
-                ServiceTwo = ServiceTwo "ServiceTwo"
-            }
-
             let consumeEventsWithDependencies: ConsumeEvents<InputEvent, OutputEvent, Dependencies> = fun parts _event ->
                 // Note: the test will not come this far, since it doesn't have any connection, but it shows, how dependencies can be reached
                 Expect.equal parts.Dependencies (Some dependencies) "Application should have correct dependencies"
 
-            let app: Application<InputEvent, OutputEvent, Dependencies, _> = kafkaApplication {
-                initialize (fun app ->
-                    { app with Dependencies = Some dependencies }
-                )
-                consume consumeEventsWithDependencies
-            }
+            initializationAlternatives
+            |> List.map (function
+                | Initialization initialization -> kafkaApplication { initialize initialization; consume consumeEventsWithDependencies }
+                | InitializationResult initialization -> kafkaApplication { initialize initialization; consume consumeEventsWithDependencies }
+                | InitializationAsyncResult initialization -> kafkaApplication { initialize initialization; consume consumeEventsWithDependencies }
+            )
+            |> ignore
 
-            ignore app
             Expect.isTrue true "This test has no other expectations, that the code compiles correctly."
     ]
