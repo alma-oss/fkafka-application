@@ -364,6 +364,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
+    Cancellation: CancellationTokenSource
 }
 
 type Initialization<'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
@@ -390,7 +391,7 @@ type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
 
 [<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =
-    let toRuntimeParts (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent, 'Dependencies> =
+    let toRuntimeParts cancellation (producers: Map<RuntimeConnectionName, ConnectedProducer>) (preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>): ConsumeRuntimeParts<'OutputEvent, 'Dependencies> =
         {
             LoggerFactory = preparedRuntimeParts.LoggerFactory
             Box = preparedRuntimeParts.Box
@@ -410,6 +411,7 @@ module internal PreparedConsumeRuntimeParts =
             EnableResource = preparedRuntimeParts.EnableResource
             DisableResource = preparedRuntimeParts.DisableResource
             Dependencies = None
+            Cancellation = cancellation
         }
 
 [<RequireQualifiedAccess>]

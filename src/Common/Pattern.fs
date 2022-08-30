@@ -1,5 +1,6 @@
 namespace Lmc.KafkaApplication
 
+open System.Threading
 open Microsoft.Extensions.Logging
 open Lmc.Kafka
 open Lmc.KafkaApplication
@@ -31,6 +32,7 @@ type PatternRuntimeParts<'Dependencies> = {
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
+    Cancellation: CancellationTokenSource
 }
 
 [<AutoOpen>]
@@ -50,6 +52,7 @@ module internal PatternRuntimeParts =
             EnableResource = consumeRuntimeParts.EnableResource
             DisableResource = consumeRuntimeParts.DisableResource
             Dependencies = consumeRuntimeParts.Dependencies
+            Cancellation = consumeRuntimeParts.Cancellation
         }
 
 [<RequireQualifiedAccess>]

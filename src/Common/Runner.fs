@@ -267,7 +267,7 @@ module internal ApplicationRunner =
 
                 let! runtimeParts =
                     application.PreparedRuntimeParts
-                    |> PreparedConsumeRuntimeParts.toRuntimeParts connectedProducers
+                    |> PreparedConsumeRuntimeParts.toRuntimeParts application.Cancellation.Children connectedProducers
                     |> ApplicationInitialization.initialize application.Initialize
 
                 connectedProducers

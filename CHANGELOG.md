@@ -2,6 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `Cancellation` to runtime parts
+    - `ConsumeRuntimeParts`
+    - `PatternRuntimeParts`
 
 ## 22.1.0 - 2022-08-30
 - Add `Dependencies` to `PatternRuntimeParts`
