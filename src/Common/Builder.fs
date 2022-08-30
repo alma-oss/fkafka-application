@@ -41,6 +41,7 @@ module ApplicationBuilder =
                         Environment = newParts.Environment |> Envs.update currentParts.Environment
                         Instance = newParts.Instance <??> currentParts.Instance
                         CurrentEnvironment = newParts.CurrentEnvironment <??> currentParts.CurrentEnvironment
+                        Initialize = newParts.Initialize <??> newParts.Initialize
                         Git = {
                             Branch = newParts.Git.Branch <??> currentParts.Git.Branch
                             Commit = newParts.Git.Commit <??> currentParts.Git.Commit
@@ -242,6 +243,7 @@ module ApplicationBuilder =
                 //
                 // optional parts
                 //
+                let initialization = configurationParts.Initialize <?=> id
                 let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Lmc.KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
@@ -402,6 +404,7 @@ module ApplicationBuilder =
 
                 return {
                     LoggerFactory = configurationParts.LoggerFactory
+                    Initialize = initialization
                     Cancellation = cancellation
                     Environment = environment
                     Box = box
@@ -449,6 +452,10 @@ module ApplicationBuilder =
         [<CustomOperation("useCurrentEnvironment")>]
         member __.CurrentEnvironment(state, currentEnvironment): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with CurrentEnvironment = Some currentEnvironment }
+
+        [<CustomOperation("initialize")>]
+        member __.Initialize(state, initialize): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with Initialize = Some initialize }
 
         [<CustomOperation("useGit")>]
         member __.Git(state, git): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =

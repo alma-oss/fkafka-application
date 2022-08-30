@@ -366,6 +366,10 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     Dependencies: 'Dependencies option
 }
 
+/// Application initialization - it allows to set up dependencies before any consuming starts
+type Initialization<'OutputEvent, 'Dependencies> =
+    ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
+
 type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
     ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
         -> ConsumerConfiguration
@@ -503,6 +507,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     Environment: Map<string, string>
     Instance: Instance option
     CurrentEnvironment: Lmc.EnvironmentModel.Environment option
+    Initialize: Initialization<'OutputEvent, 'Dependencies> option
     Git: Git
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option
@@ -542,6 +547,7 @@ module internal ConfigurationParts =
             Environment = Map.empty
             Instance = None
             CurrentEnvironment = None
+            Initialize = None
             Git = {
                 Branch = None
                 Commit = None
@@ -587,6 +593,7 @@ module private Configuration =
 
 type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
+    Initialize: Initialization<'OutputEvent, 'Dependencies>
     Cancellation: Cancellations
     Environment: Map<string, string>
     Box: Box

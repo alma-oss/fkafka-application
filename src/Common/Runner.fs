@@ -268,6 +268,7 @@ module internal ApplicationRunner =
                 let runtimeParts =
                     application.PreparedRuntimeParts
                     |> PreparedConsumeRuntimeParts.toRuntimeParts connectedProducers
+                    |> application.Initialize
 
                 connectedProducers
                 |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)

@@ -2,7 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
-- Add generic dependencies to runtime parts
+- [**BC**] Add generic dependencies to runtime parts
+- Add `initialize` keyword
 
 ## 21.2.0 - 2022-08-26
 - Update dependencies

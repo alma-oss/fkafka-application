@@ -26,6 +26,7 @@ Lmc.KafkaApplication
               ┌────────────────────────────────┘               └──────────────────────────────────────────<Ends with the Error>───────┐
               ├─> Before Run (Debug pattern specific configuration)                                                                   │
               ├─> Start Custom Tasks                                                                                                  │
+              ├─> Initialize runtime parts          (only if initialization is set)                                                   │
               └─> Run Kafka Application                                                                                               │
                    ├─> Debug Configuration          (only with debug verbosity)                                                       │
                    ├─> Enable Context Metric                                                                                          │
@@ -83,6 +84,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | consumeFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> seq<'Event> -> unit` | It will register a handler, which will be called with events consumed from the Kafka connection. |
 | consumeLast | `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the default connection. |
 | consumeLastFrom | `connectionName: string`, `handler: ConsumeRuntimeParts -> 'Event -> unit` | It will register a handler, which will be called if there is a last message (event), in the connection. |
+| initialize | `initialization: Initialization<'OutputEvent, 'Dependencies>` | Allow to update current `ConsumeRuntimeParts` before any consume handler can access them. It is the best place to initialize any application dependencies. |
 | merge | `configuration: Configuration<'Event>` | Add other configuration and merge it with current. New configuration values have higher priority. New values (only those with Some value) will replace already set configuration values. (Except of logger) |
 | onConsumeError | `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a default connection. And it determines what will happen next. |
 | onConsumeErrorFor | `connectionName: string`, `ErrorHandler = Logger -> (errorMessage: string) -> ConsumeErrorPolicy` | It will register an error handler, which will be called on error while consuming a connection. And it determines what will happen next. |
@@ -118,7 +120,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
     - `'InputEvent`
     - `Result<'InputEvent, string>`
     - `AsyncResult<'InputEvent, string>`
-- `ConsumeHandler<'InputEvent, 'OutputEvent>` could return one of following:
+- `ConsumeHandler<'InputEvent, 'OutputEvent, 'Dependencies>` could return one of following:
     - `unit`
     - `Result<unit, string>`
     - `AsyncResult<unit, string>`
@@ -156,8 +158,8 @@ kafkaApplication {
 In every Consume Handler, the first parameter you will receive is the `ConsumeRuntimeParts`. There are all _parts_ of the application, you might need on runtime.
 
 ```fs
-type ConsumeRuntimeParts<'OutputEvent> = {
-    Logger: ApplicationLogger
+type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
+    LoggerFactory: ILoggerFactory
     Box: Box
     ProcessedBy: Events.ProcessedBy
     Environment: Map<string, string>
@@ -168,6 +170,7 @@ type ConsumeRuntimeParts<'OutputEvent> = {
     SetMetric: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
+    Dependencies: 'Dependencies option
 }
 ```
 
@@ -250,7 +253,7 @@ let main argv =
     |> ApplicationShutdown.withStatusCode
 ```
 
-#### Simple one connection with logger
+#### Simple one connection with logger and dependencies
 Following example is the easiest setup, you can get but uses a logger factory to log internal events.
 
 ```fs
@@ -258,6 +261,12 @@ open Lmc.Kafka
 open Lmc.ServiceIdentification
 open Lmc.KafkaApplication
 open Lmc.ErrorHandling
+
+type Dependencies = {
+    ServiceApi: ServiceApi
+}
+
+and ServiceApi = ServiceApi of string
 
 [<EntryPoint>]
 let main argv =
@@ -285,14 +294,26 @@ let main argv =
 
         useLoggerFactory loggerFactory
 
+        require [
+            "SERVICE_API"
+        ]
+
+        initialize (fun app ->
+            { app with Dependencies = Some { ServiceApi = app.Environment.["SERVICE_API"] |> ServiceApi }}
+        )
+
         connect {
             BrokerList = BrokerList "127.0.0.1:9092"
             Topic = StreamName "my-input-stream"
         }
 
-        consume (fun _ events ->
-            events
-            |> Seq.iter (printfn "%A")
+        consume (fun app ->
+            let { ServiceApi = serviceApi } = app.Dependencies.Value
+
+            fun event ->
+                let response = serviceApi |> ServiceApi.getSomething
+
+                printfn "%A: %A" response event
         )
     }
     |> run
