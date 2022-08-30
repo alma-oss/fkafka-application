@@ -19,7 +19,7 @@ type internal PatternName = PatternName of string
 
 // Run Patterns
 
-type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent> = RunKafkaApplication<'InputEvent, 'OutputEvent> -> 'Pattern -> ApplicationShutdown
+type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent, 'Dependencies> = RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> -> 'Pattern -> ApplicationShutdown
 
 /// Application pattern parts exposed in handlers
 type PatternRuntimeParts = {
@@ -39,7 +39,7 @@ module internal PatternUtils =
 
 [<RequireQualifiedAccess>]
 module internal PatternRuntimeParts =
-    let fromConsumeParts<'OutputEvent> patternName (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent>) =
+    let fromConsumeParts<'OutputEvent, 'Dependencies> patternName (consumeRuntimeParts: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) =
         {
             LoggerFactory = consumeRuntimeParts.LoggerFactory
             Box = consumeRuntimeParts.Box
@@ -52,11 +52,11 @@ module internal PatternRuntimeParts =
 
 [<RequireQualifiedAccess>]
 module internal PatternRunner =
-    let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent>
+    let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent, 'Dependencies>
         (PatternName pattern)
-        (getKafkaApplication: 'PatternParts -> KafkaApplication<'InputEvent,'OutputEvent>)
-        (beforeRun: 'PatternParts -> BeforeRun<'InputEvent, 'OutputEvent>)
-        (run: RunKafkaApplication<'InputEvent, 'OutputEvent>)
+        (getKafkaApplication: 'PatternParts -> KafkaApplication<'InputEvent,'OutputEvent, 'Dependencies>)
+        (beforeRun: 'PatternParts -> BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies>)
+        (run: RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>)
         (patternApplication: Result<'PatternParts, 'PatternError>) =
 
         match patternApplication with
@@ -72,14 +72,14 @@ module internal PatternRunner =
 
 // Build Patterns
 
-type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent> option
-type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> -> 'PatternParts -> unit
+type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> = 'PatternParts -> Configuration<'InputEvent, 'OutputEvent, 'Dependencies> option
+type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
     open Lmc.ErrorHandling.Option.Operators
     open ApplicationBuilder
 
-    let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent> =
+    let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun pattern getConfiguration patternParts ->
             patternParts
             |> getConfiguration

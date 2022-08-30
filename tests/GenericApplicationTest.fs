@@ -19,6 +19,7 @@ let instance (value: string) = Create.Instance(value) |> okOrFail
 
 type InputEvent = string
 type OutputEvent = string
+type Dependencies = NoDependencies
 
 [<Tests>]
 let commitMessageTest =
@@ -43,9 +44,9 @@ let commitMessageTest =
             ParseEventAsyncResult parseEventAsyncResult
         ]
 
-        let consumeEvents: ConsumeEvents<InputEvent, OutputEvent> = fun _parts _event -> ()
-        let consumeEventsResult: ConsumeEventsResult<InputEvent, OutputEvent> = fun _parts _event -> Ok ()
-        let consumeEventsAsyncResult: ConsumeEventsAsyncResult<InputEvent, OutputEvent> = fun _parts _event -> AsyncResult.ofSuccess ()
+        let consumeEvents: ConsumeEvents<InputEvent, OutputEvent, Dependencies> = fun _parts _event -> ()
+        let consumeEventsResult: ConsumeEventsResult<InputEvent, OutputEvent, Dependencies> = fun _parts _event -> Ok ()
+        let consumeEventsAsyncResult: ConsumeEventsAsyncResult<InputEvent, OutputEvent, Dependencies> = fun _parts _event -> AsyncResult.ofSuccess ()
 
         let consumeEventAlternatives = [
             ConsumeEvents consumeEvents

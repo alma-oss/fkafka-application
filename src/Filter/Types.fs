@@ -28,8 +28,8 @@ type FilterContent<'InputEvent, 'OutputEvent> = ProcessedBy -> TracedEvent<'Inpu
 
 // Filter Application Configuration
 
-type internal FilterParts<'InputEvent, 'OutputEvent, 'FilterValue> = {
-    Configuration: Configuration<'InputEvent, 'OutputEvent> option
+type internal FilterParts<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> = {
+    Configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> option
     FilterConfiguration: FilterConfiguration<'FilterValue> option
     FilterTo: ConnectionName option
     FilterContent: FilterContent<'InputEvent, 'OutputEvent> option
@@ -50,14 +50,14 @@ module internal FilterParts =
         GetFilterValue = None
     }
 
-type FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'FilterValue> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent, 'FilterValue>, FilterApplicationError>
+type FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> = private FilterApplicationConfiguration of Result<FilterParts<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>, FilterApplicationError>
 
-type internal FilterApplicationParts<'InputEvent, 'OutputEvent, 'FilterValue> = {
-    Application: KafkaApplication<'InputEvent, 'OutputEvent>
+type internal FilterApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> = {
+    Application: KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>
     FilterConfiguration: FilterConfiguration<'FilterValue>
 }
 
-type FilterApplication<'InputEvent, 'OutputEvent, 'FilterValue> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent, 'FilterValue>, FilterApplicationError>
+type FilterApplication<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> = internal FilterApplication of Result<FilterApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>, FilterApplicationError>
 
 [<RequireQualifiedAccess>]
 module internal FilterApplication =

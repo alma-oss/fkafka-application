@@ -34,8 +34,8 @@ type internal DeriveEventHandler<'InputEvent, 'OutputEvent> =
 
 // Deriver Application Configuration
 
-type internal DeriverParts<'InputEvent, 'OutputEvent> = {
-    Configuration: Configuration<'InputEvent, 'OutputEvent> option
+type internal DeriverParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
+    Configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> option
     DeriveTo: ConnectionName option
     DeriveEvent: DeriveEventHandler<'InputEvent, 'OutputEvent> option
     CreateCustomValues: CreateCustomValues<'InputEvent, 'OutputEvent> option
@@ -51,13 +51,15 @@ module internal DeriverParts =
         GetCommonEvent = None
     }
 
-type DeriverApplicationConfiguration<'InputEvent, 'OutputEvent> = private DeriverApplicationConfiguration of Result<DeriverParts<'InputEvent, 'OutputEvent>, DeriverApplicationError>
+type DeriverApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> =
+    private DeriverApplicationConfiguration of Result<DeriverParts<'InputEvent, 'OutputEvent, 'Dependencies>, DeriverApplicationError>
 
-type DeriverApplicationParts<'InputEvent, 'OutputEvent> = {
-    Application: KafkaApplication<'InputEvent, 'OutputEvent>
+type DeriverApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
+    Application: KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>
 }
 
-type DeriverApplication<'InputEvent, 'OutputEvent> = internal DeriverApplication of Result<DeriverApplicationParts<'InputEvent, 'OutputEvent>, DeriverApplicationError>
+type DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
+    internal DeriverApplication of Result<DeriverApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>, DeriverApplicationError>
 
 [<RequireQualifiedAccess>]
 module internal DeriverApplication =
