@@ -366,6 +366,7 @@ module ApplicationBuilder =
                     IncrementMetric = incrementMetric
                     SetMetric = setMetric
                     Box = box
+                    CurrentEnvironment = currentEnvironment
                     GitCommit = gitCommit
                     DockerImageVersion = dockerImageVersion
                     Environment = environment

@@ -165,6 +165,7 @@ In every Consume Handler, the first parameter you will receive is the `ConsumeRu
 type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     ProcessedBy: Events.ProcessedBy
     Environment: Map<string, string>
     Connections: Connections

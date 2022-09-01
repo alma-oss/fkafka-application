@@ -338,6 +338,7 @@ module Event =
 type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Box: Box
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     GitCommit: MetaData.GitCommit
     DockerImageVersion: MetaData.DockerImageVersion
     Environment: Map<string, string>
@@ -354,6 +355,7 @@ type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
 type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     ProcessedBy: ProcessedBy
     Environment: Map<string, string>
     Connections: Connections
@@ -395,6 +397,7 @@ module internal PreparedConsumeRuntimeParts =
         {
             LoggerFactory = preparedRuntimeParts.LoggerFactory
             Box = preparedRuntimeParts.Box
+            CurrentEnvironment = preparedRuntimeParts.CurrentEnvironment
             ProcessedBy = {
                 Instance = preparedRuntimeParts.Box |> Box.instance
                 Commit = preparedRuntimeParts.GitCommit
