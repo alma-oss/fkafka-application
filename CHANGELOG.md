@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 22.3.0 - 2022-09-01
 - Add `CurrentEnvironment` to runtime parts
     - `ConsumeRuntimeParts`
     - `PatternRuntimeParts`
