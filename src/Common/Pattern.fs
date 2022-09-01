@@ -26,6 +26,7 @@ type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent, 'Dependencies> = R
 type PatternRuntimeParts<'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
+    CurrentEnvironment: Lmc.EnvironmentModel.Environment
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
@@ -46,6 +47,7 @@ module internal PatternRuntimeParts =
         {
             LoggerFactory = consumeRuntimeParts.LoggerFactory
             Box = consumeRuntimeParts.Box
+            CurrentEnvironment = consumeRuntimeParts.CurrentEnvironment
             Environment = consumeRuntimeParts.Environment
             IncrementMetric = consumeRuntimeParts.IncrementMetric
             SetMetric = consumeRuntimeParts.SetMetric
