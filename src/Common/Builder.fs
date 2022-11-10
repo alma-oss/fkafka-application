@@ -433,7 +433,7 @@ module ApplicationBuilder =
     // Kafka Application Builder computation expression
     //
 
-    type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'a> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'a) =
+    type KafkaApplicationBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'Application> internal (buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'Application) =
         member __.Yield (_): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             defaultParts
             |> Ok

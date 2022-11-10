@@ -85,7 +85,7 @@ module FilterBuilder =
             }
             |> FilterApplication
 
-    type FilterBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue, 'a> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> -> 'a) =
+    type FilterBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue, 'Application> internal (buildApplication: FilterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> -> 'Application) =
         let (>>=) (FilterApplicationConfiguration configuration) f =
             configuration
             |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c ))) >> f)

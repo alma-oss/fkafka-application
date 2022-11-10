@@ -108,7 +108,7 @@ module DeriverBuilder =
             }
             |> DeriverApplication
 
-    type DeriverBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'a> internal (buildApplication: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'a) =
+    type DeriverBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'Application> internal (buildApplication: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'Application) =
         let (>>=) (DeriverApplicationConfiguration configuration) f =
             configuration
             |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)
