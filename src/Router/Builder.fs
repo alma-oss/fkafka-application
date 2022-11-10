@@ -102,7 +102,7 @@ module ContentBasedRouterBuilder =
             }
             |> ContentBasedRouterApplication
 
-    type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'a> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'a) =
+    type ContentBasedRouterBuilder<'InputEvent, 'OutputEvent, 'Dependencies, 'Application> internal (buildApplication: ContentBasedRouterApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> 'Application) =
         let (>>=) (ContentBasedRouterApplicationConfiguration configuration) f =
             configuration
             |> Result.bind ((tee (debugPatternConfiguration pattern (fun { Configuration = c } -> c))) >> f)

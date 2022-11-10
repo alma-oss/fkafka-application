@@ -115,7 +115,7 @@ let commitMessageTest =
 
             match app with
             | Some parts -> Expect.equal parts expectedConfiguration "description"
-            | _ -> failwithf "Invalid"
+            | _ -> failtest "Invalid"
 
         testCase "should be set correctly with manual commit by merged partial app" <| fun _ ->
             let instance = instance "development-kafkaApplication-commitMessage-test"
@@ -151,5 +151,5 @@ let commitMessageTest =
 
             match app with
             | Some parts -> Expect.equal parts expectedConfiguration "description"
-            | _ -> failwithf "Invalid"
+            | _ -> failtest "Invalid"
     ]
