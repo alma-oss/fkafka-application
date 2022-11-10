@@ -14,7 +14,7 @@ NUGET
     FSharp.Control.Websockets (0.2.2)
       FSharp.Core (>= 4.3.4)
       Microsoft.IO.RecyclableMemoryStream (>= 1.2.2)
-    FSharp.Core (6.0.5)
+    FSharp.Core (6.0.7)
     FSharp.Data (4.2.10)
       FSharp.Core (>= 5.0.1)
     Giraffe (6.0)
@@ -195,7 +195,7 @@ NUGET
       Lmc.Serializer (>= 3.1 < 4.0)
       Lmc.State (>= 5.0 < 6.0)
       Lmc.Tracing (>= 6.5 < 7.0)
-    Lmc.Kafka (23.0.0)
+    Lmc.Kafka (23.0.1)
       Confluent.Kafka (>= 1.9.2 < 2.0)
       FSharp.Control.AsyncSeq (>= 3.2.1 < 4.0)
       FSharp.Core (>= 6.0.5 < 7.0)
@@ -242,14 +242,14 @@ NUGET
       OpenTelemetry.Exporter.Console (>= 1.2 < 2.0)
       OpenTelemetry.Exporter.Jaeger (>= 1.2 < 2.0)
       OpenTelemetry.Instrumentation.Http (>= 1.0.0-rc9.2)
-    Lmc.WebApplication (4.1.0)
-      FSharp.Core (>= 6.0.5 < 7.0)
-      FSharp.Data (>= 4.2.9 < 5.0)
+    Lmc.WebApplication (5.0.0)
+      FSharp.Core (>= 6.0.6 < 7.0)
+      FSharp.Data (>= 4.2.10 < 5.0)
       Giraffe (>= 6.0 < 7.0)
       Lmc.JsonApi (>= 5.0 < 6.0)
 GIT
   remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
-     (dd1e2e4a5e95acf68c9745430bf443f7fda779cb)
+     (2d9372f6c36d33bf1edb84e3113205f888c287ba)
       path: /nuget/
 GROUP Build
 STORAGE: NONE
