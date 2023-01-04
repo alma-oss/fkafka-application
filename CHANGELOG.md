@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 22.5.0 - 2023-01-04
 - Add application level debug logs
 
 ## 22.4.0 - 2022-11-10
