@@ -166,6 +166,7 @@ module internal ApplicationRunner =
             (consumeHandler: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies>) = async {
 
             let logger = LoggerFactory.createLogger loggerFactory (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
+            logger.LogDebug "Run consume handler ..."
             try
                 try
                     consumeHandler.Handler
@@ -265,10 +266,12 @@ module internal ApplicationRunner =
 
                 let doWithAllProducers = doWithAllProducers connectedProducers
 
+                logger.LogDebug "Initialize consumer runtime parts ..."
                 let! runtimeParts =
                     application.PreparedRuntimeParts
                     |> PreparedConsumeRuntimeParts.toRuntimeParts application.Cancellation.Children connectedProducers
                     |> ApplicationInitialization.initialize application.Initialize
+                logger.LogDebug "Consumer runtime parts are initialized."
 
                 connectedProducers
                 |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
@@ -276,6 +279,7 @@ module internal ApplicationRunner =
 
                 let flushAllProducers () = flushProducer |> doWithAllProducers
 
+                logger.LogDebug "Run consume handlers ..."
                 try
                     do!
                         application.ConsumeHandlers
