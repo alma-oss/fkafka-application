@@ -246,14 +246,14 @@ NUGET
       OpenTelemetry.Exporter.Jaeger (>= 1.3.1 < 2.0)
       OpenTelemetry.Extensions.Propagators (>= 1.3.2)
       OpenTelemetry.Instrumentation.Http (>= 1.0.0-rc9.14)
-    Lmc.WebApplication (6.0.1)
+    Lmc.WebApplication (6.1.0)
       FSharp.Core (>= 6.0.7 < 7.0)
       FSharp.Data (>= 4.2.10 < 5.0)
       Giraffe (>= 6.0 < 7.0)
       Lmc.JsonApi (>= 5.1 < 6.0)
 GIT
   remote: ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git
-     (c6457cd2852c34a74cf24c42e380e3e2ccb8e685)
+     (0833bc262e01b3316796d348b469360799cc77f4)
       path: /nuget/
 GROUP Build
 STORAGE: NONE

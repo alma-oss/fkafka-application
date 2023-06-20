@@ -18,7 +18,7 @@ nuget Lmc.Logging ~> 6.0
 nuget Lmc.Metrics ~> 6.1
 nuget Lmc.ServiceIdentification ~> 6.0
 nuget Lmc.Tracing ~> 6.6
-nuget Lmc.WebApplication ~> 6.0
+nuget Lmc.WebApplication ~> 6.1
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk
