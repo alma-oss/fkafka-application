@@ -3,6 +3,9 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 
+## 22.7.0 - 2023-20-06
+- Update dependencies
+
 ## 22.6.0 - 2023-20-06
 - Update dependencies
 
