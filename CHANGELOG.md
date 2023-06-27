@@ -3,13 +3,16 @@
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
 
-## 22.8.0 - 2023-20-06
+## 22.9.0 - 2023-06-27
 - Update dependencies
 
-## 22.7.0 - 2023-20-06
+## 22.8.0 - 2023-06-20
 - Update dependencies
 
-## 22.6.0 - 2023-20-06
+## 22.7.0 - 2023-06-20
+- Update dependencies
+
+## 22.6.0 - 2023-06-20
 - Update dependencies
 
 ## 22.5.0 - 2023-01-04
@@ -173,7 +176,7 @@
 ## 12.0.0 - 2020-11-24
 - [**BC**] Update dependencies
 
-## 11.0.0 - 2020-06-17
+## 11.0.0 - 2006-20-17
 - [**BC**] Update dependencies
     - `ConsentEvents`
 
