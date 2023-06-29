@@ -97,7 +97,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | runCustomTask | `TaskErrorPolicy`, `CustomTaskRuntimeParts -> Async<unit>` | Register a CustomTask, which will be start with the application. |
 | showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
-| showMetricsOn | `route: string` | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
+| showMetrics | | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
+| showMetrics | `port: int` | It will asynchronously run a web server (`http://127.0.0.1:{PORT}`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | useDockerImageVersion | `DockerImageVersion` | |
 | useGit | `Git` | |

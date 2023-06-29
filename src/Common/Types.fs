@@ -549,6 +549,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     KafkaChecker: Checker option
     CustomTasks: PreparedCustomTask list
     HttpHandlers: HttpHandler list
+    WebServerPort: WebServer.Port
 }
 
 [<AutoOpen>]
@@ -593,6 +594,7 @@ module internal ConfigurationParts =
             KafkaChecker = None
             CustomTasks = []
             HttpHandlers = []
+            WebServerPort = WebServer.defaultPort
         }
 
     let getEnvironmentValue (parts: ConfigurationParts<_, _, _>) success error name =
@@ -631,6 +633,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = 
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
     CustomTasks: CustomTask list
     HttpHandlers: HttpHandler list
+    WebServerPort: WebServer.Port
 }
 
 type KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =

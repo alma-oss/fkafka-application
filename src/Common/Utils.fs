@@ -304,10 +304,13 @@ module internal WebServer =
     open Lmc.WebApplication
 
     type Show<'Data> = (unit -> 'Data) option
+    type Port = Port of int
 
-    let web (loggerFactory: ILoggerFactory) (showMetrics: Show<string>) (showStatus: Show<ApplicationStatus>) (httpHandlers: HttpHandler list) =
+    let defaultPort = Port 8080
+
+    let web (loggerFactory: ILoggerFactory) (Port port) (showMetrics: Show<string>) (showStatus: Show<ApplicationStatus>) (httpHandlers: HttpHandler list) =
         application {
-            url "http://0.0.0.0:8080/"
+            url $"http://0.0.0.0:{port}/"
             use_router (choose [
                 Handler.healthCheck Handler.accessDeniedJson
 
