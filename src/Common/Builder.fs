@@ -69,6 +69,7 @@ module ApplicationBuilder =
                         KafkaChecker = newParts.KafkaChecker <??> currentParts.KafkaChecker
                         CustomTasks = currentParts.CustomTasks @ newParts.CustomTasks
                         HttpHandlers = currentParts.HttpHandlers @ newParts.HttpHandlers
+                        WebServerPort = newParts.WebServerPort
                     }
                 |> Configuration.result
 
@@ -425,6 +426,7 @@ module ApplicationBuilder =
                     PreparedRuntimeParts = preparedRuntimeParts
                     CustomTasks = customTasks
                     HttpHandlers = configurationParts.HttpHandlers
+                    WebServerPort = configurationParts.WebServerPort
                 }
             }
             |> KafkaApplication
@@ -609,6 +611,11 @@ module ApplicationBuilder =
         [<CustomOperation("showMetrics")>]
         member __.ShowMetrics(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with ShowMetrics = true }
+
+        /// Show metrics for prometheus on the internal web server at http://127.0.0.1:{PORT}/metrics.
+        [<CustomOperation("showMetrics")>]
+        member __.ShowMetrics(state, port): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with ShowMetrics = true; WebServerPort = WebServer.Port port }
 
         [<CustomOperation("showInputEventsWith")>]
         member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =

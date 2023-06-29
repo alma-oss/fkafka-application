@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Allow to set custom port for internal webServer
+- Add `showMetrics` with a second parameter - port: int
 
 ## 22.9.0 - 2023-06-27
 - Update dependencies

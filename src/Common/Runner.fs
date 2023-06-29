@@ -252,7 +252,7 @@ module internal ApplicationRunner =
                         else None
 
                     application.HttpHandlers
-                    |> WebServer.web application.LoggerFactory showMetrics showStatus
+                    |> WebServer.web application.LoggerFactory application.WebServerPort showMetrics showStatus
                     |> Saturn.Application.run
                 }
                 |> Async.startAndAllowCancellation logger "WebServer" application.Cancellation.Children
