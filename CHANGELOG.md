@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 23.0.0 - 2023-08-11
 - [**BC**] Use net7.0
 
 ## 22.11.0 - 2023-06-29
