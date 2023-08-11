@@ -1,24 +1,24 @@
-framework: net6.0
+framework: net7.0
 storage none
 
 source https://api.nuget.org/v3/index.json
-nuget FSharp.Core ~> 6.0
-nuget FSharp.Data ~> 4.0
+nuget FSharp.Core ~> 7.0
+nuget FSharp.Data ~> 6.0
 nuget Newtonsoft.Json ~> 13.0
 nuget Giraffe ~> 6.0
 nuget Saturn ~> 0.16
 
 git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
 # LMC Nuget dependencies:
-nuget Lmc.ApplicationStatus ~> 2.0
-nuget Lmc.Environment ~> 7.0
-nuget Lmc.ErrorHandling ~> 6.2
-nuget Lmc.Kafka ~> 23.2
-nuget Lmc.Logging ~> 6.0
-nuget Lmc.Metrics ~> 6.1
-nuget Lmc.ServiceIdentification ~> 6.0
-nuget Lmc.Tracing ~> 6.6
-nuget Lmc.WebApplication ~> 7.4
+nuget Lmc.ApplicationStatus ~> 3.0
+nuget Lmc.Environment ~> 8.0
+nuget Lmc.ErrorHandling ~> 7.0
+nuget Lmc.Kafka ~> 24.0
+nuget Lmc.Logging ~> 7.1
+nuget Lmc.Metrics ~> 7.0
+nuget Lmc.ServiceIdentification ~> 7.0
+nuget Lmc.Tracing ~> 7.0
+nuget Lmc.WebApplication ~> 8.0
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk
@@ -29,7 +29,9 @@ group Build
     source https://api.nuget.org/v3/index.json
     nuget Fake.DotNet.Cli
     nuget Fake.IO.FileSystem
+    nuget Fake.IO.Zip
     nuget Fake.Core.Target
+    nuget Fake.Core.UserInput
     nuget Fake.DotNet.AssemblyInfoFile
     nuget Fake.Core.ReleaseNotes
     nuget Fake.Tools.Git
