@@ -1,10 +1,10 @@
-namespace Lmc.KafkaApplication.Router
+namespace Alma.KafkaApplication.Router
 
 [<RequireQualifiedAccess>]
 module internal Router =
-    open Lmc.Kafka
-    open Lmc.ServiceIdentification
-    open Lmc.ErrorHandling
+    open Alma.Kafka
+    open Alma.ServiceIdentification
+    open Alma.ErrorHandling
 
     [<RequireQualifiedAccess>]
     module Configuration =
@@ -56,7 +56,7 @@ module internal Router =
     [<RequireQualifiedAccess>]
     module Routing =
         open Microsoft.Extensions.Logging
-        open Lmc.KafkaApplication
+        open Alma.KafkaApplication
 
         let routeEvent (logger: ILogger) getEventType (produce: StreamName -> TracedEvent<'OutputEvent> -> IO<unit>) router (eventToRoute: TracedEvent<'OutputEvent>): IO<unit> = asyncResult {
             let eventType = eventToRoute |> getEventType

@@ -1,6 +1,6 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
-open Lmc.ApplicationStatus
+open Alma.ApplicationStatus
 open Microsoft.Extensions.Logging
 
 type Serialize = Serialize of (obj -> string)
@@ -29,7 +29,7 @@ module internal Utils =
 
     module FileParser =
         open System.IO
-        open Lmc.ErrorHandling
+        open Alma.ErrorHandling
 
         type FilePath = string
 
@@ -42,7 +42,7 @@ module internal Utils =
             }
 
     module Serializer =
-        open Lmc.Serializer
+        open Alma.Serializer
 
         let toJson = Serialize Serialize.toJson
 
@@ -195,11 +195,11 @@ module internal Utils =
 [<RequireQualifiedAccess>]
 module LoggerFactory =
     open System.IO
-    open Lmc.Environment
-    open Lmc.ServiceIdentification
-    open Lmc.Logging
-    open Lmc.Tracing
-    open Lmc.ErrorHandling
+    open Alma.Environment
+    open Alma.ServiceIdentification
+    open Alma.Logging
+    open Alma.Tracing
+    open Alma.ErrorHandling
 
     type LoggerEnvVar = {
         Instance: string
@@ -238,10 +238,10 @@ module LoggerFactory =
 
 [<RequireQualifiedAccess>]
 module internal AppRootStatus =
-    open Lmc.ErrorHandling
-    open Lmc.Environment
+    open Alma.ErrorHandling
+    open Alma.Environment
 
-    let private mapDockerImageVersion onEmpty (Lmc.Kafka.MetaData.DockerImageVersion version) =
+    let private mapDockerImageVersion onEmpty (Alma.Kafka.MetaData.DockerImageVersion version) =
         match version with
         | null | "" -> onEmpty
         | version -> version
@@ -301,7 +301,7 @@ module internal WebServer =
     open Giraffe
     open Saturn
 
-    open Lmc.WebApplication
+    open Alma.WebApplication
 
     type Show<'Data> = (unit -> 'Data) option
     type Port = Port of int

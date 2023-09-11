@@ -1,12 +1,12 @@
-namespace Lmc.KafkaApplication.Deriver
+namespace Alma.KafkaApplication.Deriver
 
 module DeriverBuilder =
-    open Lmc.KafkaApplication
-    open Lmc.KafkaApplication.PatternBuilder
-    open Lmc.KafkaApplication.PatternMetrics
+    open Alma.KafkaApplication
+    open Alma.KafkaApplication.PatternBuilder
+    open Alma.KafkaApplication.PatternMetrics
     open ApplicationBuilder
-    open Lmc.ErrorHandling
-    open Lmc.ErrorHandling.Option.Operators
+    open Alma.ErrorHandling
+    open Alma.ErrorHandling.Option.Operators
 
     let internal pattern = PatternName "Deriver"
 

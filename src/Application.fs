@@ -1,19 +1,19 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 [<AutoOpen>]
 module KafkaApplication =
     open System
     open Microsoft.Extensions.Logging
-    open Lmc.Kafka
-    open Lmc.Tracing
+    open Alma.Kafka
+    open Alma.Tracing
     open ApplicationBuilder
     open ApplicationRunner
-    open Lmc.KafkaApplication.Filter
-    open Lmc.KafkaApplication.Filter.FilterBuilder
-    open Lmc.KafkaApplication.Router
-    open Lmc.KafkaApplication.Router.ContentBasedRouterBuilder
-    open Lmc.KafkaApplication.Deriver
-    open Lmc.KafkaApplication.Deriver.DeriverBuilder
+    open Alma.KafkaApplication.Filter
+    open Alma.KafkaApplication.Filter.FilterBuilder
+    open Alma.KafkaApplication.Router
+    open Alma.KafkaApplication.Router.ContentBasedRouterBuilder
+    open Alma.KafkaApplication.Deriver
+    open Alma.KafkaApplication.Deriver.DeriverBuilder
 
     //
     // Applications

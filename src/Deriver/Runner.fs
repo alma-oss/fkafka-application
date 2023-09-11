@@ -1,7 +1,7 @@
-namespace Lmc.KafkaApplication.Deriver
+namespace Alma.KafkaApplication.Deriver
 
 module internal DeriverRunner =
-    open Lmc.KafkaApplication
+    open Alma.KafkaApplication
 
     let runDeriver: RunPattern<DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies>, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun run (DeriverApplication application) ->

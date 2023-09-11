@@ -8,14 +8,20 @@ It contains computation expressions to help with building this kind of applicati
 
 Add following into `paket.dependencies`
 ```
-git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
+source https://nuget.pkg.github.com/almacareer/index.json username: "%PRIVATE_FEED_USER%" password: "%PRIVATE_FEED_PASS%"
 # LMC Nuget dependencies:
-nuget Lmc.KafkaApplication
+nuget Alma.KafkaApplication
+```
+
+NOTE: For local development, you have to create ENV variables with your github personal access token.
+```sh
+export PRIVATE_FEED_USER='{GITHUB USERNANME}'
+export PRIVATE_FEED_PASS='{TOKEN}'	# with permissions: read:packages
 ```
 
 Add following into `paket.references`
 ```
-Lmc.KafkaApplication
+Alma.KafkaApplication
 ```
 
 ## Application life cycle
@@ -148,7 +154,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 ### Add Route example
 ```fs
 open Giraffe
-open Lmc.KafkaApplication
+open Alma.KafkaApplication
 
 kafkaApplication {
     addHttpHandler (
@@ -166,7 +172,7 @@ In every Consume Handler, the first parameter you will receive is the `ConsumeRu
 type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment
+    CurrentEnvironment: Alma.EnvironmentModel.Environment
     ProcessedBy: Events.ProcessedBy
     Environment: Map<string, string>
     Connections: Connections
@@ -230,9 +236,9 @@ This is also mandatory, to define at least one connection.
 Following example is the easiest setup, you can get.
 
 ```fs
-open Lmc.Kafka
-open Lmc.ServiceIdentification
-open Lmc.KafkaApplication
+open Alma.Kafka
+open Alma.ServiceIdentification
+open Alma.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -264,10 +270,10 @@ let main argv =
 Following example is the easiest setup, you can get but uses a logger factory to log internal events.
 
 ```fs
-open Lmc.Kafka
-open Lmc.ServiceIdentification
-open Lmc.KafkaApplication
-open Lmc.ErrorHandling
+open Alma.Kafka
+open Alma.ServiceIdentification
+open Alma.KafkaApplication
+open Alma.ErrorHandling
 
 type Dependencies = {
     ServiceApi: ServiceApi
@@ -331,9 +337,9 @@ let main argv =
 Instead of previous example, where our application uses only one connections, there are cases, where we need more than that.
 
 ```fs
-open Lmc.Kafka
-open Lmc.ServiceIdentification
-open Lmc.KafkaApplication
+open Alma.Kafka
+open Alma.ServiceIdentification
+open Alma.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -381,9 +387,9 @@ Now we have even more connection and different relationships between them.
 Keep in mind, that this example is simplified and it is missing the parsing logic (which is passed to the `run` function)
 
 ```fs
-open Lmc.Kafka
-open Lmc.ServiceIdentification
-open Lmc.KafkaApplication
+open Alma.Kafka
+open Alma.ServiceIdentification
+open Alma.KafkaApplication
 
 [<EntryPoint>]
 let main argv =
@@ -444,15 +450,17 @@ useCommitMessageFor "connection" CommitMessage.Manually
 1. Increment version in `KafkaApplication.fsproj`
 2. Update `CHANGELOG.md`
 3. Commit new version and tag it
-4. Run `$ fake build target release`
-5. Go to `nuget-server` repo, run `faket build target copyAll` and push new versions
 
 ## Development
 ### Requirements
 - [dotnet core](https://dotnet.microsoft.com/learn/dotnet/hello-world-tutorial)
-- [FAKE](https://fake.build/fake-gettingstarted.html)
 
 ### Build
 ```bash
-fake build
+./build.sh build
+```
+
+### Tests
+```bash
+./build.sh -t tests
 ```

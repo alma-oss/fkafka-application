@@ -1,13 +1,13 @@
-namespace Lmc.KafkaApplication.Router
+namespace Alma.KafkaApplication.Router
 
-open Lmc.Kafka
-open Lmc.Kafka.MetaData
-open Lmc.KafkaApplication
+open Alma.Kafka
+open Alma.Kafka.MetaData
+open Alma.KafkaApplication
 
 // Errors
 
 type RouterError =
-    | StreamNameIsNotInstance of Lmc.ServiceIdentification.InstanceError
+    | StreamNameIsNotInstance of Alma.ServiceIdentification.InstanceError
 
 type RouterConfigurationError =
     | InvalidConfiguration of file: string * exn

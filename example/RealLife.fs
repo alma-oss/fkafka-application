@@ -1,11 +1,11 @@
 namespace RealLifeExample
 
 open Microsoft.Extensions.Logging
-open Lmc.ServiceIdentification
-open Lmc.Kafka
-open Lmc.KafkaApplication
-open Lmc.ErrorHandling
-open Lmc.Tracing
+open Alma.ServiceIdentification
+open Alma.Kafka
+open Alma.KafkaApplication
+open Alma.ErrorHandling
+open Alma.Tracing
 
 type InputEvent = string
 type OutputEvent = string
@@ -117,7 +117,7 @@ module App =
             })
         }
 
-    open Lmc.KafkaApplication.Deriver
+    open Alma.KafkaApplication.Deriver
 
     let deriverExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _> =
         let deriveEvent (app: PatternRuntimeParts): DeriveEventAsyncResult<InputEvent, OutputEvent> = fun processedBy { Event = event; Trace = trace } -> asyncResult {

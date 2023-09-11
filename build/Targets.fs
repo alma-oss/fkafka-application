@@ -12,6 +12,7 @@ module internal Targets =
     open Fake.Core.TargetOperators
 
     open Utils
+    open Github.Types
 
     // --------------------------------------------------------------------------------------------------------
     // 2. Targets for FAKE
@@ -291,6 +292,41 @@ module internal Targets =
                 | _ -> ()
             )
 
+            Target.create "Publish" (fun _ ->
+                match definition with
+                | { Specs = Library { ReleaseDir = releaseDir } } ->
+                    let organization =
+                        envVar "PRIVATE_FEED_USER"
+                        |> Option.orElse (envVar "NUGET_SERVER_ORGANIZATION")
+                        |> Option.defaultValue "almacareer"
+                    let nugetToken = envVar "PRIVATE_FEED_PASS" |> Option.requireSome "Environment variable PRIVATE_FEED_PASS is not set."
+
+                    Trace.tracefn "[Nuget] Add source"
+                    sprintf "nuget add source --username %s --password %s --store-password-in-clear-text --name github \"https://nuget.pkg.github.com/%s/index.json\""
+                        organization nugetToken organization
+                    |> Dotnet.runInRootOrFail
+
+                    Trace.tracefn "[Nuget] Push packages"
+                    sprintf "nuget push %s -s github --api-key=%s --skip-duplicate" (releaseDir </> "*.nupkg") nugetToken
+                    |> Dotnet.runInRootOrFail
+
+                    match envVar "NUGET_SERVER_TOKEN" with
+                    | Some token ->
+                        Trace.tracefn "Trigger: Update nuget-server readme"
+
+                        Github.triggerAction {
+                            EventType = "update-readme"
+                            CurrentProject = definition.Project.Name
+                            Token = token
+                            Organization = envVar "NUGET_SERVER_ORGANIZATION" |> Option.defaultValue "almacareer"
+                            Repository = envVar "NUGET_SERVER_REPOSITORY" |> Option.defaultValue "prc-nuget-server"
+                        }
+                        |> Async.RunSynchronously
+
+                    | _ -> ()
+                | _ -> ()
+            )
+
             Target.create "Watch" (fun _ ->
                 Dotnet.runInRootOrFail "watch run"
             )
@@ -312,6 +348,7 @@ module internal Targets =
                     ==> "Lint"
                     ==> "Tests"
                     ==> "Release"
+                    ==> "Publish"
             ]
 
         | { Specs = ConsoleApplication _ } ->

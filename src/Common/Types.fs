@@ -1,17 +1,17 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 open System
 open System.Threading
 open Microsoft.Extensions.Logging
 open Giraffe
 
-open Lmc.Kafka
-open Lmc.Kafka.MetaData
-open Lmc.Metrics
-open Lmc.ServiceIdentification
-open Lmc.Logging
-open Lmc.Tracing
-open Lmc.ErrorHandling
+open Alma.Kafka
+open Alma.Kafka.MetaData
+open Alma.Metrics
+open Alma.ServiceIdentification
+open Alma.Logging
+open Alma.Tracing
+open Alma.ErrorHandling
 
 [<Measure>] type Second
 [<Measure>] type Attempt
@@ -106,7 +106,7 @@ type ConnectionConfiguration = {
 
 [<RequireQualifiedAccess>]
 module internal ConnectionConfiguration =
-    let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Lmc.Kafka.ConnectionConfiguration =
+    let toKafkaConnectionConfiguration (connection: ConnectionConfiguration): Alma.Kafka.ConnectionConfiguration =
         {
             BrokerList = connection.BrokerList
             Topic = connection.Topic |> StreamName.Instance
@@ -180,17 +180,17 @@ type EnvironmentError =
 [<RequireQualifiedAccess>]
 type InstanceError =
     | VariableNotFoundError of string
-    | InvalidFormatError of Lmc.ServiceIdentification.InstanceError
+    | InvalidFormatError of Alma.ServiceIdentification.InstanceError
 
 [<RequireQualifiedAccess>]
 type CurrentEnvironmentError =
     | VariableNotFoundError of string
-    | InvalidFormatError of Lmc.EnvironmentModel.EnvironmentError
+    | InvalidFormatError of Alma.EnvironmentModel.EnvironmentError
 
 [<RequireQualifiedAccess>]
 type SpotError =
     | VariableNotFoundError of string
-    | InvalidFormatError of Lmc.ServiceIdentification.SpotError
+    | InvalidFormatError of Alma.ServiceIdentification.SpotError
 
 [<RequireQualifiedAccess>]
 type GroupIdError =
@@ -199,7 +199,7 @@ type GroupIdError =
 [<RequireQualifiedAccess>]
 type ConnectionConfigurationError =
     | VariableNotFoundError of string
-    | TopicIsNotInstanceError of Lmc.ServiceIdentification.InstanceError list
+    | TopicIsNotInstanceError of Alma.ServiceIdentification.InstanceError list
 
 [<RequireQualifiedAccess>]
 type ConsumeHandlerError =
@@ -304,7 +304,7 @@ type internal ConsumeEventsWithConfiguration<'InputEvent> = ConsumerConfiguratio
 
 [<RequireQualifiedAccess>]
 module Event =
-    open Lmc.ErrorHandling.AsyncResult.Operators
+    open Alma.ErrorHandling.AsyncResult.Operators
 
     let private errorToConsumeError = function
         | RuntimeError error -> ConsumeError.RuntimeException error
@@ -338,7 +338,7 @@ module Event =
 type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
     LoggerFactory: ILoggerFactory
     Box: Box
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment
+    CurrentEnvironment: Alma.EnvironmentModel.Environment
     GitCommit: MetaData.GitCommit
     DockerImageVersion: MetaData.DockerImageVersion
     Environment: Map<string, string>
@@ -355,7 +355,7 @@ type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
 type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment
+    CurrentEnvironment: Alma.EnvironmentModel.Environment
     ProcessedBy: ProcessedBy
     Environment: Map<string, string>
     Connections: Connections
@@ -524,7 +524,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment option
+    CurrentEnvironment: Alma.EnvironmentModel.Environment option
     Initialize: ApplicationInitialization<'OutputEvent, 'Dependencies> option
     Git: Git
     DockerImageVersion: DockerImageVersion option
@@ -619,7 +619,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = 
     Box: Box
     Git: Git
     DockerImageVersion: DockerImageVersion option
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment
+    CurrentEnvironment: Alma.EnvironmentModel.Environment
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ConsumeHandlers: RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dependencies> list
     ConsumeEvents: RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies>

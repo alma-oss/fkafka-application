@@ -1,20 +1,20 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 module internal ApplicationRunner =
     open System
     open System.Threading
     open Microsoft.Extensions.Logging
-    open Lmc.Kafka
-    open Lmc.ServiceIdentification
-    open Lmc.ErrorHandling
-    open Lmc.ErrorHandling.Option.Operators
+    open Alma.Kafka
+    open Alma.ServiceIdentification
+    open Alma.ErrorHandling
+    open Alma.ErrorHandling.Option.Operators
 
     module private KafkaApplicationRunner =
         open System
-        open Lmc.Metrics
-        open Lmc.Metrics.ServiceStatus
-        open Lmc.Tracing
-        open Lmc.KafkaApplication.ApplicationEvents
+        open Alma.Metrics
+        open Alma.Metrics.ServiceStatus
+        open Alma.Tracing
+        open Alma.KafkaApplication.ApplicationEvents
 
         let private checkResources (application: KafkaApplicationParts<_, _, _>) =
             let instance = application.Box |> Box.instance
@@ -48,7 +48,7 @@ module internal ApplicationRunner =
                 |> Async.startAndAllowCancellation logger $"Check resource {resource}" application.Cancellation.Children
             )
 
-        let internal wait (seconds: int<Lmc.KafkaApplication.Second>) =
+        let internal wait (seconds: int<Alma.KafkaApplication.Second>) =
             Async.Sleep(TimeSpan.FromSeconds (float seconds))
 
         let rec private connectProducersWithErrorHandling connectProducer application = async {
@@ -241,7 +241,7 @@ module internal ApplicationRunner =
                 application |> checkResources
 
                 async {
-                    let showStatus: WebServer.Show<Lmc.ApplicationStatus.ApplicationStatus> =
+                    let showStatus: WebServer.Show<Alma.ApplicationStatus.ApplicationStatus> =
                         if application.ShowAppRootStatus
                         then Some (fun () -> AppRootStatus.status instance application.CurrentEnvironment application.Git application.DockerImageVersion)
                         else None

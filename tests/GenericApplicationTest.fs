@@ -1,16 +1,16 @@
-module Lmc.KafkaApplication.Test.GenericApplication
+module Alma.KafkaApplication.Test.GenericApplication
 
 open Expecto
-open Lmc.KafkaApplication.Test
+open Alma.KafkaApplication.Test
 
-open Lmc.ServiceIdentification
-open Lmc.Kafka
-open Lmc.ErrorHandling
-open Lmc.EnvironmentModel
-open Lmc.KafkaApplication
-open Lmc.KafkaApplication.Deriver
-open Lmc.KafkaApplication.Filter
-open Lmc.KafkaApplication.Router
+open Alma.ServiceIdentification
+open Alma.Kafka
+open Alma.ErrorHandling
+open Alma.EnvironmentModel
+open Alma.KafkaApplication
+open Alma.KafkaApplication.Deriver
+open Alma.KafkaApplication.Filter
+open Alma.KafkaApplication.Router
 
 let okOrFail = function
     | Ok ok -> ok

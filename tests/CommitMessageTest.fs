@@ -1,12 +1,12 @@
-module Lmc.KafkaApplication.Test.CommitMessage
+module Alma.KafkaApplication.Test.CommitMessage
 
 open Expecto
-open Lmc.Kafka
-open Lmc.ServiceIdentification
+open Alma.Kafka
+open Alma.ServiceIdentification
 open Microsoft.Extensions.Logging
-open Lmc.Kafka.MetaData
-open Lmc.Logging
-open Lmc.KafkaApplication
+open Alma.Kafka.MetaData
+open Alma.Logging
+open Alma.KafkaApplication
 
 let okOrFail = function
     | Ok ok -> ok
@@ -21,7 +21,7 @@ type TestableConfigurationParts = {
     LoggerFactory: ILoggerFactory
     Environment: Map<string, string>
     Instance: Instance option
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment option
+    CurrentEnvironment: Alma.EnvironmentModel.Environment option
     Git: Git
     DockerImageVersion: DockerImageVersion option
     Spot: Spot option

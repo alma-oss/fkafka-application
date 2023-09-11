@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  #push:
+  pull_request:
+  schedule:
+      -   cron:  '0 3 * * *'
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os:
+          - name: ubuntu-latest
+            run: ./build.sh
+    runs-on: ${{ matrix.os.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.x
+
+      - name: Run tests
+        env:
+          PRIVATE_FEED_USER: ${{ github.repository_owner }}
+          PRIVATE_FEED_PASS: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.os.run }} -t tests

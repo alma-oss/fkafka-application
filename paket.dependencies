@@ -8,17 +8,17 @@ nuget Newtonsoft.Json ~> 13.0
 nuget Giraffe ~> 6.0
 nuget Saturn ~> 0.16
 
-git ssh://git@bitbucket.lmc.cz:7999/archi/nuget-server.git master Packages: /nuget/
+source https://nuget.pkg.github.com/almacareer/index.json username: "%PRIVATE_FEED_USER%" password: "%PRIVATE_FEED_PASS%"
 # LMC Nuget dependencies:
-nuget Lmc.ApplicationStatus ~> 3.0
-nuget Lmc.Environment ~> 8.0
-nuget Lmc.ErrorHandling ~> 7.0
-nuget Lmc.Kafka ~> 24.0
-nuget Lmc.Logging ~> 7.1
-nuget Lmc.Metrics ~> 7.0
-nuget Lmc.ServiceIdentification ~> 7.0
-nuget Lmc.Tracing ~> 7.0
-nuget Lmc.WebApplication ~> 8.0
+nuget Alma.ApplicationStatus ~> 4.0
+nuget Alma.Environment ~> 9.0
+nuget Alma.ErrorHandling ~> 8.0
+nuget Alma.Kafka ~> 25.0
+nuget Alma.Logging ~> 8.0
+nuget Alma.Metrics ~> 8.0
+nuget Alma.ServiceIdentification ~> 8.0
+nuget Alma.Tracing ~> 8.0
+nuget Alma.WebApplication ~> 9.0
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk

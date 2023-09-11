@@ -1,8 +1,8 @@
-namespace Lmc.KafkaApplication.Filter
+namespace Alma.KafkaApplication.Filter
 
 module internal FilterRunner =
     open Microsoft.Extensions.Logging
-    open Lmc.KafkaApplication
+    open Alma.KafkaApplication
 
     let runFilter: RunPattern<FilterApplication<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun run (FilterApplication application) ->

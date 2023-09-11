@@ -1,11 +1,11 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 open System.Threading
 open Microsoft.Extensions.Logging
-open Lmc.Kafka
-open Lmc.KafkaApplication
-open Lmc.ServiceIdentification
-open Lmc.Metrics
+open Alma.Kafka
+open Alma.KafkaApplication
+open Alma.ServiceIdentification
+open Alma.Metrics
 
 // Errors
 
@@ -26,7 +26,7 @@ type internal RunPattern<'Pattern, 'InputEvent, 'OutputEvent, 'Dependencies> = R
 type PatternRuntimeParts<'Dependencies> = {
     LoggerFactory: ILoggerFactory
     Box: Box
-    CurrentEnvironment: Lmc.EnvironmentModel.Environment
+    CurrentEnvironment: Alma.EnvironmentModel.Environment
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
@@ -83,7 +83,7 @@ type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Depend
 type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
-    open Lmc.ErrorHandling.Option.Operators
+    open Alma.ErrorHandling.Option.Operators
     open ApplicationBuilder
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> =

@@ -71,6 +71,10 @@ module internal Utils =
             | Some v -> Some v
             | None -> f None
 
+        let requireSome error = function
+            | Some v -> v
+            | None -> failwith error
+
     [<RequireQualifiedAccess>]
     module Dotnet =
         let dotnet = createProcess "dotnet"
@@ -315,3 +319,58 @@ module internal Utils =
                 | AlpineLinux -> "linux-musl-x64"
                 | RaspberryPiHassioAddon -> "alpine.3.16-arm64"
                 | Other other -> other
+
+    [<RequireQualifiedAccess>]
+    module Http =
+        open System.Net.Http
+        open System.Net.Http.Headers
+
+        let post (currentProject: string) token (url: string) (data: string) = async {
+            use client = new HttpClient()
+
+            let requestHeaders = client.DefaultRequestHeaders
+            requestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
+            requestHeaders.Add("User-Agent", sprintf "Fake.Build/%s" currentProject)
+
+            use request = new StringContent(data, Text.Encoding.UTF8)
+            request.Headers.ContentType <- new MediaTypeHeaderValue("application/json")
+
+            let! response = client.PostAsync(url, request) |> Async.AwaitTask
+            response.EnsureSuccessStatusCode() |> ignore
+
+            let headers =
+                response.Headers :> seq<Collections.Generic.KeyValuePair<string, seq<string>>>
+                |> Seq.append (
+                    response.Content.Headers :> seq<Collections.Generic.KeyValuePair<string, seq<string>>>
+                )
+                |> Seq.map (fun kv -> kv.Key, kv.Value |> Seq.toList)
+                |> Map.ofSeq
+
+            use! stream = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+            use reader = new StreamReader(stream)
+
+            return headers, reader.ReadToEnd()
+        }
+
+    [<RequireQualifiedAccess>]
+    module Github =
+        [<AutoOpen>]
+        module Types =
+            type TriggerAction = {
+                CurrentProject: string
+                Token: string
+                Organization: string
+                Repository: string
+                EventType: string
+            }
+
+        let triggerAction { CurrentProject = current; Token = token; Organization = org; Repository = repo; EventType = event } = async {
+            let url =
+                $"https://api.github.com/repos/{org}/{repo}/dispatches"
+                |> tee (Trace.tracefn "Github.Trigger<%s>: %s" event)
+
+            let data = sprintf @"{""event_type"":""%s"",""client_payload"":{""from"": ""%s""}}" event current
+            let! _ = Http.post current token url data
+
+            return ()
+        }

@@ -1,11 +1,11 @@
-namespace Lmc.KafkaApplication.Filter
+namespace Alma.KafkaApplication.Filter
 
 [<RequireQualifiedAccess>]
 module internal Filter =
     open Microsoft.Extensions.Logging
-    open Lmc.Kafka
-    open Lmc.ErrorHandling
-    open Lmc.ServiceIdentification
+    open Alma.Kafka
+    open Alma.ErrorHandling
+    open Alma.ServiceIdentification
 
     [<RequireQualifiedAccess>]
     module Configuration =
@@ -64,7 +64,7 @@ module internal Filter =
 
     [<RequireQualifiedAccess>]
     module Filtering =
-        open Lmc.KafkaApplication
+        open Alma.KafkaApplication
 
         let filterByConfiguration<'InputEvent, 'OutputEvent, 'FilterValue when 'FilterValue: equality>
             (loggerFactory: ILoggerFactory)

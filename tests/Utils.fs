@@ -1,4 +1,4 @@
-namespace Lmc.KafkaApplication.Test
+namespace Alma.KafkaApplication.Test
 
 [<RequireQualifiedAccess>]
 module internal List =

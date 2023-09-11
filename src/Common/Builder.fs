@@ -1,19 +1,19 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 module ApplicationBuilder =
     open System
     open System.Threading
     open Microsoft.Extensions.Logging
-    open Lmc.Kafka
-    open Lmc.Kafka.MetaData
-    open Lmc.KafkaApplication
-    open Lmc.Metrics
-    open Lmc.Metrics.ServiceStatus
-    open Lmc.ServiceIdentification
-    open Lmc.Environment
-    open Lmc.ErrorHandling
-    open Lmc.ErrorHandling.AsyncResult.Operators
-    open Lmc.ErrorHandling.Option.Operators
+    open Alma.Kafka
+    open Alma.Kafka.MetaData
+    open Alma.KafkaApplication
+    open Alma.Metrics
+    open Alma.Metrics.ServiceStatus
+    open Alma.ServiceIdentification
+    open Alma.Environment
+    open Alma.ErrorHandling
+    open Alma.ErrorHandling.AsyncResult.Operators
+    open Alma.ErrorHandling.Option.Operators
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =
@@ -139,7 +139,7 @@ module ApplicationBuilder =
             checker
             markAsDisabled
             prepareProducer
-            (produceMessage: ConnectedProducer -> Lmc.Tracing.Trace -> MessageToProduce -> unit)
+            (produceMessage: ConnectedProducer -> Alma.Tracing.Trace -> MessageToProduce -> unit)
             (connections: Connections)
             fromDomain
             (incrementOutputCount: OutputStreamName -> 'OutputEvent -> unit)
@@ -245,10 +245,10 @@ module ApplicationBuilder =
                 // optional parts
                 //
                 let initialization = configurationParts.Initialize <?=> Initialization id
-                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Lmc.KafkaApplication.Second>)
+                let defaultProduceErrorHandler: ProducerErrorHandler = (fun _ _ -> ProducerErrorPolicy.RetryIn 60<Alma.KafkaApplication.Second>)
                 let producerErrorHandler = configurationParts.ProducerErrorHandler <?=> defaultProduceErrorHandler
 
-                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<Lmc.KafkaApplication.Second>)
+                let defaultConsumeErrorHandler: ConsumeErrorHandler = (fun _ _ -> RetryIn 60<Alma.KafkaApplication.Second>)
                 let getErrorHandler connection =
                     configurationParts.OnConsumeErrorHandlers |> Map.tryFind connection
                     <?=> defaultConsumeErrorHandler
@@ -266,7 +266,7 @@ module ApplicationBuilder =
 
                 let gitCommit =
                     configurationParts.Git.Commit
-                    |> Option.map (fun (Lmc.ApplicationStatus.GitCommit g) -> GitCommit g)
+                    |> Option.map (fun (Alma.ApplicationStatus.GitCommit g) -> GitCommit g)
                     <?=> GitCommit "unknown"
 
                 let dockerImageVersion = configurationParts.DockerImageVersion <?=> DockerImageVersion "unknown"
