@@ -2,9 +2,9 @@
 
 open System
 open Microsoft.Extensions.Logging
-open Lmc.Logging
-open Lmc.KafkaApplication
-open Lmc.ErrorHandling
+open Alma.Logging
+open Alma.KafkaApplication
+open Alma.ErrorHandling
 
 let tee f a =
     f a

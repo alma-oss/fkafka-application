@@ -19,7 +19,7 @@ Filter computation expression returns `Application of FilterApplication<'InputEv
 | from | `Configuration<'InputEvent, 'OutputEvent>` | It will create a base kafka application parts. This is mandatory and configuration must contain all dependencies. |
 | getCommonEventBy | `GetCommonEvent: InputOrOutputEvent<'InputEvent, 'OutputEvent> -> CommonEvent` | It will _register_ a function to get common data out of both input and output events for metrics. |
 | getFilterValue | `GetFilterValue: 'InputEvent -> 'FilterValue option` | It will _register_ a function to get a generic 'FilterValue from the Input Event - to be used in Filter. Otherwise 'FilterValue is ignored. |
-| parseConfiguration | `parseFilterValue: (Lmc.Kafka.RawData -> 'FilterValue)`, `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
+| parseConfiguration | `parseFilterValue: (Alma.Kafka.RawData -> 'FilterValue)`, `configurationPath: string` | It parses the configuration file from the path. Configuration must have the correct schema (_see below_). |
 
 ### FilterContent
 It is a function, which is responsible for filtering events.

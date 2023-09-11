@@ -1,13 +1,13 @@
-namespace Lmc.KafkaApplication.Router
+namespace Alma.KafkaApplication.Router
 
 module ContentBasedRouterBuilder =
-    open Lmc.Kafka
-    open Lmc.KafkaApplication
-    open Lmc.KafkaApplication.PatternBuilder
-    open Lmc.KafkaApplication.PatternMetrics
-    open Lmc.ErrorHandling
-    open Lmc.ErrorHandling.Option.Operators
-    open Lmc.ErrorHandling.Result.Operators
+    open Alma.Kafka
+    open Alma.KafkaApplication
+    open Alma.KafkaApplication.PatternBuilder
+    open Alma.KafkaApplication.PatternMetrics
+    open Alma.ErrorHandling
+    open Alma.ErrorHandling.Option.Operators
+    open Alma.ErrorHandling.Result.Operators
     open ApplicationBuilder
 
     let internal pattern = PatternName "ContentBasedRouter"
@@ -27,7 +27,7 @@ module ContentBasedRouterBuilder =
                 let! outputStreamTopics =
                     outputStreams
                     |> List.map (function
-                        | StreamName streamName -> Error (StreamNameIsNotInstance (Lmc.ServiceIdentification.InstanceError.InvalidFormat streamName))
+                        | StreamName streamName -> Error (StreamNameIsNotInstance (Alma.ServiceIdentification.InstanceError.InvalidFormat streamName))
                         | Instance instance -> Ok instance
                     )
                     |> Validation.ofResults <@> RouterErrors

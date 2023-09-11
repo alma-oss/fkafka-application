@@ -1,8 +1,8 @@
-namespace Lmc.KafkaApplication.Deriver
+namespace Alma.KafkaApplication.Deriver
 
-open Lmc.KafkaApplication
-open Lmc.Kafka.MetaData
-open Lmc.ErrorHandling
+open Alma.KafkaApplication
+open Alma.Kafka.MetaData
+open Alma.ErrorHandling
 
 // Errors
 

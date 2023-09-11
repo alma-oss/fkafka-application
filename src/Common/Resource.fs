@@ -1,9 +1,9 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 module internal ResourceChecker =
-    open Lmc.Kafka
-    open Lmc.Metrics
-    open Lmc.ServiceIdentification
+    open Alma.Kafka
+    open Alma.Metrics
+    open Alma.ServiceIdentification
 
     let private kafkaClusterResource brokerList = ResourceAvailability.createFromStrings "kafka_cluster" brokerList brokerList Audience.Sys
 

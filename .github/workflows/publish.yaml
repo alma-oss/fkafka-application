@@ -1,0 +1,35 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '[0-9]+\.[0-9]+\.[0-9]+'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.x
+
+      - name: Generate token
+        id: generate_token
+        uses: almacareer/dex-github-app-token@v1
+        with:
+          app_id: ${{ secrets.PRC_ACTIONS_INTERNAL_APPID }}
+          installation_id: ${{ secrets.PRC_ACTIONS_INTERNAL_INSTALLATION_ID }}
+          private_key: ${{ secrets.PRC_ACTIONS_INTERNAL_KEY }}
+
+      - name: Publish package
+        env:
+          PRIVATE_FEED_USER: ${{ github.repository_owner }}
+          PRIVATE_FEED_PASS: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_SERVER_TOKEN: ${{ steps.generate_token.outputs.token }}
+          NUGET_SERVER_ORGANIZATION: ${{ github.repository_owner }}
+          NUGET_SERVER_REPOSITORY: "prc-nuget-server"
+        run: ./build.sh -t publish

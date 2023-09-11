@@ -1,9 +1,9 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 open System
-open Lmc.Kafka
-open Lmc.ServiceIdentification
-open Lmc.Serializer
+open Alma.Kafka
+open Alma.ServiceIdentification
+open Alma.Serializer
 
 type public InstanceStartedDtoMetaData = {
     CreatedAt: string

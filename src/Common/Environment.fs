@@ -1,17 +1,17 @@
-namespace Lmc.KafkaApplication
+namespace Alma.KafkaApplication
 
 [<AutoOpen>]
 module EnvironmentBuilder =
     open System.IO
     open Microsoft.Extensions.Logging
-    open Lmc.ServiceIdentification
-    open Lmc.Kafka
-    open Lmc.Kafka.MetaData
-    open Lmc.KafkaApplication
-    open Lmc.Environment
-    open Lmc.EnvironmentModel
-    open Lmc.ErrorHandling
-    open Lmc.ErrorHandling.Option.Operators
+    open Alma.ServiceIdentification
+    open Alma.Kafka
+    open Alma.Kafka.MetaData
+    open Alma.KafkaApplication
+    open Alma.Environment
+    open Alma.EnvironmentModel
+    open Alma.ErrorHandling
+    open Alma.ErrorHandling.Option.Operators
 
     type EnvironmentBuilder internal (loggerFactory: ILoggerFactory) =
         let logger = LoggerFactory.createLogger loggerFactory "KafkaApplication.Environment"

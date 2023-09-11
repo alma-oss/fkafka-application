@@ -1,14 +1,14 @@
-namespace Lmc.KafkaApplication.Filter
+namespace Alma.KafkaApplication.Filter
 
-open Lmc.ServiceIdentification
-open Lmc.Kafka.MetaData
-open Lmc.KafkaApplication
+open Alma.ServiceIdentification
+open Alma.Kafka.MetaData
+open Alma.KafkaApplication
 
 // Errors
 type FilterConfigurationError =
     | NotFound of string
     | NotSet
-    | InvalidSpot of Lmc.ServiceIdentification.SpotError list
+    | InvalidSpot of Alma.ServiceIdentification.SpotError list
     | MissingOutputStream
     | MissingFilterContent
     | MissingGetCommonEvent

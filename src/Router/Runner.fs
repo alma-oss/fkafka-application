@@ -1,8 +1,8 @@
-namespace Lmc.KafkaApplication.Router
+namespace Alma.KafkaApplication.Router
 
 module internal ContentBasedRouterRunner =
     open Microsoft.Extensions.Logging
-    open Lmc.KafkaApplication
+    open Alma.KafkaApplication
 
     let runRouter: RunPattern<ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies>, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun run (ContentBasedRouterApplication application) ->
