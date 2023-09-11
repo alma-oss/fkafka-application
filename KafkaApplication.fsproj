@@ -5,7 +5,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Alma.KafkaApplication</PackageId>
-    <Version>23.0.0</Version>
+    <Version>24.0.0</Version>
     <RepositoryUrl>https://github.com/almacareer/prc-fkafka-application</RepositoryUrl>
   </PropertyGroup>
 
