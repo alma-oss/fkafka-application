@@ -18,7 +18,7 @@ nuget Alma.Logging ~> 8.0
 nuget Alma.Metrics ~> 8.0
 nuget Alma.ServiceIdentification ~> 8.0
 nuget Alma.Tracing ~> 8.0
-nuget Alma.WebApplication ~> 9.0
+nuget Alma.WebApplication ~> 10.2
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk

@@ -312,19 +312,19 @@ module internal WebServer =
         application {
             url $"http://0.0.0.0:{port}/"
             use_router (choose [
-                Handler.healthCheck Handler.accessDeniedJson
+                Handler.Public.healthCheck
 
                 match showMetrics with
-                | Some metrics -> Handler.metrics (fun _ -> metrics())
+                | Some metrics -> Handler.Public.metrics (fun _ -> metrics())
                 | _ -> ()
 
                 match showStatus with
-                | Some status -> Handler.appRootStatus (fun _ -> status())
+                | Some status -> Handler.Public.appRootStatus (fun _ -> status())
                 | _ -> ()
 
                 yield! httpHandlers
 
-                Handler.resourceNotFound
+                Handler.Public.notFoundJson
             ])
             memory_cache
             use_gzip
