@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `ConnectionName.runtimeName` function
+- Add `CustomTaskRuntimeParts.ConsumerConfigurations` field
 
 ## 24.1.0 - 2023-11-01
 - Update dependencies

@@ -95,8 +95,8 @@ type ConnectionName = ConnectionName of string
 type RuntimeConnectionName = string
 
 [<RequireQualifiedAccess>]
-module internal ConnectionName =
-    let value (ConnectionName name) = name
+module ConnectionName =
+    let internal value (ConnectionName name) = name
     let runtimeName (ConnectionName name): RuntimeConnectionName = name
 
 type ConnectionConfiguration = {
@@ -499,6 +499,7 @@ type CustomTaskRuntimeParts = {
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
 }
 
 type CustomTaskName = CustomTaskName of string
