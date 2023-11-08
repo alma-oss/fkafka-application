@@ -402,6 +402,7 @@ module ApplicationBuilder =
                         SetMetric = setMetric
                         EnableResource = enableResource
                         DisableResource = disableResource
+                        ConsumerConfigurations = runtimeConsumerConfigurations
                     }
 
                 return {

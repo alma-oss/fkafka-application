@@ -200,6 +200,7 @@ type CustomTaskRuntimeParts = {
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
+    ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
 }
 ```
 
