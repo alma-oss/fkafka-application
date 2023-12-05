@@ -37,7 +37,7 @@ NUGET
       FSharp.Data (>= 6.3 < 7.0)
       librdkafka.redist (2.0.2)
       Microsoft.Extensions.Logging (>= 7.0 < 8.0)
-    Alma.Logging (8.0.0)
+    Alma.Logging (8.3.2)
       Alma.ErrorHandling (>= 8.0 < 9.0)
       Alma.ServiceIdentification (>= 8.0 < 9.0)
       FSharp.Core (>= 7.0.400 < 8.0)

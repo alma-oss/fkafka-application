@@ -14,7 +14,7 @@ nuget Alma.ApplicationStatus ~> 4.0
 nuget Alma.Environment ~> 9.0
 nuget Alma.ErrorHandling ~> 8.0
 nuget Alma.Kafka ~> 25.0
-nuget Alma.Logging ~> 8.0
+nuget Alma.Logging ~> 8.3
 nuget Alma.Metrics ~> 8.0
 nuget Alma.ServiceIdentification ~> 8.0
 nuget Alma.Tracing ~> 8.0
