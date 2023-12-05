@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 24.3.0 - 2023-12-05
 - Ignore health-check and metrics for logging
 
 ## 24.2.0 - 2023-11-08
