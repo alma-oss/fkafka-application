@@ -229,6 +229,9 @@ module LoggerFactory =
             LogToSerilog (SerilogOptions.ofInstance instance @ [
                 SerilogOption.UseLevelFromEnvironment loggerEnvVars.Verbosity
                 AddMetaFromEnvironment loggerEnvVars.LoggerTags
+
+                IgnorePathHealthCheck
+                IgnorePathMetrics
             ])
         ]
     }
