@@ -86,7 +86,7 @@ module internal Utils =
 
     [<AutoOpen>]
     module ProjectDefinition =
-        type ProjectSources =
+        type IProjectSources =
             abstract member Sources: IGlobbingPattern
             abstract member Tests: IGlobbingPattern
             abstract member All: IGlobbingPattern
@@ -100,10 +100,10 @@ module internal Utils =
             with
                 member this.Sources =
                     match this with
-                    | { Specs = Library app } -> app :> ProjectSources
-                    | { Specs = Executable app } -> app  :> ProjectSources
-                    | { Specs = ConsoleApplication app } -> app :> ProjectSources
-                    | { Specs = SAFEStackApplication app } -> app  :> ProjectSources
+                    | { Specs = Library app } -> app :> IProjectSources
+                    | { Specs = Executable app } -> app  :> IProjectSources
+                    | { Specs = ConsoleApplication app } -> app :> IProjectSources
+                    | { Specs = SAFEStackApplication app } -> app  :> IProjectSources
 
                 member this.ChangeLog =
                     match this with
@@ -152,7 +152,7 @@ module internal Utils =
                 AllSources: IGlobbingPattern
             }
 
-            interface ProjectSources with
+            interface IProjectSources with
                 member this.Sources = this.LibrarySources
                 member this.Tests = this.TestsSources
                 member this.All = this.AllSources
@@ -166,7 +166,7 @@ module internal Utils =
                 AllSources: IGlobbingPattern
             }
 
-            interface ProjectSources with
+            interface IProjectSources with
                 member this.Sources = this.ApplicationSources
                 member this.Tests = this.TestsSources
                 member this.All = this.AllSources
@@ -182,7 +182,7 @@ module internal Utils =
                 AllSources: IGlobbingPattern
             }
 
-            interface ProjectSources with
+            interface IProjectSources with
                 member this.Sources = this.ApplicationSources
                 member this.Tests = this.TestsSources
                 member this.All = this.AllSources
@@ -207,7 +207,7 @@ module internal Utils =
                 AllSources: IGlobbingPattern
             }
 
-            interface ProjectSources with
+            interface IProjectSources with
                 member this.Sources = this.ReleaseSources
                 member this.Tests = this.TestsSources
                 member this.All = this.AllSources
