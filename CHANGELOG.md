@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 25.0.0 - 2024-01-11
 - [**BC**] Use net8.0
 - Fix package metadata
 
