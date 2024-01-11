@@ -1,5 +1,5 @@
 // ========================================================================================================
-// === F# / Project fake build ==================================================================== 1.2.0 =
+// === F# / Project fake build ==================================================================== 1.3.0 =
 // --------------------------------------------------------------------------------------------------------
 // Options:
 //  - no-clean   - disables clean of dirs in the first step (required on CI)
@@ -23,7 +23,9 @@ let main args =
             Summary = "Framework for kafka application. It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc.."
             Git = Git.init ()
         }
-        Specs = Spec.defaultLibrary
+        Specs =
+            Spec.defaultLibrary
+            |> Spec.mapLibrary (fun library -> { library with NugetApi = NugetApi.Organization "almacareer" })
     }
 
     args |> Args.run

@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- [**BC**] Use net8.0
+- Fix package metadata
 
 ## 24.3.0 - 2023-12-05
 - Ignore health-check and metrics for logging
