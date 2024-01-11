@@ -2,11 +2,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Alma.KafkaApplication</PackageId>
     <Version>24.3.0</Version>
-    <RepositoryUrl>https://github.com/almacareer/prc-fkafka-application</RepositoryUrl>
+    <RepositoryUrl>https://github.com/almacareer/prc-fkafka-application.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/almacareer/prc-fkafka-application</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
