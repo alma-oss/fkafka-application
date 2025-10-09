@@ -2,6 +2,9 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Add `ErrorMessage.format` function
+- Add `Compressor` pattern
+- Add `showInternalState` keyword for a common builder
 
 ## 26.0.0 - 2025-03-18
 - [**BC**] Use net9.0

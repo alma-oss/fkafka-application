@@ -62,6 +62,7 @@ module ApplicationBuilder =
                         FromDomain = newParts.FromDomain |> Map.merge currentParts.FromDomain
                         ShowMetrics = newParts.ShowMetrics
                         ShowAppRootStatus = newParts.ShowAppRootStatus
+                        ShowInternalState = newParts.ShowInternalState
                         CustomMetrics = currentParts.CustomMetrics @ newParts.CustomMetrics
                         IntervalResourceCheckers = currentParts.IntervalResourceCheckers @ newParts.IntervalResourceCheckers
                         CreateInputEventKeys = newParts.CreateInputEventKeys <??> currentParts.CreateInputEventKeys
@@ -221,8 +222,33 @@ module ApplicationBuilder =
                 }
             }
 
+        let internal showMetrics state: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with ShowMetrics = true }
+
+        let internal registerCustomMetric customMetric configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            configuration <!> fun parts -> { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+
+        let internal showCustomMetric name metricType description configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            showMetrics configuration >>= fun parts ->
+                result {
+                    let! metricName =
+                        name
+                        |> MetricName.create
+                        |> Result.mapError (InvalidMetricName >> MetricsError)
+
+                    let customMetric = {
+                        Name = metricName
+                        Type = metricType
+                        Description = description
+                    }
+
+                    // todo<later>: it should be possible to use `registerCustomMetric` here, but I'm not sure how to do it in a way that the result is properly propagated
+                    // in that case, showMetrics should not be called twice
+                    return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+                }
+
         let buildApplication createProducer produceMessage (Configuration configuration): KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
-            /// Overriden Result.ofOption operator to return a KafkaApplicationError instead of generic error
+            /// Overridden Result.ofOption operator to return a KafkaApplicationError instead of generic error
             let inline (<?!>) o errorMessage =
                 o <?!> (sprintf "[KafkaApplicationBuilder] %s" errorMessage |> ErrorMessage |> KafkaApplicationError)
 
@@ -312,6 +338,7 @@ module ApplicationBuilder =
                                 Cancellation = Some cancellation.Children.Token
                                 CountLag = false
                                 CommitMessage = commitMessages.TryFind name <?=> defaultCommitMessage
+                                GetCheckpoint = None
                             }
                         )
                     ) Map.empty
@@ -389,8 +416,22 @@ module ApplicationBuilder =
                 let consume: RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
                     fun runtimeParts ->
                         let parseEvent = Event.parse (parseEvent runtimeParts)
+                        let beforeParse =
+                            if runtimeParts.StoreCurrentOffsetInternally
+                            then
+                                runtimeParts.LoggerFactory.CreateLogger("Consume.BeforeParse").LogInformation "Storing current offsets internally enabled."
+                                InternalState.updateCurrentOffset
+                            else fun _ -> ignore
+
                         fun configuration ->
-                            Consumer.consumeAsync configuration parseEvent
+                            Consumer.consumeMessagesAsync configuration (fun tracedMessage ->
+                                tracedMessage
+                                |> Consumer.TracedMessage.map (
+                                    tee (beforeParse configuration.Connection.Topic)
+                                    >> Consumer.Message.value
+                                )
+                                |> parseEvent
+                            )
 
                 let customTasks =
                     configurationParts.CustomTasks
@@ -422,6 +463,7 @@ module ApplicationBuilder =
                     ServiceStatus = serviceStatus
                     ShowMetrics = configurationParts.ShowMetrics
                     ShowAppRootStatus = configurationParts.ShowAppRootStatus
+                    ShowInternalState = configurationParts.ShowInternalState
                     CustomMetrics = configurationParts.CustomMetrics
                     IntervalResourceCheckers = configurationParts.IntervalResourceCheckers
                     PreparedRuntimeParts = preparedRuntimeParts
@@ -611,12 +653,12 @@ module ApplicationBuilder =
         /// Show metrics for prometheus on the internal web server at http://127.0.0.1:8080/metrics.
         [<CustomOperation("showMetrics")>]
         member __.ShowMetrics(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
-            state <!> fun parts -> { parts with ShowMetrics = true }
+            state |> showMetrics
 
         /// Show metrics for prometheus on the internal web server at http://127.0.0.1:{PORT}/metrics.
         [<CustomOperation("showMetrics")>]
         member __.ShowMetrics(state, port): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
-            state <!> fun parts -> { parts with ShowMetrics = true; WebServerPort = WebServer.Port port }
+            state |> showMetrics <!> fun parts -> { parts with WebServerPort = WebServer.Port port }
 
         [<CustomOperation("showInputEventsWith")>]
         member __.ShowInputEventsWith(state, createInputEventKeys): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
@@ -627,27 +669,12 @@ module ApplicationBuilder =
             state |> addCreateOutputEventKeys createOutputEventKeys
 
         [<CustomOperation("showCustomMetric")>]
-        member this.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
-            this.ShowMetrics(state) >>= fun parts ->
-                result {
-                    let! metricName =
-                        name
-                        |> MetricName.create
-                        |> Result.mapError InvalidMetricName
-
-                    let customMetric = {
-                        Name = metricName
-                        Type = metricType
-                        Description = description
-                    }
-
-                    return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
-                }
-                |> Result.mapError MetricsError
+        member __.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state |> showCustomMetric name metricType description
 
         [<CustomOperation("registerCustomMetric")>]
         member __.RegisterCustomMetric(state, customMetric): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
-            state <!> fun parts -> { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+            state |> registerCustomMetric customMetric
 
         [<CustomOperation("checkResourceInInterval")>]
         member __.CheckResourceInInterval(state, checker, resource, interval): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
@@ -671,3 +698,7 @@ module ApplicationBuilder =
         [<CustomOperation("showAppRootStatus")>]
         member __.ShowAppRootStatus(state): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state <!> fun parts -> { parts with ShowAppRootStatus = true }
+
+        [<CustomOperation("showInternalState")>]
+        member __.ShowInternalState(state, path): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state <!> fun parts -> { parts with ShowInternalState = Some path }

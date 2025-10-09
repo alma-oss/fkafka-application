@@ -5,8 +5,8 @@ module internal DeriverRunner =
 
     let runDeriver: RunPattern<DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies>, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun run (DeriverApplication application) ->
-            let beforeRun _: BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> =
-                ignore
+            let beforeStart _ = BeforeStart.empty
+            let beforeRun _ = BeforeRun.empty
 
             application
-            |> PatternRunner.runPattern DeriverBuilder.pattern DeriverApplication.application beforeRun run
+            |> PatternRunner.runPattern DeriverBuilder.pattern DeriverApplication.application beforeStart beforeRun run

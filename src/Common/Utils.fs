@@ -311,7 +311,7 @@ module internal WebServer =
 
     let defaultPort = Port 8080
 
-    let web (loggerFactory: ILoggerFactory) (Port port) (showMetrics: Show<string>) (showStatus: Show<ApplicationStatus>) (httpHandlers: HttpHandler list) =
+    let web (loggerFactory: ILoggerFactory) (Port port) (showMetrics: Show<string>) (showStatus: Show<ApplicationStatus>) (showInternalState: HttpHandler option) (httpHandlers: HttpHandler list) =
         application {
             url $"http://0.0.0.0:{port}/"
             use_router (choose [
@@ -323,6 +323,10 @@ module internal WebServer =
 
                 match showStatus with
                 | Some status -> Handler.Public.appRootStatus (fun _ -> status())
+                | _ -> ()
+
+                match showInternalState with
+                | Some handler -> handler
                 | _ -> ()
 
                 yield! httpHandlers

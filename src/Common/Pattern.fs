@@ -62,7 +62,8 @@ module internal PatternRunner =
     let runPattern<'PatternParts, 'PatternError, 'InputEvent, 'OutputEvent, 'Dependencies>
         (PatternName pattern)
         (getKafkaApplication: 'PatternParts -> KafkaApplication<'InputEvent,'OutputEvent, 'Dependencies>)
-        (beforeRun: 'PatternParts -> BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies>)
+        (beforeStart: 'PatternParts -> BeforeStart<'InputEvent, 'OutputEvent, 'Dependencies>)
+        (beforeRun: 'PatternParts -> BeforeRun<'OutputEvent, 'Dependencies>)
         (run: RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies>)
         (patternApplication: Result<'PatternParts, 'PatternError>) =
 
@@ -70,7 +71,7 @@ module internal PatternRunner =
         | Ok patternParts ->
             patternParts
             |> getKafkaApplication
-            |> run (beforeRun patternParts)
+            |> run (beforeStart patternParts) (beforeRun patternParts)
         | Error error ->
             error
             |> sprintf "[Critical Error] %s Application cannot start because of %A" pattern

@@ -12,10 +12,10 @@ source https://nuget.pkg.github.com/almacareer/index.json username: "%PRIVATE_FE
 # LMC Nuget dependencies:
 nuget Alma.ApplicationStatus ~> 6.1
 nuget Alma.Environment ~> 11.1
-nuget Alma.ErrorHandling ~> 10.0
-nuget Alma.Kafka ~> 27.0
+nuget Alma.ErrorHandling ~> 10.1
+nuget Alma.Kafka ~> 28.0
 nuget Alma.Logging ~> 10.0
-nuget Alma.Metrics ~> 10.1
+nuget Alma.Metrics ~> 10.1.1
 nuget Alma.ServiceIdentification ~> 10.0
 nuget Alma.Tracing ~> 11.0
 nuget Alma.WebApplication ~> 12.0

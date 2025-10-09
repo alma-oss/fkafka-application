@@ -167,11 +167,16 @@ module internal ApplicationRunner =
 
             let logger = LoggerFactory.createLogger loggerFactory (sprintf "KafkaApplication.Kafka<%s>" consumeHandler.Connection)
             logger.LogDebug "Run consume handler ..."
+
             try
+                let configuration =
+                    consumeHandler.Configuration
+                    |> ConsumerConfiguration.updateByRuntimeConfiguration runtimeParts.ConsumerConfigurations[consumeHandler.Connection]
+
                 try
                     consumeHandler.Handler
                     |> ConsumeHandler.toRuntime runtimeParts
-                    |> consume logger (consumeEvents runtimeParts) consumeHandler.IncrementInputCount consumeHandler.Configuration
+                    |> consume logger (consumeEvents runtimeParts) consumeHandler.IncrementInputCount configuration
                 with
                 | e ->
                     logger.LogError("Consume events ends with {error}", e)
@@ -221,6 +226,7 @@ module internal ApplicationRunner =
             |> List.iter action
 
         let run<'InputEvent, 'OutputEvent, 'Dependencies>
+            beforeRun
             connectProducer
             produceSingleMessage
             flushProducer
@@ -251,8 +257,12 @@ module internal ApplicationRunner =
                         then Some (fun () -> ApplicationMetrics.getMetricsState instance application.CustomMetrics)
                         else None
 
+                    let showInternalState =
+                        application.ShowInternalState
+                        |> Option.map InternalState.httpHandler
+
                     application.HttpHandlers
-                    |> WebServer.web application.LoggerFactory application.WebServerPort showMetrics showStatus
+                    |> WebServer.web application.LoggerFactory application.WebServerPort showMetrics showStatus showInternalState
                     |> Saturn.Application.run
                 }
                 |> Async.startAndAllowCancellation logger "WebServer" application.Cancellation.Children
@@ -272,6 +282,16 @@ module internal ApplicationRunner =
                     |> PreparedConsumeRuntimeParts.toRuntimeParts application.Cancellation.Children connectedProducers
                     |> ApplicationInitialization.initialize application.Initialize
                 logger.LogDebug "Consumer runtime parts are initialized."
+
+                let runtimeParts =
+                    match beforeRun with
+                    | BeforeRun (Some beforeRun) ->
+                        logger.LogInformation "Execute pattern before run function."
+
+                        beforeRun runtimeParts
+                        |> tee (fun _ -> logger.LogInformation "Pattern before run function executed.")
+
+                    | _ -> runtimeParts
 
                 connectedProducers
                 |> Map.tryFind (Connections.Supervision |> ConnectionName.runtimeName)
@@ -315,7 +335,7 @@ module internal ApplicationRunner =
             |> List.iter runSafely
 
     let startKafkaApplication: RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
-        fun beforeRun (KafkaApplication application) ->
+        fun (BeforeStart beforeStart) patternBeforeRun (KafkaApplication application) ->
             match application with
             | Ok app ->
                 let logger = LoggerFactory.createLogger app.LoggerFactory "KafkaApplication"
@@ -327,9 +347,10 @@ module internal ApplicationRunner =
                     ApplicationState.start logger
 
                     app
-                    |> tee beforeRun
+                    |> tee beforeStart
                     |> tee KafkaApplicationRunner.runCustomTasks
                     |> KafkaApplicationRunner.run
+                        patternBeforeRun
                         Producer.connect
                         Producer.produceSingle
                         Producer.flush
