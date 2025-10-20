@@ -1,6 +1,7 @@
 namespace Alma.KafkaApplication.Compressor
 
 module CompressorBuilder =
+    open Microsoft.Extensions.Logging
     open Alma.KafkaApplication
     open Alma.KafkaApplication.PatternBuilder
     open Alma.KafkaApplication.PatternMetrics
@@ -66,12 +67,14 @@ module CompressorBuilder =
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option)
             (configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies>): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
 
-            let sendBatch app =
+            let sendBatch (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) =
+                (app.LoggerFactory.CreateLogger "Compressor.init").LogDebug "prepare sendBatch"
                 match sendBatch with
                 | SendBatchHandler.Simple sendBatch -> sendBatch
                 | SendBatchHandler.WithApplication sendBatch -> sendBatch (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
-            let pickEvent app processedBy =
+            let pickEvent (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) processedBy =
+                (app.LoggerFactory.CreateLogger "Compressor.init").LogDebug "prepare pickEvent"
                 let pickEvent =
                     match pickEventHandler with
                     | Simple pickEvent -> pickEvent
@@ -83,8 +86,9 @@ module CompressorBuilder =
                 | PickEventAsyncResult pickEvent -> pickEvent processedBy
 
             let pickEventHandler (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) =
+                (app.LoggerFactory.CreateLogger "Compressor.init").LogDebug "prepare pickEventHandler"
                 let sendBatch = SendBatch.prepare sendBatch app
-                let pickEvent = pickEvent app
+                let pickEvent = pickEvent app app.ProcessedBy
                 let setOffset = setOffset app
                 let instance = app.Box |> Box.instance
                 let incrementBatchCreated () = CompressorMetrics.incrementBatchCreated instance
@@ -94,10 +98,7 @@ module CompressorBuilder =
 
                 fun (event: TracedEvent<'InputEvent>) -> asyncResult {
                     use inputEvent = event |> TracedEvent.continueAs "Compressor" "Pick event"
-
-                    let! outputEvent =
-                        inputEvent
-                        |> pickEvent app.ProcessedBy
+                    let! outputEvent = inputEvent |> pickEvent
 
                     outputEvent
                     |> Option.iter (fun ({ Trace = trace } as event) ->

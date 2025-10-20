@@ -61,8 +61,9 @@ module App =
         let name = sprintf "%s.txt" key
         Path.Combine("offset", name)
 
-    let parseEvent: ParseEvent<InputEvent> =
-        id
+    let parseEvent app =
+        printfn "⚠️ Parse event"
+        fun event -> event
 
     open Alma.KafkaApplication.Compressor
 
@@ -74,6 +75,7 @@ module App =
         let mutable batchCounter = 0
 
         let send (app: PatternRuntimeParts<Dependencies>) =
+            printfn "⚠️ Send event"
             let file = app.Environment["BATCH_FILE"]
 
             fun (CompressedBatch batch) -> asyncResult {
@@ -94,6 +96,44 @@ module App =
                 File.AppendAllLines(file, $"Batch[{batchCounter}]: " :: lines)
 
                 return ()
+            }
+
+        let pickEventHandler app =
+                printfn "⚠️ Pickup event"
+
+                fun { Trace = trace; Event = event } ->
+                    printfn "Picking event: %s" event
+                    // failOn2()
+
+                    Some { Trace = trace; Event = sprintf "O: %s" event }
+
+        let storeOffset app =
+            printfn "⚠️ Store offset"
+            fun groupId tpo -> asyncResult {
+                printfn "[Offset] Set: %s" (formatTpo tpo)
+
+                match tpo with
+                | { Offset = Some (Offset o) } ->
+                    let file = tpFile groupId tpo.TopicPartition
+                    File.WriteAllText(file, string o)
+
+                | _ -> printfn " - No offset to store -> skipped"
+            }
+
+        let retreiveOffset app =
+            printfn "⚠️ Retrieve offset"
+            fun groupId tp -> asyncResult {
+                printfn "[Offset] Get: %s" (formatTp tp)
+                let file = tpFile groupId tp
+
+                if file |> File.Exists |> not then
+                    printfn " - File %s not found, returning None" file
+                    return { TopicPartition = tp; Offset = None }
+
+                else
+                    match File.ReadAllText file |> Int64.TryParse with
+                    | true, o -> return { TopicPartition = tp; Offset = Some (Offset (o + 1L)) }
+                    | _ -> return { TopicPartition = tp; Offset = None }
             }
 
         compressor {
@@ -119,7 +159,7 @@ module App =
                     groupId "GROUP_ID"
                 })
 
-                parseEventWith parseEvent
+                parseEventAndUseApplicationWith parseEvent
 
                 showMetrics
                 showAppRootStatus
@@ -128,40 +168,12 @@ module App =
 
             batchSize "BATCH_SIZE"
 
-            setOffset (fun app groupId tpo -> asyncResult {
-                printfn "[Offset] Set: %s" (formatTpo tpo)
+            setOffset storeOffset
 
-                match tpo with
-                | { Offset = Some (Offset o) } ->
-                    let file = tpFile groupId tpo.TopicPartition
-                    File.WriteAllText(file, string o)
+            getOffset retreiveOffset
 
-                | _ -> printfn " - No offset to store -> skipped"
-            })
-
-            getOffset (fun app groupId tp -> asyncResult {
-                printfn "[Offset] Get: %s" (formatTp tp)
-                let file = tpFile groupId tp
-
-                if file |> File.Exists |> not then
-                    printfn " - File %s not found, returning None" file
-                    return { TopicPartition = tp; Offset = None }
-
-                else
-                    match File.ReadAllText file |> Int64.TryParse with
-                    | true, o -> return { TopicPartition = tp; Offset = Some (Offset (o + 1L)) }
-                    | _ -> return { TopicPartition = tp; Offset = None }
-            })
-
-            pickEvent (fun _ { Trace = trace; Event = event } ->
-                printfn "Picking event: %s" event
-                // failOn2()
-
-                Some { Trace = trace; Event = sprintf "O: %s" event }
-            )
-
+            pickEvent pickEventHandler
             sendBatch send
-
         }
 
 module Program =

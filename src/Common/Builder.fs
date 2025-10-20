@@ -415,6 +415,7 @@ module ApplicationBuilder =
 
                 let consume: RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
                     fun runtimeParts ->
+                        (runtimeParts.LoggerFactory.CreateLogger "Builder.init").LogDebug "prepare consume"
                         let parseEvent = Event.parse (parseEvent runtimeParts)
                         let beforeParse =
                             if runtimeParts.StoreCurrentOffsetInternally
