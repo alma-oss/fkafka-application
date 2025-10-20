@@ -141,6 +141,12 @@ module ErrorMessage =
         | Errors [] -> []
         | Errors errors -> errors |> List.collect value
 
+    let format e =
+        match value e with
+        | [] -> "No error message."
+        | [ message ] -> message
+        | messages -> messages |> String.concat "\n"
+
 type internal IO<'Data> = AsyncResult<'Data, ErrorMessage>
 
 [<RequireQualifiedAccess>]
@@ -367,6 +373,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
     Cancellation: CancellationTokenSource
+    StoreCurrentOffsetInternally: bool
 }
 
 type Initialization<'OutputEvent, 'Dependencies> = ConsumeRuntimeParts<'OutputEvent, 'Dependencies> -> ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
@@ -415,6 +422,7 @@ module internal PreparedConsumeRuntimeParts =
             DisableResource = preparedRuntimeParts.DisableResource
             Dependencies = None
             Cancellation = cancellation
+            StoreCurrentOffsetInternally = false
         }
 
 [<RequireQualifiedAccess>]
@@ -481,6 +489,22 @@ type internal RuntimeConsumeHandlerForConnection<'InputEvent, 'OutputEvent, 'Dep
     IncrementInputCount: 'InputEvent -> unit
 }
 
+[<RequireQualifiedAccess>]
+module internal ConsumerConfiguration =
+    /// This function allows to modify only the specific parts of Configuration of the handler
+    /// Some parts are already used elsewhere and should not be changed, it will fail if you try to change them
+    let updateByRuntimeConfiguration (mapped: ConsumerConfiguration) (original: ConsumerConfiguration) =
+        if
+            mapped.Connection <> original.Connection
+            || mapped.GroupId <> original.GroupId
+            || mapped.CommitMessage <> original.CommitMessage
+            || mapped.CountLag <> original.CountLag
+            // other fields contains functions or complex types, we do not want to compare them
+        then
+            failwith "You cannot change Consumer configuration this way."
+
+        { original with GetCheckpoint = mapped.GetCheckpoint }
+
 //
 // Custom tasks
 //
@@ -543,6 +567,7 @@ type internal ConfigurationParts<'InputEvent, 'OutputEvent, 'Dependencies> = {
     FromDomain: Map<ConnectionName, OutputFromDomain<'OutputEvent>>
     ShowMetrics: bool
     ShowAppRootStatus: bool
+    ShowInternalState: string option
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list
     CreateInputEventKeys: CreateInputEventKeys<'InputEvent> option
@@ -588,6 +613,7 @@ module internal ConfigurationParts =
             FromDomain = Map.empty
             ShowMetrics = false
             ShowAppRootStatus = false
+            ShowInternalState = None
             CustomMetrics = []
             IntervalResourceCheckers = []
             CreateInputEventKeys = None
@@ -629,6 +655,7 @@ type internal KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> = 
     ServiceStatus: ServiceStatus.ServiceStatus
     ShowMetrics: bool
     ShowAppRootStatus: bool
+    ShowInternalState: string option
     CustomMetrics: CustomMetric list
     IntervalResourceCheckers: ResourceMetricInInterval list
     PreparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent>
@@ -673,7 +700,19 @@ module ApplicationShutdown =
                 .LogCritical("Application shutdown with runtime error: {error}", error)
             1
 
-type internal BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> -> unit
+type internal BeforeStart<'InputEvent, 'OutputEvent, 'Dependencies> = BeforeStart of (KafkaApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies> -> unit)
+type internal BeforeRun<'OutputEvent, 'Dependencies> = BeforeRun of (ConsumeRuntimeParts<'OutputEvent,'Dependencies> -> ConsumeRuntimeParts<'OutputEvent,'Dependencies>) option
 type internal Run<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> -> ApplicationShutdown
 
-type internal RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> -> Run<'InputEvent, 'OutputEvent, 'Dependencies>
+type internal RunKafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
+    BeforeStart<'InputEvent, 'OutputEvent, 'Dependencies>
+        -> BeforeRun<'OutputEvent, 'Dependencies>
+        -> Run<'InputEvent, 'OutputEvent, 'Dependencies>
+
+[<RequireQualifiedAccess>]
+module internal BeforeStart =
+    let empty = BeforeStart ignore
+
+[<RequireQualifiedAccess>]
+module internal BeforeRun =
+    let empty = BeforeRun None

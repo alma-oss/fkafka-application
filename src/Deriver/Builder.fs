@@ -1,6 +1,7 @@
 namespace Alma.KafkaApplication.Deriver
 
 module DeriverBuilder =
+    open Microsoft.Extensions.Logging
     open Alma.KafkaApplication
     open Alma.KafkaApplication.PatternBuilder
     open Alma.KafkaApplication.PatternMetrics
@@ -19,29 +20,32 @@ module DeriverBuilder =
             (getCommonEvent: GetCommonEvent<'InputEvent, 'OutputEvent> option)
             (configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies>): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
 
-            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) (event: TracedEvent<'InputEvent>) = asyncResult {
-                use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
+            let deriveEvent (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) processedBy =
+                (app.LoggerFactory.CreateLogger "Deriver.init").LogDebug "prepare deriveEvent"
+                let deriveEvent =
+                    match deriveEventHandler with
+                    | Simple deriveEvent -> deriveEvent
+                    | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
 
-                let deriveEvent processedBy =
-                    let deriveEvent =
-                        match deriveEventHandler with
-                        | Simple deriveEvent -> deriveEvent
-                        | WithApplication deriveEvent -> deriveEvent (app |> PatternRuntimeParts.fromConsumeParts pattern)
+                match deriveEvent with
+                | DeriveEvent deriveEvent -> deriveEvent processedBy >> AsyncResult.ofSuccess
+                | DeriveEventResult deriveEvent -> deriveEvent processedBy >> AsyncResult.ofResult
+                | DeriveEventAsyncResult deriveEvent -> deriveEvent processedBy
 
-                    match deriveEvent with
-                    | DeriveEvent deriveEvent -> deriveEvent processedBy >> AsyncResult.ofSuccess
-                    | DeriveEventResult deriveEvent -> deriveEvent processedBy >> AsyncResult.ofResult
-                    | DeriveEventAsyncResult deriveEvent -> deriveEvent processedBy
+            let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) =
+                (app.LoggerFactory.CreateLogger "Deriver.init").LogDebug "prepare deriveEventHandler"
+                let deriveEvent = deriveEvent app app.ProcessedBy
+                let produceTo = app.ProduceTo.[deriverOutputStream]
 
-                let! outputEvents =
-                    eventToDerive
-                    |> deriveEvent app.ProcessedBy
+                fun (event: TracedEvent<'InputEvent>) -> asyncResult {
+                    use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
+                    let! outputEvents = eventToDerive |> deriveEvent
 
-                do!
-                    outputEvents
-                    |> List.map app.ProduceTo.[deriverOutputStream]
-                    |> IO.runList
-            }
+                    do!
+                        outputEvents
+                        |> List.map produceTo
+                        |> IO.runList
+                }
 
             let configuration =
                 configuration

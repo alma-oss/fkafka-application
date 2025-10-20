@@ -18,6 +18,7 @@
     <!-- Common kafka application -->
     <Compile Include="src/Common/Utils.fs" />
     <Compile Include="src/Common/Types.fs" />
+    <Compile Include="src/Common/InternalState.fs" />
     <Compile Include="src/Common/Resource.fs" />
     <Compile Include="src/Common/Metrics.fs" />
     <Compile Include="src/Common/ApplicationEvents.fs" />
@@ -48,6 +49,15 @@
     <Compile Include="src/Deriver/Types.fs" />
     <Compile Include="src/Deriver/Builder.fs" />
     <Compile Include="src/Deriver/Runner.fs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- Compressor pattern application -->
+    <Compile Include="src/Compressor/Batch.fs" />
+    <Compile Include="src/Compressor/Types.fs" />
+    <Compile Include="src/Compressor/Metrics.fs" />
+    <Compile Include="src/Compressor/Builder.fs" />
+    <Compile Include="src/Compressor/Runner.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,10 +6,12 @@ module internal ContentBasedRouterRunner =
 
     let runRouter: RunPattern<ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies>, 'InputEvent, 'OutputEvent, 'Dependencies> =
         fun run (ContentBasedRouterApplication application) ->
-            let beforeRun routerApplication: BeforeRun<'InputEvent, 'OutputEvent, 'Dependencies> =
-                fun app ->
-                    (patternLogger ContentBasedRouterBuilder.pattern app.LoggerFactory)
-                        .LogDebug("Configuration: {configuration}", routerApplication.RouterConfiguration)
+            let beforeStart routerApplication = BeforeStart (fun app ->
+                (patternLogger ContentBasedRouterBuilder.pattern app.LoggerFactory)
+                    .LogDebug("Configuration: {configuration}", routerApplication.RouterConfiguration)
+            )
+
+            let beforeRun _ = BeforeRun.empty
 
             application
-            |> PatternRunner.runPattern ContentBasedRouterBuilder.pattern ContentBasedRouterApplication.application beforeRun run
+            |> PatternRunner.runPattern ContentBasedRouterBuilder.pattern ContentBasedRouterApplication.application beforeStart beforeRun run

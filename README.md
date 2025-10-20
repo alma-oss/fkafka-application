@@ -30,9 +30,10 @@ Alma.KafkaApplication
     ├─> Build (computation expression) builds the Application out of your configuration
     └─> Run Application, which might be either Ok or with the Error
               ┌────────────────────────────────┘               └──────────────────────────────────────────<Ends with the Error>───────┐
-              ├─> Before Run (Debug pattern specific configuration)                                                                   │
+              ├─> Before Start                      (Debug pattern specific configuration)                                            │
               ├─> Start Custom Tasks                                                                                                  │
               ├─> Initialize runtime parts          (only if initialization is set)                                                   │
+              ├─> Before Run                        (allow the pattern to map some runtime parts)                                     │
               └─> Run Kafka Application                                                                                               │
                    ├─> Debug Configuration          (only with debug verbosity)                                                       │
                    ├─> Enable Context Metric                                                                                          │
@@ -71,9 +72,10 @@ Alma.KafkaApplication
 Definitions for patterns could is in the [Confluence](https://confluence.int.lmc.cz/display/ARCH/Event+Driven+Architecture).
 You can simply use predefined patterns for application you want.
 
-- [FilterContentFilter](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Filter/README.md)
-- [ContentBasedRouter](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Router/README.md)
-- [Deriver](https://bitbucket.lmc.cz/projects/ARCHI/repos/fkafka-application/browse/src/Deriver/README.md)
+- [FilterContentFilter](src/Filter/README.md)
+- [ContentBasedRouter](src/Router/README.md)
+- [Deriver](src/Deriver/README.md)
+- [Compressor](src/Compressor/README.md)
 
 ## Custom Kafka Application functions
 _NOTE: All functions has the first argument for the `state: Configuration<'Event>`, but this is current state of the application and it is passed implicitly in the background by computation expression._
@@ -106,6 +108,7 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | showMetrics | | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showMetrics | `port: int` | It will asynchronously run a web server (`http://127.0.0.1:{PORT}`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showOutputEventsWith | `createOutputEventKeys: OutputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Output events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
+| showInternalState | `path: string` | Add `HttpHandler` for a given `path` which will show current internal state as a plain/text. Route must start with `/`. |
 | useDockerImageVersion | `DockerImageVersion` | |
 | useGit | `Git` | |
 | useGroupId | `GroupId` | It is optional with default `GroupId.Random`. |

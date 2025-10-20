@@ -14,6 +14,8 @@ module KafkaApplication =
     open Alma.KafkaApplication.Router.ContentBasedRouterBuilder
     open Alma.KafkaApplication.Deriver
     open Alma.KafkaApplication.Deriver.DeriverBuilder
+    open Alma.KafkaApplication.Compressor
+    open Alma.KafkaApplication.Compressor.CompressorBuilder
 
     //
     // Applications
@@ -24,6 +26,7 @@ module KafkaApplication =
         | FilterContentFilter of FilterApplication<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>
         | ContentBasedRouter of ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies>
         | Deriver of DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies>
+        | Compressor of CompressorApplication<'InputEvent, 'OutputEvent, 'Dependencies>
 
         with
             member this.Logger
@@ -62,6 +65,11 @@ module KafkaApplication =
         let buildDeriver: DeriverApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> DeriverApplication<'InputEvent, 'OutputEvent, 'Dependencies> = DeriverApplicationBuilder.buildDeriver buildApplication
         DeriverBuilder(buildDeriver >> Deriver)
 
+    let compressor<'InputEvent, 'OutputEvent, 'Dependencies> =
+        let buildApplication: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> -> KafkaApplication<'InputEvent, 'OutputEvent, 'Dependencies> = KafkaApplicationBuilder.buildApplication Producer.prepare Producer.produceWithTrace
+        let buildCompressor: CompressorApplicationConfiguration<'InputEvent, 'OutputEvent, 'Dependencies> -> CompressorApplication<'InputEvent, 'OutputEvent, 'Dependencies> = CompressorApplicationBuilder.buildCompressor buildApplication
+        CompressorBuilder(buildCompressor >> Compressor)
+
     //
     // Run applications
     //
@@ -69,10 +77,11 @@ module KafkaApplication =
     let run<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue> (application: Application<'InputEvent, 'OutputEvent, 'Dependencies, 'FilterValue>) =
         try
             match application with
-            | CustomApplication kafkaApplication -> startKafkaApplication ignore kafkaApplication
+            | CustomApplication kafkaApplication -> startKafkaApplication BeforeStart.empty BeforeRun.empty kafkaApplication
             | FilterContentFilter filterApplication -> FilterRunner.runFilter startKafkaApplication filterApplication
             | ContentBasedRouter routerApplication -> ContentBasedRouterRunner.runRouter startKafkaApplication routerApplication
             | Deriver deriverApplication -> DeriverRunner.runDeriver startKafkaApplication deriverApplication
+            | Compressor compressorApplication -> CompressorRunner.runCompressor startKafkaApplication compressorApplication
         finally
             ApplicationState.finish application.Logger
             Tracer.finishTracerProvider()

@@ -60,7 +60,7 @@ module App =
     if Tracer.Check.isTracerAvailable() |> not then
         failwithf "Tracer is not available\n%A" <| Tracer.Check.environment()
 
-    let kafkaApplicationExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _> =
+    let kafkaApplicationExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _, _> =
         kafkaApplication {
             useLoggerFactory loggerFactory
             useCommitMessage (CommitMessage.Manually FailOnNotCommittedMessage.WithException)
@@ -119,8 +119,8 @@ module App =
 
     open Alma.KafkaApplication.Deriver
 
-    let deriverExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _> =
-        let deriveEvent (app: PatternRuntimeParts): DeriveEventAsyncResult<InputEvent, OutputEvent> = fun processedBy { Event = event; Trace = trace } -> asyncResult {
+    let deriverExample envFiles loggerFactory: Application<InputEvent, OutputEvent, _, _> =
+        let deriveEvent (app: PatternRuntimeParts<_>): DeriveEventAsyncResult<InputEvent, OutputEvent> = fun processedBy { Event = event; Trace = trace } -> asyncResult {
             printfn "------------------------------------------------------"
             let finish = ignore
 
@@ -191,8 +191,8 @@ module App =
 
 module Program =
     let run envFiles loggerFactory =
-        App.kafkaApplicationExample
-        // App.deriverExample
+        //App.kafkaApplicationExample
+        App.deriverExample
             envFiles
             loggerFactory
         |> run

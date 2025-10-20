@@ -25,8 +25,8 @@ let main argv =
         }
         |> Result.orFail
 
-    printfn "Wait 5s before start ..."
-    System.Threading.Thread.Sleep 5_000
+    // printfn "Wait 10s before start ..."
+    // System.Threading.Thread.Sleep 10_000
 
     RealLifeExample.Program.run envFiles loggerFactory
     |> ApplicationShutdown.withStatusCodeAndLogResult loggerFactory
