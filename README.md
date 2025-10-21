@@ -182,6 +182,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
     ProduceTo: Map<RuntimeConnectionName, ProduceEvent<'OutputEvent>>
     IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
+    IncrementMetricBy: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
     SetMetric: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
@@ -200,6 +201,7 @@ type CustomTaskRuntimeParts = {
     Box: Box
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
