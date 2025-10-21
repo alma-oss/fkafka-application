@@ -47,22 +47,25 @@ module internal ApplicationMetrics =
             | Int int -> Count int
             | _ -> Count 0
 
-        let incrementState createInputKeys createOutputKeys = function
+        let incrementStateBy createInputKeys createOutputKeys value = function
             | InputEventsTotal (instance, inputStream, event) ->
                 event
                 |> createKeyForInputEvent createInputKeys instance inputStream
-                |> State.incrementMetricSetValue (Int 1) (metricTotalInputEvent instance.Context)
+                |> State.incrementMetricSetValue value (metricTotalInputEvent instance.Context)
                 |> metricValueToCount
             | OutputEventsTotal (instance, outputStream, event) ->
                 event
                 |> createKeyForOutputEvent createOutputKeys instance outputStream
-                |> State.incrementMetricSetValue (Int 1) (metricTotalOutputEvent instance.Context)
+                |> State.incrementMetricSetValue value (metricTotalOutputEvent instance.Context)
                 |> metricValueToCount
             | CustomMetricWithDataSetKey (instance, metricName, (SimpleDataSetKeys labels)) ->
                 labels
                 |> createKey instance
-                |> State.incrementMetricSetValue (Int 1) metricName
+                |> State.incrementMetricSetValue value metricName
                 |> metricValueToCount
+
+        let incrementState createInputKeys createOutputKeys =
+            incrementStateBy createInputKeys createOutputKeys (Int 1)
 
         let enableContextStatus (instance: Instance) =
             let metricName = metricStatus instance.Context
@@ -135,6 +138,12 @@ module internal ApplicationMetrics =
         (instance, metricName, labels)
         |> CustomMetricWithDataSetKey
         |> incrementState createNoInputKeys createNoOutputKeys
+        |> ignore
+
+    let incrementCustomMetricCountBy instance metricName labels metricValue =
+        (instance, metricName, labels)
+        |> CustomMetricWithDataSetKey
+        |> incrementStateBy createNoInputKeys createNoOutputKeys metricValue
         |> ignore
 
     let setCustomMetricValue instance metricName (SimpleDataSetKeys labels) value =
