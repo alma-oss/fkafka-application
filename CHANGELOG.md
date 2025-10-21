@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 26.2.0 - 2025-10-21
 - Add `IncrementMetricBy` to runtime parts
 
 ## 26.1.0 - 2025-10-20
