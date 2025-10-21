@@ -29,6 +29,7 @@ type PatternRuntimeParts<'Dependencies> = {
     CurrentEnvironment: Alma.EnvironmentModel.Environment
     Environment: Map<string, string>
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
+    IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
@@ -50,6 +51,7 @@ module internal PatternRuntimeParts =
             CurrentEnvironment = consumeRuntimeParts.CurrentEnvironment
             Environment = consumeRuntimeParts.Environment
             IncrementMetric = consumeRuntimeParts.IncrementMetric
+            IncrementMetricBy = consumeRuntimeParts.IncrementMetricBy
             SetMetric = consumeRuntimeParts.SetMetric
             EnableResource = consumeRuntimeParts.EnableResource
             DisableResource = consumeRuntimeParts.DisableResource
