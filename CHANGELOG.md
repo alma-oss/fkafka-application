@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 26.3.1 - 2025-10-22
 - Update kafka lib to fix problem with compressor checkpoint offset, when there is no checkpoint stored yet
 
 ## 26.3.0 - 2025-10-21
