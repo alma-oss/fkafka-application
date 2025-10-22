@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update kafka lib to fix problem with compressor checkpoint offset, when there is no checkpoint stored yet
 
 ## 26.3.0 - 2025-10-21
 - Add `IncrementMetricBy` to pattern runtime parts

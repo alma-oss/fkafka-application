@@ -21,7 +21,7 @@ export KAFKA_BROKER="$RPK_BROKERS"
 export INPUT_STREAM="development-compressor-local-v1v10"
 
 #export GROUP_ID="$INSTANCE-2" # -2 zustal na 105
-ATTEMPT=15
+ATTEMPT=17
 export GROUP_ID="$INSTANCE-$ATTEMPT" # -2 by mel zustal na 100
 export BATCH_SIZE=10
 

@@ -90,6 +90,7 @@ module App =
                     batch
                     |> List.map (TracedEvent.event >> sprintf " - %s")
 
+                failwith "Simulated failure during send"
                 do! AsyncResult.sleep (Dice.roll() * 1000)
                 do! failOn2()
 
