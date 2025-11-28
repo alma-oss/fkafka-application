@@ -4,7 +4,7 @@ open Microsoft.Extensions.Logging
 open Alma.ServiceIdentification
 open Alma.Kafka
 open Alma.KafkaApplication
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 open Alma.Tracing
 
 type InputEvent = string

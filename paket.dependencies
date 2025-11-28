@@ -8,17 +8,15 @@ nuget Newtonsoft.Json ~> 13.0
 nuget Giraffe ~> 7.0
 nuget Saturn ~> 0.17
 
-source https://nuget.pkg.github.com/almacareer/index.json username: "%PRIVATE_FEED_USER%" password: "%PRIVATE_FEED_PASS%"
-# LMC Nuget dependencies:
-nuget Alma.ApplicationStatus ~> 6.1
-nuget Alma.Environment ~> 11.1
-nuget Alma.ErrorHandling ~> 10.1
-nuget Alma.Kafka ~> 28.1
-nuget Alma.Logging ~> 10.0
-nuget Alma.Metrics ~> 10.1.1
-nuget Alma.ServiceIdentification ~> 10.0
-nuget Alma.Tracing ~> 11.0
-nuget Alma.WebApplication ~> 12.0
+nuget Alma.ApplicationStatus ~> 7.0
+nuget Alma.Environment ~> 12.0
+nuget Feather.ErrorHandling ~> 1.0
+nuget Alma.Kafka ~> 29.0
+nuget Alma.Logging ~> 11.0
+nuget Alma.Metrics ~> 11.0
+nuget Alma.ServiceIdentification ~> 10.1
+nuget Alma.Tracing ~> 12.0
+nuget Alma.WebApplication ~> 13.0
 
 nuget Expecto
 nuget YoloDev.Expecto.TestSdk

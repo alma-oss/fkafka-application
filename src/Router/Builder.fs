@@ -5,9 +5,9 @@ module ContentBasedRouterBuilder =
     open Alma.KafkaApplication
     open Alma.KafkaApplication.PatternBuilder
     open Alma.KafkaApplication.PatternMetrics
-    open Alma.ErrorHandling
-    open Alma.ErrorHandling.Option.Operators
-    open Alma.ErrorHandling.Result.Operators
+    open Feather.ErrorHandling
+    open Feather.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling.Result.Operators
     open ApplicationBuilder
 
     let internal pattern = PatternName "ContentBasedRouter"

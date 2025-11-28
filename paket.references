@@ -3,10 +3,10 @@ FSharp.Data
 Newtonsoft.Json
 Giraffe
 Saturn
+Feather.ErrorHandling
 Alma.ApplicationStatus
 Alma.Environment
 Alma.EnvironmentModel
-Alma.ErrorHandling
 Alma.Kafka
 Alma.Logging
 Alma.Metrics

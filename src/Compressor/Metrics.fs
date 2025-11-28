@@ -3,7 +3,7 @@ namespace Alma.KafkaApplication.Compressor
 module internal CompressorMetrics =
     open System
     open Alma.Metrics
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
     open Alma.KafkaApplication
 
     let private metricBatchCreatedTotal = "compressor_batch_created_total" |> MetricName.createOrFail

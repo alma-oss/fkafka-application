@@ -11,7 +11,6 @@ jobs:
 
     permissions:
       contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -21,20 +20,8 @@ jobs:
         with:
           dotnet-version: 9.x
 
-      - name: Generate token
-        id: generate_token
-        uses: almacareer/dex-github-app-token@v1
-        with:
-          app_id: ${{ secrets.PRC_ACTIONS_INTERNAL_APPID }}
-          installation_id: ${{ secrets.PRC_ACTIONS_INTERNAL_INSTALLATION_ID }}
-          private_key: ${{ secrets.PRC_ACTIONS_INTERNAL_KEY }}
-
-      - name: Publish package
+      - name: Publish to NuGet.org
         env:
-          PRIVATE_FEED_USER: ${{ github.repository_owner }}
-          PRIVATE_FEED_PASS: ${{ secrets.GITHUB_TOKEN }}
-          NUGET_SERVER_TOKEN: ${{ steps.generate_token.outputs.token }}
-          NUGET_SERVER_ORGANIZATION: ${{ github.repository_owner }}
-          NUGET_SERVER_REPOSITORY: "prc-nuget-server"
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           DOTNET_ROLL_FORWARD: latestMajor
-        run: ./build.sh -t publish
+        run: ./build.sh -t publish no-lint

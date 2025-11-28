@@ -29,7 +29,7 @@ module internal Utils =
 
     module FileParser =
         open System.IO
-        open Alma.ErrorHandling
+        open Feather.ErrorHandling
 
         type FilePath = string
 
@@ -199,7 +199,7 @@ module LoggerFactory =
     open Alma.ServiceIdentification
     open Alma.Logging
     open Alma.Tracing
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
 
     type LoggerEnvVar = {
         Instance: string
@@ -241,7 +241,7 @@ module LoggerFactory =
 
 [<RequireQualifiedAccess>]
 module internal AppRootStatus =
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
     open Alma.Environment
 
     let private mapDockerImageVersion onEmpty (Alma.Kafka.MetaData.DockerImageVersion version) =
@@ -256,46 +256,19 @@ module internal AppRootStatus =
             | Some version -> version |> mapDockerImageVersion "N/A"
             | _ -> DockerImageVersion "N/A"
 
-        let nomad = maybe {
-            let! nomadJobName = "NOMAD_JOB_NAME" |> Envs.tryResolve
-            let! nomadAllocId = "NOMAD_ALLOC_ID" |> Envs.tryResolve
+        ApplicationStatus.create {
+            new ApplicationStatusFeature.ICurrentApplication with
+                member __.Instance = instance
+                member __.Environment = currentEnvironment
 
-            return NomadJobName nomadJobName, NomadAllocationId nomadAllocId
+            interface ApplicationStatusFeature.IAssemblyInformation with
+                member __.GitBranch = git.Branch |> Option.defaultValue GitBranch.empty
+                member __.GitCommit = git.Commit |> Option.defaultValue GitCommit.empty
+                member __.GitRepository = git.Repository |> Option.defaultValue GitRepository.empty
+
+            interface ApplicationStatusFeature.IDockerApplication with
+                member __.DockerImageVersion = dockerImageVersion
         }
-
-        match nomad with
-        | Some (nomadJobName, nomadAllocId) ->
-            ApplicationStatus.create {
-                new ApplicationStatusFeature.ICurrentApplication with
-                    member __.Instance = instance
-                    member __.Environment = currentEnvironment
-
-                interface ApplicationStatusFeature.IAssemblyInformation with
-                    member __.GitBranch = git.Branch |> Option.defaultValue GitBranch.empty
-                    member __.GitCommit = git.Commit |> Option.defaultValue GitCommit.empty
-                    member __.GitRepository = git.Repository |> Option.defaultValue GitRepository.empty
-
-                interface ApplicationStatusFeature.IDockerApplication with
-                    member __.DockerImageVersion = dockerImageVersion
-
-                interface ApplicationStatusFeature.INomadApplication with
-                    member __.NomadJobName = nomadJobName
-                    member __.NomadAllocationId = nomadAllocId
-            }
-        | _ ->
-            ApplicationStatus.create {
-                new ApplicationStatusFeature.ICurrentApplication with
-                    member __.Instance = instance
-                    member __.Environment = currentEnvironment
-
-                interface ApplicationStatusFeature.IAssemblyInformation with
-                    member __.GitBranch = git.Branch |> Option.defaultValue GitBranch.empty
-                    member __.GitCommit = git.Commit |> Option.defaultValue GitCommit.empty
-                    member __.GitRepository = git.Repository |> Option.defaultValue GitRepository.empty
-
-                interface ApplicationStatusFeature.IDockerApplication with
-                    member __.DockerImageVersion = dockerImageVersion
-            }
 
 [<RequireQualifiedAccess>]
 module internal WebServer =

@@ -6,10 +6,10 @@ module CompressorBuilder =
     open Alma.KafkaApplication.PatternBuilder
     open Alma.KafkaApplication.PatternMetrics
     open ApplicationBuilder
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
     open Alma.ServiceIdentification
-    open Alma.ErrorHandling.Option.Operators
-    open Alma.ErrorHandling.Result.Operators
+    open Feather.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling.Result.Operators
     open Alma.Tracing
 
     let internal pattern = PatternName "Compressor"

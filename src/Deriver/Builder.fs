@@ -6,8 +6,8 @@ module DeriverBuilder =
     open Alma.KafkaApplication.PatternBuilder
     open Alma.KafkaApplication.PatternMetrics
     open ApplicationBuilder
-    open Alma.ErrorHandling
-    open Alma.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling
+    open Feather.ErrorHandling.Option.Operators
 
     let internal pattern = PatternName "Deriver"
 

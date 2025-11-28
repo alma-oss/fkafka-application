@@ -86,7 +86,7 @@ type internal GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Depend
 type internal DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> = PatternName -> GetConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> -> 'PatternParts -> unit
 
 module internal PatternBuilder =
-    open Alma.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling.Option.Operators
     open ApplicationBuilder
 
     let debugPatternConfiguration: DebugConfiguration<'PatternParts, 'InputEvent, 'OutputEvent, 'Dependencies> =

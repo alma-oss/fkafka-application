@@ -6,8 +6,11 @@
     <OutputType>Library</OutputType>
     <PackageId>Alma.KafkaApplication</PackageId>
     <Version>26.3.1</Version>
-    <RepositoryUrl>https://github.com/almacareer/prc-fkafka-application.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/almacareer/prc-fkafka-application</PackageProjectUrl>
+    <Authors>AlmaCareer</Authors>
+    <Description>Framework for kafka application. It contains computation expressions to help with building this kind of application and have in-build metrics, logging, parsing, etc..</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/alma-oss/fkafka-application.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/alma-oss/fkafka-application</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>

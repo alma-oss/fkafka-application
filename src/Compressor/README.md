@@ -99,7 +99,7 @@ The compressor pattern automatically provides these Prometheus metrics:
 
 ```fs
 open Alma.KafkaApplication.Compressor
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 
 type InputEvent = string
 type OutputEvent = string
@@ -146,7 +146,7 @@ let main argv =
 
 ```fs
 open Alma.KafkaApplication.Compressor
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 open System.IO
 
 type Dependencies = {

@@ -6,8 +6,8 @@ module internal ApplicationRunner =
     open Microsoft.Extensions.Logging
     open Alma.Kafka
     open Alma.ServiceIdentification
-    open Alma.ErrorHandling
-    open Alma.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling
+    open Feather.ErrorHandling.Option.Operators
 
     module private KafkaApplicationRunner =
         open System

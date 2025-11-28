@@ -3,7 +3,7 @@ namespace Alma.KafkaApplication.Compressor
 open Alma.KafkaApplication
 open Alma.Kafka
 open Alma.Kafka.MetaData
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 
 // Errors
 

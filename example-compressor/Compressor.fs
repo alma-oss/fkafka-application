@@ -7,7 +7,7 @@ open Alma.ServiceIdentification
 open Alma.Kafka
 open Alma.Kafka.MetaData
 open Alma.KafkaApplication
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 open Alma.Tracing
 
 type InputEvent = string
