@@ -4,7 +4,7 @@ namespace Alma.KafkaApplication.Filter
 module internal Filter =
     open Microsoft.Extensions.Logging
     open Alma.Kafka
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
     open Alma.ServiceIdentification
 
     [<RequireQualifiedAccess>]

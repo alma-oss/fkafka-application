@@ -11,7 +11,7 @@ open Alma.Metrics
 open Alma.ServiceIdentification
 open Alma.Logging
 open Alma.Tracing
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 
 [<Measure>] type Second
 [<Measure>] type Attempt
@@ -310,7 +310,7 @@ type internal ConsumeEventsWithConfiguration<'InputEvent> = ConsumerConfiguratio
 
 [<RequireQualifiedAccess>]
 module Event =
-    open Alma.ErrorHandling.AsyncResult.Operators
+    open Feather.ErrorHandling.AsyncResult.Operators
 
     let private errorToConsumeError = function
         | RuntimeError error -> ConsumeError.RuntimeException error

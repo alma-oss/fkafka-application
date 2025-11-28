@@ -6,7 +6,7 @@ type CompressedBatch<'T> = CompressedBatch of 'T list
 module internal CompressorBatch =
     open System
     open System.Collections.Concurrent
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
 
     type Batch<'Item> = Batch of ConcurrentQueue<'Item>
     type BatchThreshold = BatchThreshold of int

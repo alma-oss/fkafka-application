@@ -5,7 +5,7 @@ open Alma.KafkaApplication.Test
 
 open Alma.ServiceIdentification
 open Alma.Kafka
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 open Alma.EnvironmentModel
 open Alma.KafkaApplication
 open Alma.KafkaApplication.Compressor

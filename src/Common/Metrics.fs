@@ -3,7 +3,7 @@ namespace Alma.KafkaApplication
 module internal ApplicationMetrics =
     open Alma.Metrics
     open Alma.ServiceIdentification
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
 
     type private Count = Count of int
 

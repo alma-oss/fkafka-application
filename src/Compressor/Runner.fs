@@ -4,7 +4,7 @@ module internal CompressorRunner =
     open System
     open Microsoft.Extensions.Logging
     open Alma.KafkaApplication
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
     open Alma.Kafka
 
     let runCompressor: RunPattern<CompressorApplication<'InputEvent, 'OutputEvent, 'Dependencies>, 'InputEvent, 'OutputEvent, 'Dependencies> =

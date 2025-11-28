@@ -4,7 +4,7 @@ namespace Alma.KafkaApplication.Router
 module internal Router =
     open Alma.Kafka
     open Alma.ServiceIdentification
-    open Alma.ErrorHandling
+    open Feather.ErrorHandling
 
     [<RequireQualifiedAccess>]
     module Configuration =

@@ -4,7 +4,7 @@ open System
 open Microsoft.Extensions.Logging
 open Alma.Logging
 open Alma.KafkaApplication
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 
 let tee f a =
     f a

@@ -11,9 +11,9 @@ module ApplicationBuilder =
     open Alma.Metrics.ServiceStatus
     open Alma.ServiceIdentification
     open Alma.Environment
-    open Alma.ErrorHandling
-    open Alma.ErrorHandling.AsyncResult.Operators
-    open Alma.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling
+    open Feather.ErrorHandling.AsyncResult.Operators
+    open Feather.ErrorHandling.Option.Operators
 
     [<AutoOpen>]
     module internal KafkaApplicationBuilder =

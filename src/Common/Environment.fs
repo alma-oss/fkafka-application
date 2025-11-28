@@ -10,8 +10,8 @@ module EnvironmentBuilder =
     open Alma.KafkaApplication
     open Alma.Environment
     open Alma.EnvironmentModel
-    open Alma.ErrorHandling
-    open Alma.ErrorHandling.Option.Operators
+    open Feather.ErrorHandling
+    open Feather.ErrorHandling.Option.Operators
 
     type EnvironmentBuilder internal (loggerFactory: ILoggerFactory) =
         let logger = LoggerFactory.createLogger loggerFactory "KafkaApplication.Environment"

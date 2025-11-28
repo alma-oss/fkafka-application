@@ -2,7 +2,7 @@ namespace Alma.KafkaApplication.Deriver
 
 open Alma.KafkaApplication
 open Alma.Kafka.MetaData
-open Alma.ErrorHandling
+open Feather.ErrorHandling
 
 // Errors
 
