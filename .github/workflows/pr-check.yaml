@@ -8,7 +8,7 @@ jobs:
     name: Block fixup commits
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Block fixup commit merge
         uses: 13rac1/block-fixup-merge-action@v2.0.0
@@ -17,7 +17,7 @@ jobs:
     name: Shellcheck
     runs-on: ubuntu-latest
     steps:
-        -   uses: actions/checkout@v4
+        -   uses: actions/checkout@v6
         -   name: Run ShellCheck
             uses: ludeeus/action-shellcheck@master
             env:
