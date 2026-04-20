@@ -2,6 +2,7 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update dependencies
 
 ## 28.0.0 - 2026-01-30
 - [**BC**] Use net10.0
