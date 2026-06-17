@@ -1,5 +1,7 @@
 # AGENTS.md — F-Kafka Application
 
+This repo ships Agent Skill for the `Alma.KafkaApplication` library. Compatible agents discover it automatically; see `.agents/skills/fkafka-application/SKILL.md`.
+
 ## Project Purpose
 
 F-Kafka Application (`Alma.KafkaApplication`) is an open-source F# framework for building Kafka-based event-driven applications. It provides computation expressions (DSL) for common EDA patterns — Filter, Content-Based Router, Deriver, and Compressor — with built-in metrics (Prometheus), logging, event parsing, error handling, and graceful shutdown. Published as a NuGet package consumed by downstream microservices.
