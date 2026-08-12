@@ -313,10 +313,10 @@ module ApplicationBuilder =
 
                 // service status
                 let! markAsEnabled =
-                    ServiceStatus.markAsEnabled instance Audience.Sys
+                    ServiceStatus.markAsEnabled instance (Audience "sys")
                     |> Result.mapError (MetricError >> MetricsError)
                 let! markAsDisabled =
-                    ServiceStatus.markAsDisabled instance Audience.Sys
+                    ServiceStatus.markAsDisabled instance (Audience "sys")
                     |> Result.mapError (MetricError >> MetricsError)
 
                 let serviceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled }

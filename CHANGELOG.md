@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+- Update dependencies
+    - `Alma.Metrics` 13
 
 ## 28.1.0 - 2026-04-20
 - Update dependencies

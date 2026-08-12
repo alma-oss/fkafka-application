@@ -5,13 +5,13 @@ module internal ResourceChecker =
     open Alma.Metrics
     open Alma.ServiceIdentification
 
-    let private kafkaClusterResource brokerList = ResourceAvailability.createFromStrings "kafka_cluster" brokerList brokerList Audience.Sys
+    let private kafkaClusterResource brokerList = ResourceAvailability.createFromStrings "kafka_cluster" brokerList brokerList (Audience "sys")
 
     let private kafkaTopicResource brokerList = function
         | (StreamName topic) ->
-            ResourceAvailability.createFromStrings "kafka_topic" topic brokerList Audience.Sys
+            ResourceAvailability.createFromStrings "kafka_topic" topic brokerList (Audience "sys")
         | Instance topic ->
-            ResourceAvailability.createForServiceFromStrings "kafka_topic" (topic |> Instance.concat "-") brokerList topic Audience.Sys
+            ResourceAvailability.createForServiceFromStrings "kafka_topic" (topic |> Instance.concat "-") brokerList topic (Audience "sys")
 
     let private updateResourceStatus instance (resource: ResourceAvailability) = function
         | true -> ResourceAvailability.enable instance resource |> ignore
