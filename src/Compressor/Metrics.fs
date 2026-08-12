@@ -7,35 +7,37 @@ module internal CompressorMetrics =
     open Alma.KafkaApplication
 
     let private metricBatchCreatedTotal = "compressor_batch_created_total" |> MetricName.createOrFail
-    let private metricBatchSize = "compressor_batch_size" |> MetricName.createOrFail
+    let private metricBatchSize =
+        HistogramBuckets.create [ 1.0; 5.0; 10.0; 25.0; 50.0; 100.0; 250.0; 500.0; 1000.0; 2500.0; 5000.0; 10000.0 ]
+        |> HistogramMetric.createOrFail "compressor_batch_size"
     let private metricBatchSentTotal = "compressor_batch_sent_total" |> MetricName.createOrFail
-    let private metricBatchSendDurationSeconds = "compressor_batch_send_duration_seconds" |> MetricName.createOrFail
+    let private metricBatchSendDurationSeconds =
+        HistogramBuckets.create [ 0.005; 0.01; 0.025; 0.05; 0.1; 0.25; 0.5; 1.0; 2.5; 5.0; 10.0 ]
+        |> HistogramMetric.createOrFail "compressor_batch_send_duration_seconds"
     let private metricBatchSendFailuresTotal = "compressor_batch_send_failures_total" |> MetricName.createOrFail
 
     let metrics = [
-        {
+        CustomMetric.Simple {
             Name = metricBatchCreatedTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts the total number of batches created by the compressor, regardless of success or failure."
         }
-        {
-            Name = metricBatchSize
-            Type = Histogram
+        CustomMetric.Histogram {
+            Metric = metricBatchSize
             Description = "Observes the size of batches being created (number of events per batch)."
         }
-        {
+        CustomMetric.Simple {
             Name = metricBatchSentTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts how many times a batch was sent because the size  was reached."
         }
-        {
-            Name = metricBatchSendDurationSeconds
-            Type = Histogram
+        CustomMetric.Histogram {
+            Metric = metricBatchSendDurationSeconds
             Description = "Measures the time it takes to send (HTTP POST) a batch to the target service."
         }
-        {
+        CustomMetric.Simple {
             Name = metricBatchSendFailuresTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts the number of failed attempts to send batches."
         }
     ]
@@ -59,7 +61,7 @@ module internal CompressorMetrics =
 
     let observeBatchSize instance batchThreshold =
         let dataSetKey = createKey instance []
-        State.setMetricSetValue (Float (batchThreshold |> BatchThreshold.float)) metricBatchSize dataSetKey
+        State.observeHistogramSetValue metricBatchSize (batchThreshold |> BatchThreshold.float) dataSetKey
 
     let incrementBatchSent instance size =
         let dataSetKey = createKey instance [ "size", size |> BatchSize.value |> string ]
@@ -68,7 +70,7 @@ module internal CompressorMetrics =
 
     let observeBatchSendDuration instance (duration: TimeSpan) =
         let dataSetKey = createKey instance []
-        State.setMetricSetValue (Float duration.TotalSeconds) metricBatchSendDurationSeconds dataSetKey
+        State.observeHistogramSetValue metricBatchSendDurationSeconds duration.TotalSeconds dataSetKey
 
     let incrementBatchSendFailure instance status =
         let dataSetKey = createKey instance [ "status", status ]

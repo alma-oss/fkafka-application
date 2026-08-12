@@ -31,6 +31,7 @@ type PatternRuntimeParts<'Dependencies> = {
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    ObserveHistogram: HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
@@ -53,6 +54,7 @@ module internal PatternRuntimeParts =
             IncrementMetric = consumeRuntimeParts.IncrementMetric
             IncrementMetricBy = consumeRuntimeParts.IncrementMetricBy
             SetMetric = consumeRuntimeParts.SetMetric
+            ObserveHistogram = consumeRuntimeParts.ObserveHistogram
             EnableResource = consumeRuntimeParts.EnableResource
             DisableResource = consumeRuntimeParts.DisableResource
             Dependencies = consumeRuntimeParts.Dependencies
