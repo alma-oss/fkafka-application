@@ -2,6 +2,8 @@
 
 <!-- There is always Unreleased section on the top. Subsections (Add, Changed, Fix, Removed) should be Add as needed. -->
 ## Unreleased
+
+## 29.0.0 - 2026-08-17
 - Update dependencies
     - `Alma.Metrics` 13
 - [**BC**] Change `CustomMetric` to a union of `Simple` and `Histogram` cases (`SimpleCustomMetric`, `HistogramCustomMetric`)
