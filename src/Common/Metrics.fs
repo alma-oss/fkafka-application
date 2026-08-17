@@ -89,11 +89,23 @@ module internal ApplicationMetrics =
                     | _ -> ""
             let formatCounter = formatMetric MetricType.Counter
 
+            let formatHistogram description histogramMetric =
+                histogramMetric
+                |> State.getHistogram
+                |> function
+                    | Some histogram ->
+                        { histogram with Description = Some description }
+                        |> Histogram.format
+                    | _ -> ""
+
             let customMetrics =
                 customMetrics
                 |> List.rev
-                |> List.map (fun customMetric ->
-                    formatMetric customMetric.Type customMetric.Description customMetric.Name
+                |> List.map (function
+                    | CustomMetric.Simple metric ->
+                        formatMetric (metric.Type |> SimpleMetricType.toMetricType) metric.Description metric.Name
+                    | CustomMetric.Histogram histogram ->
+                        formatHistogram histogram.Description histogram.Metric
                 )
 
             [
@@ -150,6 +162,11 @@ module internal ApplicationMetrics =
         labels
         |> createKey instance
         |> State.setMetricSetValue value metricName
+
+    let observeCustomHistogramValue instance histogramMetric (SimpleDataSetKeys labels) value =
+        labels
+        |> createKey instance
+        |> State.observeHistogramSetValue histogramMetric value
 
     // Showing state
 

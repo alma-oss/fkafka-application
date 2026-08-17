@@ -9,33 +9,34 @@ module internal CompressorMetrics =
     let private metricBatchCreatedTotal = "compressor_batch_created_total" |> MetricName.createOrFail
     let private metricBatchSize = "compressor_batch_size" |> MetricName.createOrFail
     let private metricBatchSentTotal = "compressor_batch_sent_total" |> MetricName.createOrFail
-    let private metricBatchSendDurationSeconds = "compressor_batch_send_duration_seconds" |> MetricName.createOrFail
+    let private metricBatchSendDurationSeconds =
+        HistogramBuckets.create [ 0.005; 0.01; 0.025; 0.05; 0.1; 0.25; 0.5; 1.0; 2.5; 5.0; 10.0 ]
+        |> HistogramMetric.createOrFail "compressor_batch_send_duration_seconds"
     let private metricBatchSendFailuresTotal = "compressor_batch_send_failures_total" |> MetricName.createOrFail
 
     let metrics = [
-        {
+        CustomMetric.Simple {
             Name = metricBatchCreatedTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts the total number of batches created by the compressor, regardless of success or failure."
         }
-        {
+        CustomMetric.Simple {
             Name = metricBatchSize
-            Type = Histogram
-            Description = "Observes the size of batches being created (number of events per batch)."
+            Type = SimpleMetricType.Gauge
+            Description = "Shows the size of batches being created (number of events per batch)."
         }
-        {
+        CustomMetric.Simple {
             Name = metricBatchSentTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts how many times a batch was sent because the size  was reached."
         }
-        {
-            Name = metricBatchSendDurationSeconds
-            Type = Histogram
+        CustomMetric.Histogram {
+            Metric = metricBatchSendDurationSeconds
             Description = "Measures the time it takes to send (HTTP POST) a batch to the target service."
         }
-        {
+        CustomMetric.Simple {
             Name = metricBatchSendFailuresTotal
-            Type = Counter
+            Type = SimpleMetricType.Counter
             Description = "Counts the number of failed attempts to send batches."
         }
     ]
@@ -68,7 +69,7 @@ module internal CompressorMetrics =
 
     let observeBatchSendDuration instance (duration: TimeSpan) =
         let dataSetKey = createKey instance []
-        State.setMetricSetValue (Float duration.TotalSeconds) metricBatchSendDurationSeconds dataSetKey
+        State.observeHistogramSetValue metricBatchSendDurationSeconds duration.TotalSeconds dataSetKey
 
     let incrementBatchSendFailure instance status =
         let dataSetKey = createKey instance [ "status", status ]

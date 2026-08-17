@@ -20,18 +20,48 @@ open Feather.ErrorHandling
 // Metrics
 //
 
-type CustomMetric = {
+/// Metric types supported by the simple (single-value) custom metric state.
+[<RequireQualifiedAccess>]
+type SimpleMetricType =
+    | Counter
+    | Gauge
+    | Untyped
+
+[<RequireQualifiedAccess>]
+module SimpleMetricType =
+    let toMetricType = function
+        | SimpleMetricType.Counter -> MetricType.Counter
+        | SimpleMetricType.Gauge -> MetricType.Gauge
+        | SimpleMetricType.Untyped -> MetricType.Untyped
+
+type SimpleCustomMetric = {
     Name: MetricName
-    Type: MetricType
+    Type: SimpleMetricType
+    Description: string
+}
+
+type HistogramCustomMetric = {
+    Metric: HistogramMetric
     Description: string
 }
 
 [<RequireQualifiedAccess>]
+type CustomMetric =
+    | Simple of SimpleCustomMetric
+    | Histogram of HistogramCustomMetric
+
+[<RequireQualifiedAccess>]
 module CustomMetric =
     let fromMetric metric metricType description =
-        {
+        CustomMetric.Simple {
             Name = metric
             Type = metricType
+            Description = description
+        }
+
+    let fromHistogramMetric histogramMetric description =
+        CustomMetric.Histogram {
+            Metric = histogramMetric
             Description = description
         }
 
@@ -354,6 +384,7 @@ type internal PreparedConsumeRuntimeParts<'OutputEvent> = {
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    ObserveHistogram: HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
 }
@@ -371,6 +402,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    ObserveHistogram: HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
@@ -421,6 +453,7 @@ module internal PreparedConsumeRuntimeParts =
             IncrementMetric = preparedRuntimeParts.IncrementMetric
             IncrementMetricBy = preparedRuntimeParts.IncrementMetricBy
             SetMetric = preparedRuntimeParts.SetMetric
+            ObserveHistogram = preparedRuntimeParts.ObserveHistogram
             EnableResource = preparedRuntimeParts.EnableResource
             DisableResource = preparedRuntimeParts.DisableResource
             Dependencies = None
@@ -525,6 +558,7 @@ type CustomTaskRuntimeParts = {
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    ObserveHistogram: HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>

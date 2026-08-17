@@ -236,7 +236,7 @@ module ApplicationBuilder =
                         |> MetricName.create
                         |> Result.mapError (InvalidMetricName >> MetricsError)
 
-                    let customMetric = {
+                    let customMetric = CustomMetric.Simple {
                         Name = metricName
                         Type = metricType
                         Description = description
@@ -244,6 +244,23 @@ module ApplicationBuilder =
 
                     // todo<later>: it should be possible to use `registerCustomMetric` here, but I'm not sure how to do it in a way that the result is properly propagated
                     // in that case, showMetrics should not be called twice
+                    return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
+                }
+
+        let internal showCustomHistogramMetric name buckets description configuration: Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            showMetrics configuration >>= fun parts ->
+                result {
+                    let! histogramMetric =
+                        buckets
+                        |> HistogramBuckets.create
+                        |> HistogramMetric.create name
+                        |> Result.mapError (InvalidMetricName >> MetricsError)
+
+                    let customMetric = CustomMetric.Histogram {
+                        Metric = histogramMetric
+                        Description = description
+                    }
+
                     return { parts with CustomMetrics = customMetric :: parts.CustomMetrics }
                 }
 
@@ -313,10 +330,10 @@ module ApplicationBuilder =
 
                 // service status
                 let! markAsEnabled =
-                    ServiceStatus.markAsEnabled instance Audience.Sys
+                    ServiceStatus.markAsEnabled instance (Audience "sys")
                     |> Result.mapError (MetricError >> MetricsError)
                 let! markAsDisabled =
-                    ServiceStatus.markAsDisabled instance Audience.Sys
+                    ServiceStatus.markAsDisabled instance (Audience "sys")
                     |> Result.mapError (MetricError >> MetricsError)
 
                 let serviceStatus = { MarkAsEnabled = markAsEnabled; MarkAsDisabled = markAsDisabled }
@@ -389,12 +406,14 @@ module ApplicationBuilder =
                 let incrementMetric = ApplicationMetrics.incrementCustomMetricCount instance
                 let incrementMetricBy = ApplicationMetrics.incrementCustomMetricCountBy instance
                 let setMetric = ApplicationMetrics.setCustomMetricValue instance
+                let observeHistogram = ApplicationMetrics.observeCustomHistogramValue instance
 
                 let preparedRuntimeParts: PreparedConsumeRuntimeParts<'OutputEvent> = {
                     LoggerFactory = configurationParts.LoggerFactory
                     IncrementMetric = incrementMetric
                     IncrementMetricBy = incrementMetricBy
                     SetMetric = setMetric
+                    ObserveHistogram = observeHistogram
                     Box = box
                     CurrentEnvironment = currentEnvironment
                     GitCommit = gitCommit
@@ -445,6 +464,7 @@ module ApplicationBuilder =
                         IncrementMetric = incrementMetric
                         IncrementMetricBy = incrementMetricBy
                         SetMetric = setMetric
+                        ObserveHistogram = observeHistogram
                         EnableResource = enableResource
                         DisableResource = disableResource
                         ConsumerConfigurations = runtimeConsumerConfigurations
@@ -675,6 +695,10 @@ module ApplicationBuilder =
         [<CustomOperation("showCustomMetric")>]
         member __.ShowCustomMetric(state, name, metricType, description): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
             state |> showCustomMetric name metricType description
+
+        [<CustomOperation("showCustomHistogramMetric")>]
+        member __.ShowCustomHistogramMetric(state, name, buckets, description): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =
+            state |> showCustomHistogramMetric name buckets description
 
         [<CustomOperation("registerCustomMetric")>]
         member __.RegisterCustomMetric(state, customMetric): Configuration<'InputEvent, 'OutputEvent, 'Dependencies> =

@@ -94,7 +94,8 @@ _NOTE: All functions has the first argument for the `state: Configuration<'Event
 | produceToMany | `topics: string list`, `FromDomain<'OutputEvent>` | This will register both a Kafka Producer and a produce event function for all topics with the one `fromDomain` function. |
 | registerCustomMetric | `CustomMetric` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
 | runCustomTask | `TaskErrorPolicy`, `CustomTaskRuntimeParts -> Async<unit>` | Register a CustomTask, which will be start with the application. |
-| showCustomMetric | `name: string`, `MetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
+| showCustomMetric | `name: string`, `SimpleMetricType`, `description: string` | It will register a custom metric, which will be shown (_if it has a value_) amongst other metrics on metrics route. (_see also `showMetrics`, `ConsumeRuntimeParts.IncrementMetric`, etc._) |
+| showCustomHistogramMetric | `name: string`, `buckets: float list`, `description: string` | It will register a custom histogram metric, which will be shown (_if it has observations_) amongst other metrics on metrics route as `_bucket`/`_sum`/`_count` samples. (_see also `showMetrics`, `ConsumeRuntimeParts.ObserveHistogram`, etc._) |
 | showInputEventsWith | `createInputEventKeys: InputStreamName -> 'Event -> SimpleDataSetKey` | If this function is set, all Input events will be counted and the count will be shown on metrics. (_Created keys will be added to the default ones, like `Instance`, etc._) |
 | showMetrics | | It will asynchronously run a web server (`http://127.0.0.1:8080`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
 | showMetrics | `port: int` | It will asynchronously run a web server (`http://127.0.0.1:{PORT}`) and show metrics (_for Prometheus_) on the route. Route must start with `/`. |
@@ -175,6 +176,7 @@ type ConsumeRuntimeParts<'OutputEvent, 'Dependencies> = {
     IncrementMetric: Metrics.MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
     SetMetric: Metrics.MetricName -> SimpleDataSetKeys -> Metrics.MetricValue -> unit
+    ObserveHistogram: Metrics.HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     Dependencies: 'Dependencies option
@@ -194,6 +196,7 @@ type CustomTaskRuntimeParts = {
     IncrementMetric: MetricName -> SimpleDataSetKeys -> unit
     IncrementMetricBy: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
     SetMetric: MetricName -> SimpleDataSetKeys -> MetricValue -> unit
+    ObserveHistogram: HistogramMetric -> SimpleDataSetKeys -> float -> unit
     EnableResource: ResourceAvailability -> unit
     DisableResource: ResourceAvailability -> unit
     ConsumerConfigurations: Map<RuntimeConnectionName, ConsumerConfiguration>
