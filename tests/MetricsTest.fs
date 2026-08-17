@@ -4,6 +4,7 @@ open Expecto
 open Alma.Metrics
 open Alma.ServiceIdentification
 open Alma.KafkaApplication
+open Alma.KafkaApplication.Compressor
 
 let private okOrFail = function
     | Ok ok -> ok
@@ -108,4 +109,15 @@ let metricsTest =
             let labels = "svc_domain=\"development\", svc_context=\"kafkaApplication\", svc_purpose=\"metricsCounter\", svc_version=\"test\""
             Expect.stringContains formatted "# TYPE test_formatted_counter_total counter" "Metric should be typed as counter"
             Expect.stringContains formatted (sprintf "test_formatted_counter_total {%s} 2" labels) "Counter sample should count both increments"
+
+        testCase "should publish compressor batch size as gauge" <| fun _ ->
+            let instance = instance "development-kafkaApplication-compressorBatchSize-test"
+            let batchThreshold = BatchThreshold.tryCreate 10 |> Option.get
+
+            CompressorMetrics.observeBatchSize instance batchThreshold
+            let formatted = ApplicationMetrics.getMetricsState instance CompressorMetrics.metrics
+
+            let labels = "svc_domain=\"development\", svc_context=\"kafkaApplication\", svc_purpose=\"compressorBatchSize\", svc_version=\"test\""
+            Expect.stringContains formatted "# TYPE compressor_batch_size gauge" "Batch size should be typed as gauge"
+            Expect.stringContains formatted (sprintf "compressor_batch_size {%s} 10" labels) "Gauge sample should hold the batch threshold"
     ]

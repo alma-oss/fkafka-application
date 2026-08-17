@@ -7,9 +7,7 @@ module internal CompressorMetrics =
     open Alma.KafkaApplication
 
     let private metricBatchCreatedTotal = "compressor_batch_created_total" |> MetricName.createOrFail
-    let private metricBatchSize =
-        HistogramBuckets.create [ 1.0; 5.0; 10.0; 25.0; 50.0; 100.0; 250.0; 500.0; 1000.0; 2500.0; 5000.0; 10000.0 ]
-        |> HistogramMetric.createOrFail "compressor_batch_size"
+    let private metricBatchSize = "compressor_batch_size" |> MetricName.createOrFail
     let private metricBatchSentTotal = "compressor_batch_sent_total" |> MetricName.createOrFail
     let private metricBatchSendDurationSeconds =
         HistogramBuckets.create [ 0.005; 0.01; 0.025; 0.05; 0.1; 0.25; 0.5; 1.0; 2.5; 5.0; 10.0 ]
@@ -22,9 +20,10 @@ module internal CompressorMetrics =
             Type = SimpleMetricType.Counter
             Description = "Counts the total number of batches created by the compressor, regardless of success or failure."
         }
-        CustomMetric.Histogram {
-            Metric = metricBatchSize
-            Description = "Observes the size of batches being created (number of events per batch)."
+        CustomMetric.Simple {
+            Name = metricBatchSize
+            Type = SimpleMetricType.Gauge
+            Description = "Shows the size of batches being created (number of events per batch)."
         }
         CustomMetric.Simple {
             Name = metricBatchSentTotal
@@ -61,7 +60,7 @@ module internal CompressorMetrics =
 
     let observeBatchSize instance batchThreshold =
         let dataSetKey = createKey instance []
-        State.observeHistogramSetValue metricBatchSize (batchThreshold |> BatchThreshold.float) dataSetKey
+        State.setMetricSetValue (Float (batchThreshold |> BatchThreshold.float)) metricBatchSize dataSetKey
 
     let incrementBatchSent instance size =
         let dataSetKey = createKey instance [ "size", size |> BatchSize.value |> string ]

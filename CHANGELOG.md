@@ -8,7 +8,8 @@
 - [**BC**] Change `showCustomMetric` to take `SimpleMetricType` (`Counter`/`Gauge`/`Untyped`) instead of `MetricType`
 - Add `showCustomHistogramMetric` builder operation
 - Add `ObserveHistogram` to `ConsumeRuntimeParts`, `PatternRuntimeParts` and `CustomTaskRuntimeParts`
-- Publish compressor `compressor_batch_size` and `compressor_batch_send_duration_seconds` as real Prometheus histograms (`_bucket`, `_sum`, `_count`)
+- Publish compressor `compressor_batch_send_duration_seconds` as a real Prometheus histogram (`_bucket`, `_sum`, `_count`)
+- Publish compressor `compressor_batch_size` as a gauge
 
 ## 28.1.0 - 2026-04-20
 - Update dependencies

@@ -90,9 +90,9 @@ type GetOffset = TopicPartition -> AsyncResult<TopicPartitionOffset, string>
 The compressor pattern automatically provides these Prometheus metrics:
 
 - `compressor_batch_created_total`: Total number of batches created
-- `compressor_batch_size`: Size of batches (observed when batch is created)
-- `compressor_batch_threshold_triggered_total`: Number of times batch size threshold was triggered
-- `compressor_batch_send_duration_seconds`: Time taken to send batches
+- `compressor_batch_size`: Size of batches (gauge, set when batch is created)
+- `compressor_batch_sent_total`: Number of times batch size threshold was triggered
+- `compressor_batch_send_duration_seconds`: Time taken to send batches (histogram)
 - `compressor_batch_send_failures_total`: Number of batch send failures
 
 ## Simple Example
