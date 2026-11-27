@@ -336,7 +336,7 @@ type ParsedEvent<'InputEvent> = {
 
 type ParsedEventAsyncResult<'InputEvent> = Consumer.ConsumedAsyncResult<ParsedEvent<'InputEvent>>
 
-type internal ConsumeEventsWithConfiguration<'InputEvent> = ConsumerConfiguration -> ParsedEventAsyncResult<'InputEvent> seq
+type internal ConsumeEventsWithConfiguration<'InputEvent> = ConsumerConfiguration -> seq<ParsedEventAsyncResult<'InputEvent>>
 
 [<RequireQualifiedAccess>]
 module Event =
@@ -430,7 +430,7 @@ module internal ApplicationInitialization =
 type internal RuntimeConsumeEvents<'InputEvent, 'OutputEvent, 'Dependencies> =
     ConsumeRuntimeParts<'OutputEvent, 'Dependencies>
         -> ConsumerConfiguration
-        -> ParsedEventAsyncResult<'InputEvent> seq
+        -> seq<ParsedEventAsyncResult<'InputEvent>>
 
 [<RequireQualifiedAccess>]
 module internal PreparedConsumeRuntimeParts =

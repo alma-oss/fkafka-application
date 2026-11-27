@@ -29,7 +29,7 @@ module FilterBuilder =
                     >>= filterContentFromInputEvent app.ProcessedBy
 
                 match outputEvent with
-                | Some event -> do! event |> app.ProduceTo.[filterOutputStream]
+                | Some event -> do! event |> app.ProduceTo[filterOutputStream]
                 | _ -> ()
             }
 

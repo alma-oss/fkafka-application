@@ -51,6 +51,7 @@ module internal ApplicationRunner =
         let internal wait (seconds: int<Alma.KafkaApplication.Second>) =
             Async.Sleep(TimeSpan.FromSeconds (float seconds))
 
+        [<TailCall>]
         let rec private connectProducersWithErrorHandling connectProducer application = async {
             try
                 return application.Producers |> Map.map (fun _ -> connectProducer)
@@ -75,7 +76,7 @@ module internal ApplicationRunner =
                     log <| sprintf "Producer could not connect, application will shutdown in %i seconds." seconds
                     ApplicationState.shutDown logger
                     do! wait seconds
-                    return failwithf "Producer could not connect due to:\n\t%A" e.Message
+                    return failwithf "Producer could not connect (shutdown in %i seconds) due to:\n\t%A" seconds e.Message
 
                 | ProducerErrorPolicy.Retry ->
                     log "Producer could not connect, try again."
@@ -145,7 +146,7 @@ module internal ApplicationRunner =
                 | Error ConsumeError.PreviousMessageWasNotCommited ->
                     raise (Confluent.Kafka.KafkaException(Confluent.Kafka.Error(Confluent.Kafka.ErrorCode.Local_Fail, "PreviousMessageWasNotCommited")))
                 | Error (ConsumeError.KafkaException e) -> raise e
-                | Error e -> failwithf "%A" e
+                | Error e -> failwithf "Consume error: %A" e
             }
 
             function
@@ -158,6 +159,7 @@ module internal ApplicationRunner =
                 |> Seq.takeWhile (ignore >> ApplicationState.isRunning logger)
                 |> Seq.iter (handleEvent eventsHandler >> Async.runSynchronouslyAndFinishTheTask logger $"Consume events from {topic}")
 
+        [<TailCall>]
         let rec private consumeWithErrorHandling<'InputEvent, 'OutputEvent, 'Dependencies>
             (loggerFactory: ILoggerFactory)
             (runtimeParts: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>)
