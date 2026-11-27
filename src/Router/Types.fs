@@ -63,7 +63,7 @@ type internal ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent, 'Dep
     RouterConfiguration: RouterConfiguration
 }
 
-type ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies> = 
+type ContentBasedRouterApplication<'InputEvent, 'OutputEvent, 'Dependencies> =
     internal ContentBasedRouterApplication of Result<ContentBasedRouterApplicationParts<'InputEvent, 'OutputEvent, 'Dependencies>, ContentBasedRouterApplicationError>
 
 [<RequireQualifiedAccess>]

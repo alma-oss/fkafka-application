@@ -35,7 +35,7 @@ module DeriverBuilder =
             let deriveEventHandler (app: ConsumeRuntimeParts<'OutputEvent, 'Dependencies>) =
                 (app.LoggerFactory.CreateLogger "Deriver.init").LogDebug "prepare deriveEventHandler"
                 let deriveEvent = deriveEvent app app.ProcessedBy
-                let produceTo = app.ProduceTo.[deriverOutputStream]
+                let produceTo = app.ProduceTo[deriverOutputStream]
 
                 fun (event: TracedEvent<'InputEvent>) -> asyncResult {
                     use eventToDerive = event |> TracedEvent.continueAs "Deriver" "Derive event"
